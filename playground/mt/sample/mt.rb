@@ -22,7 +22,6 @@ class MT
     1.upto(N-1) do |i|
       @x[i] = (1812433253 * (@x[i-1] ^ (@x[i-1] >> 30)) + i) & WHOLE_MASK
     end
-    p @x
   end
 
   def next
