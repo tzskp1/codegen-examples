@@ -1,0 +1,7 @@
+mt
+mt_generated.c
+/mt.dSYM
+*.glob
+*.vo
+*.aux
+
