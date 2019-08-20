@@ -1,7 +1,7 @@
 (* MT19937 *)
 
 let w = 32;;
-let n = 634;;
+let n = 624;;
 let m = 397;;
 let r = 31;;
 let u = 11;;
@@ -53,4 +53,4 @@ let printRandomSeq seed n =
       end
   in iter 0 (initialize seed);;
   
-printRandomSeq 20150919 2048;;
+printRandomSeq 20190820 2048;;

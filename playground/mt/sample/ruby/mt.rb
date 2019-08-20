@@ -1,5 +1,6 @@
+# MT19937
 W = 32
-N = 634
+N = 624
 M = 397
 R = 31
 U = 11
@@ -40,7 +41,7 @@ class MT
   end
 end
 
-mt = MT.new(20150919)
+mt = MT.new(20190820)
 2048.times do |i|
   print i, ": ", mt.next, "\n"
 end
