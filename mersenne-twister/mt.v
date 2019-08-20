@@ -1,3 +1,4 @@
+(* Implementation of MT19937 *)
 From mathcomp Require Import all_ssreflect.
 
 Require Import BinNat.
@@ -59,23 +60,6 @@ Definition next_random_state (rand : random_state) : (N * random_state) :=
       |} in
   (y4, next_rand).
 
-Fixpoint nth_rand (n : nat) (rand : random_state) : N :=
-  let (r, next_state) := next_random_state rand in
-  match n with
-  | 0%nat => r
-  | S m => nth_rand m next_state
-  end.
-
-Definition nth_rand_with_seed (n : nat) (seed : N) : N :=
-  let rand := initialize_random_state seed in
-  nth_rand n rand.
-
-Compute initialize_random_state 20150919.
-
-Compute nth_rand_with_seed 0 20150919.
-Compute nth_rand_with_seed 1 20150919.
-Compute nth_rand_with_seed 2 20150919.
-
 CodeGen Terminate Monomorphization N.land.
 CodeGen Terminate Monomorphization N.lor.
 CodeGen Terminate Monomorphization N.lxor.
@@ -83,18 +67,12 @@ CodeGen Terminate Monomorphization N.shiftl.
 CodeGen Terminate Monomorphization N.shiftr.
 CodeGen Monomorphization initialize_random_state.
 CodeGen Monomorphization next_random_state.
-CodeGen Monomorphization nth_rand.
-CodeGen Monomorphization nth_rand_with_seed.
 Print _initialize_random_state.
 Print _generate_state_vector.
 Print _next_random_state.
-Print _nth_rand.
-Print _nth_rand_with_seed.
 
 CodeGen GenCFile "mt_generated.c"
         _generate_state_vector
         _initialize_random_state
-        _next_random_state
-        _nth_rand
-        _nth_rand_with_seed.
+        _next_random_state.
         

@@ -1,4 +1,6 @@
-all:mt.c mt_generated.c
+all:mt
+
+mt:mt.c mt_generated.c
 	gcc -g -Wall mt.c -o mt
 
 mt_generated.c: mt.v
