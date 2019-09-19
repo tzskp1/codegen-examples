@@ -1,13 +1,11 @@
 (* Implementation of MT19937 *)
 From mathcomp Require Import all_ssreflect.
+Require Import BinNat.
+From codegen Require Import codegen.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
-Require Import BinNat.
-
-Require Import codegen.codegen.
 
 Open Scope N_scope.
 
