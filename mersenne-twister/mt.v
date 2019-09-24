@@ -3,7 +3,6 @@ From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
 Require Import BinNat.
-From codegen Require Import codegen.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -74,20 +73,3 @@ Fixpoint nth_random_value_with_random_state (nth : nat) (rand : random_state) : 
 Definition nth_random_value (seed : N) (nth : nat) :=
   let rand := initialize_random_state seed in
   nth_random_value_with_random_state nth rand.
-
-CodeGen Terminate Monomorphization N.land.
-CodeGen Terminate Monomorphization N.lor.
-CodeGen Terminate Monomorphization N.lxor.
-CodeGen Terminate Monomorphization N.shiftl.
-CodeGen Terminate Monomorphization N.shiftr.
-CodeGen Monomorphization initialize_random_state.
-CodeGen Monomorphization next_random_state.
-Print _initialize_random_state.
-Print _generate_state_vector.
-Print _next_random_state.
-
-CodeGen GenCFile "mt_generated.c"
-        _generate_state_vector
-        _initialize_random_state
-        _next_random_state.
-        

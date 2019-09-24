@@ -3,7 +3,6 @@ From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 From infotheo Require Import f2 ssralg_ext.
 Require BinNat.
-From codegen Require Import codegen.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
