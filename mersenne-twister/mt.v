@@ -1,7 +1,6 @@
 (* Implementation of MT19937 *)
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
-From infotheo Require Import f2 ssralg_ext.
 
 Require Import BinNat.
 From codegen Require Import codegen.
@@ -76,12 +75,6 @@ Definition nth_random_value (nth : nat) (seed : N) :=
   let rand := initialize_random_state seed in
   nth_random_value_with_random_state nth rand.
 
-Definition cycle : nat := 2 ^ 19937 - 1.
-
-Lemma Merrsenne_Twister_Cycle : forall seed n, nth_random_value n seed = nth_random_value (n + cycle) seed.
-
-
-  
 CodeGen Terminate Monomorphization N.land.
 CodeGen Terminate Monomorphization N.lor.
 CodeGen Terminate Monomorphization N.lxor.
