@@ -14,3 +14,7 @@ Open Scope N_scope.
 Definition cycle : nat := 2 ^ 19937 - 1.
 
 Lemma Mersenne_Twister_Cycle : forall seed n, nth_random_value n seed = nth_random_value (n + cycle) seed.
+Abort.
+
+
+
