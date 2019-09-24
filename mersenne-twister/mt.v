@@ -1,5 +1,7 @@
 (* Implementation of MT19937 *)
 From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_algebra.
+
 Require Import BinNat.
 From codegen Require Import codegen.
 
