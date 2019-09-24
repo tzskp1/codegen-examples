@@ -1,5 +1,6 @@
 -arg -w -arg -notation-overridden
 
 mt.v
+mt_alg.v
 cycle.v
 -R . mt
