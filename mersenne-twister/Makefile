@@ -5,8 +5,8 @@ Makefile.coq: _CoqProject
 
 # all:mt
 
-# mt:mt.c mt_generated.c
-# 	gcc -g -Wall mt.c -o mt
+mt: mt.c mt_generated.c
+	gcc -g -Wall mt.c -o mt
 
 # mt_generated.c: mt.v
 # 	coqc mt.v
