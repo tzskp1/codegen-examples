@@ -1,5 +1,7 @@
 (* Implementation of MT19937 *)
 From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_algebra.
+From infotheo Require Import f2.
 
 Require Import BinNat.
 
@@ -60,6 +62,23 @@ Definition next_random_state (rand : random_state) : (N * random_state) :=
       |} in
   (y4, next_rand).
 
+Fixpoint nth_random_value_with_random_state (nth : nat) (rand : random_state) : N :=
+  let (r, next_rand) := next_random_state rand in
+  match nth with
+  | 0%nat => r
+  | S m => nth_random_value_with_random_state m next_rand
+  end.
+
+Definition nth_random_value (nth : nat) (seed : N) :=
+  let rand := initialize_random_state seed in
+  nth_random_value_with_random_state nth rand.
+
+Definition cycle : nat := 2 ^ 19937 - 1.
+
+Lemma Merrsenne_Twister_Cycle : forall seed n, nth_random_value n seed = nth_random_value (n + cycle) seed.
+
+
+  
 CodeGen Terminate Monomorphization N.land.
 CodeGen Terminate Monomorphization N.lor.
 CodeGen Terminate Monomorphization N.lxor.
