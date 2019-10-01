@@ -2,7 +2,7 @@
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 Require Import BinNat.
-From infotheo Require Import f2 ssralg_ext natbin.
+From infotheo Require Import f2 ssralg_ext ssr_ext natbin.
 Require mt.
 
 Set Implicit Arguments.
@@ -44,6 +44,21 @@ Lemma N_of_wordK : cancel N_of_word word_of_N.
 Proof.
 by move=> w; rewrite /N_of_word /word_of_N /= Nnat.Nat2N.id nat_of_rVK.
 Qed.
-Lemma word_of_NK (n : N) : (N.size_nat n <= 32)%nat -> N_of_word (word_of_N n) = n.
-Admitted.
+
+Lemma word_of_NK (n : N) :
+  n < 2 ^ 32 -> N_of_word (word_of_N n) = n.
+Proof.
+move=> n232.
+rewrite /N_of_word /word_of_N /=.
+apply Nnat.N2Nat.inj.
+rewrite Nnat.Nat2N.id.
+have n232' : N.to_nat n < 2 ^ 32.
+- have-> : 2 ^ 32 = N.to_nat (N.of_nat (2 ^ 32))
+    by rewrite Nnat.Nat2N.id.
+  apply/ltP/Compare_dec.nat_compare_lt.
+  move: n232=> /ltP /Compare_dec.nat_compare_lt <-.
+  by rewrite (Nto_natE n) Nnat.Nat2N.id.
+apply (rV_of_nat_inj (nat_of_rV_up _) n232').
+by rewrite nat_of_rVK.
+Qed.
 End word_of_N.
