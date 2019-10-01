@@ -3,11 +3,14 @@ From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 From infotheo Require Import f2 ssralg_ext.
 Require BinNat.
+Require mt.
+Require Import mt_vec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+(*
 Definition len : nat := 624. (* 'n' in tgfsr3.pdf, p.4 is 623*)
 Definition m : nat := 397. (* 'm' in  tgfsr3.pdf, p.4 *)
 Definition r := 31.
@@ -22,26 +25,28 @@ Definition c := 4022730752.
 Definition upper_mask := 2147483648.
 Definition whole_mask := upper_mask * 2 - 1.
 Definition lower_mask := upper_mask - 1.
+*)
 
-Definition word := 'rV['F_2]_32.
-Definition random_state := seq word. (* x_n :: x_(n-1) :: x_(n-2) :: ... *)
+Local Notation word := 'rV['F_2]_32.
+Local Notation op := 'M['F_2]_(32, 32).
+Local Notation state := (seq word). (* x_n :: x_(n-1) :: x_(n-2) :: ... *)
 
 Section next_state.
 Local Open Scope ring_scope.
-Variable A : 'M['F_2]_(32, 32).
+Variable A : op.
 
 (* x_(l+n) = x_(l+m) + x_l *m A*)
-Definition next_Word (state : random_state) := 
-  nth 0 state (len - m + 1) + (nth 0 state len) *m A.
+Definition next_word (rand : state) := 
+  nth 0 rand (len - m + 1) + (nth 0 rand len) *m A.
 
-Definition next_state (state : random_state) : random_state :=
-  (next_Word state) :: state.
+Definition next_state (rand : state) : state :=
+  (next_word rand) :: rand.
 End next_state.
 
 Import BinNat.
 
-Definition next_random_state (state: random_state) : N * random_state.
-Admitted.
+Definition next_random_state (rand: state) : N * state.
+Abort.
 
 (*
 Fixpoint generate_state_vector (rest : nat) (acc : seq N) : seq N :=
