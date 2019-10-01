@@ -24,7 +24,7 @@ Definition M_shiftr : op :=
   \matrix_(i < 32, j < 32) (i + 1 == j : 'F_2).
 
 Definition shiftl_with_1 (w : word) : word := 
-  \row_(j < 32) (bool_of_F2 ((w *m M_shiftl) 0 j) || (j == inord 31) : 'F_2).
+  \row_(j < 32) (bool_of_F2 ((w *m M_shiftl) 0 j) || (j == 31 :> nat) : 'F_2).
 Definition shiftr_with_1 (w : word) : word :=
   \row_(j < 32) (bool_of_F2 ((w *m M_shiftr) 0 j) || (j == 0) : 'F_2).
 
