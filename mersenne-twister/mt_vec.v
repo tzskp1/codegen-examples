@@ -37,12 +37,12 @@ Definition word_of_N : N -> word :=
 Definition N_of_word : word -> N :=
   N_of_bitseq \o (map bool_of_F2) \o rVpoly.
 *)
-Definition word_of_N : N -> word := (rV_of_nat 32) \o nat_of_N.
-Definition N_of_word : word -> N := N_of_nat \o (@nat_of_rV 32).
+Definition word_of_N : N -> word := (rV_of_nat 32) \o nat_of_bin.
+Definition N_of_word : word -> N := bin_of_nat \o (@nat_of_rV 32).
 
 Lemma N_of_wordK : cancel N_of_word word_of_N.
 Proof.
-by move=> w; rewrite /N_of_word /word_of_N /= Nnat.Nat2N.id nat_of_rVK.
+by move=> ?; rewrite /N_of_word /word_of_N /= bin_of_natK nat_of_rVK.
 Qed.
 
 Lemma word_of_NK (n : N) :
@@ -50,15 +50,10 @@ Lemma word_of_NK (n : N) :
 Proof.
 move=> n232.
 rewrite /N_of_word /word_of_N /=.
-apply Nnat.N2Nat.inj.
-rewrite Nnat.Nat2N.id.
-have n232' : N.to_nat n < 2 ^ 32.
-- have-> : 2 ^ 32 = N.to_nat (N.of_nat (2 ^ 32))
-    by rewrite Nnat.Nat2N.id.
-  apply/ltP/Compare_dec.nat_compare_lt.
-  move: n232=> /ltP /Compare_dec.nat_compare_lt <-.
-  by rewrite (Nto_natE n) Nnat.Nat2N.id.
-apply (rV_of_nat_inj (nat_of_rV_up _) n232').
+Set Printing Coercions.
+apply (can_inj nat_of_binK).
+rewrite bin_of_natK.
+apply (rV_of_nat_inj (nat_of_rV_up _) n232).
 by rewrite nat_of_rVK.
 Qed.
 End word_of_N.
