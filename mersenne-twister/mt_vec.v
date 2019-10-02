@@ -45,6 +45,12 @@ Proof.
 by move=> ?; rewrite /N_of_word /word_of_N /= bin_of_natK nat_of_rVK.
 Qed.
 
+(*
+Lemma rV_of_natK len (n : N) :
+  n < 2 ^ len -> nat_of_rV len (rV_of_nat len n) = n.
+Abort.
+*)
+
 Lemma word_of_NK (n : N) :
   n < 2 ^ 32 -> N_of_word (word_of_N n) = n.
 Proof.
