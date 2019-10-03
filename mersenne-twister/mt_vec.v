@@ -2,7 +2,7 @@
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 Require Import BinNat.
-From infotheo Require Import f2 ssralg_ext natbin.
+From infotheo Require Import f2 ssralg_ext ssr_ext natbin.
 Require mt.
 
 Set Implicit Arguments.
@@ -31,36 +31,35 @@ Definition shiftr_with_1 (w : word) : word :=
 End shift.
 
 Section word_of_N.
-Import N.
-Local Open Scope ring_scope.
-
-Definition word_of_N : N -> word :=
-  binary_rect (fun n => word) 0 (fun n w => w *m M_shiftl)
-              (fun n w => shiftl_with_1 w).
-
 (*
-Definition N_of_word (w : word) : N.
-set p := rVpoly w : {poly 'F_2}.
-set q := map_poly (@GF2_of_F2 5) p.
-Check R_ringType.
+Definition word_of_N : N -> word :=
+  poly_rV \o Poly \o (map F2_of_bool) \o bitseq_of_N.
+Definition N_of_word : word -> N :=
+  N_of_bitseq \o (map bool_of_F2) \o rVpoly.
 *)
-
-Definition N_of_word (w : word) : N := 
-  locked (fix loop (n : nat) : (n < 32)%nat -> N :=
-     match n with
-     | O => fun _ => 0%N
-     | S n' =>
-       fun Hn => 
-         if w 0 (Ordinal Hn) == 0
-         then N.double (loop n' (ltnW Hn))
-         else N.succ (N.double (loop n' (ltnW Hn)))
-     end) 31 (ltnSn 31).
+Definition word_of_N : N -> word := (rV_of_nat 32) \o nat_of_bin.
+Definition N_of_word : word -> N := bin_of_nat \o (@nat_of_rV 32).
 
 Lemma N_of_wordK : cancel N_of_word word_of_N.
 Proof.
-move=> w.
-rewrite /N_of_word.
+by move=> ?; rewrite /N_of_word /word_of_N /= bin_of_natK nat_of_rVK.
+Qed.
+
+(*
+Lemma rV_of_natK len (n : N) :
+  n < 2 ^ len -> nat_of_rV len (rV_of_nat len n) = n.
 Abort.
-Lemma word_of_NK (n : N) : (N.size_nat n <= 32)%nat -> N_of_word (word_of_N n) = n.
-Admitted.
+*)
+
+Lemma word_of_NK (n : N) :
+  n < 2 ^ 32 -> N_of_word (word_of_N n) = n.
+Proof.
+move=> n232.
+rewrite /N_of_word /word_of_N /=.
+Set Printing Coercions.
+apply (can_inj nat_of_binK).
+rewrite bin_of_natK.
+apply (rV_of_nat_inj (nat_of_rV_up _) n232).
+by rewrite nat_of_rVK.
+Qed.
 End word_of_N.
