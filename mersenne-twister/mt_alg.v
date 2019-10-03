@@ -31,17 +31,30 @@ Local Notation word := 'rV['F_2]_32.
 Local Notation op := 'M['F_2]_(32, 32).
 Local Notation state := (seq word). (* x_n :: x_(n-1) :: x_(n-2) :: ... *)
 
-Section next_state.
+Section tgfsr_next_state.
 Local Open Scope ring_scope.
 Variable A : op.
 
-(* x_(l+n) = x_(l+m) + x_l *m A*)
-Definition next_word (rand : state) := 
-  nth 0 rand (len - m + 1) + (nth 0 rand len) *m A.
+(* x_(l+n) = x_(l+m) + x_l *m A, n -> len *)
+(* indexの対応: l+n -> 0, l+m -> len - m, l -> len *)
+Definition tgfsr_next_word (rand : state) := 
+  nth 0 rand (len - m) + (nth 0 rand len) *m A.
 
-Definition next_state (rand : state) : state :=
-  (next_word rand) :: rand.
-End next_state.
+Definition tgfsr_next_state (rand : state) : state :=
+  (tgfsr_next_word rand) :: rand.
+End tgfsr_next_state.
+
+Section mt_next_state.
+Local Open Scope ring_scope.
+Variable B C : op.
+
+(* x_(n+p) =  x_(l+q) + x_(n+1) *m B + x_n *m C *)
+Definition mt_next_word (rand : state) :=
+  nth 0 rand (len - m) + (nth 0 rand (len - 1)) *m B + (nth 0 rand len) *m C.
+
+Definition mt_next_state (rand : state) : state :=
+  (mt_next_word rand) :: rand.
+End mt_next_state.
 
 Import BinNat.
 
