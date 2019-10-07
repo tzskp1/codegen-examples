@@ -46,7 +46,31 @@ End tgfsr_next_state.
 
 Section mt_next_state.
 Local Open Scope ring_scope.
-Variable B C : op.
+
+Section parameter_A.
+Import BinNat.
+Local Open Scope N_scope.
+Definition a := word_of_N 2567483615.
+End parameter_A.
+
+Section matrix.
+Local Open Scope nat_scope.
+Definition r : nat := 31.
+
+Definition I_r : op :=
+  \matrix_(i < 32, j < 32) ((i == j) && (i >= r) : 'F_2).
+
+Definition I_wr : op :=
+  \matrix_(i < 32, j < 32) ((i == j) && (i < r) : 'F_2).
+
+Definition A : op :=
+  \matrix_(i < 32, j < 32)
+   ((i + 1 == j) || ((i == 31 :> nat) && (bool_of_F2 (a ord0 j))) : 'F_2).
+
+Definition B : op := I_r *m A.
+Definition C : op := I_wr *m A.
+
+End matrix.
 
 (* x_(n+p) =  x_(l+q) + x_(n+1) *m B + x_n *m C *)
 Definition mt_next_word (rand : state) :=
@@ -57,6 +81,11 @@ Definition mt_next_state (rand : state) : state :=
 End mt_next_state.
 
 Import BinNat.
+
+Variable seed : state.
+Hypothesis Size_Seed : size seed > len.
+
+
 
 Definition next_random_state (rand: state) : N * state.
 Abort.
