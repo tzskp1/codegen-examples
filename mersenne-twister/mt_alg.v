@@ -50,7 +50,7 @@ Local Open Scope ring_scope.
 Section parameter_A.
 Import BinNat.
 Local Open Scope N_scope.
-Definition a := word_of_N 2567483615.
+Definition a := word_of_N 32 2567483615.
 End parameter_A.
 
 Section matrix.
