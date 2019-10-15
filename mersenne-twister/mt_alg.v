@@ -1,6 +1,7 @@
 (* Algebraic Implementation of MT19937 *)
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
+From mathcomp Require Import all_field.
 From infotheo Require Import f2 ssralg_ext.
 Require BinNat.
 Require mt.
@@ -82,7 +83,9 @@ Definition mt_next_state (rand : state) : state :=
   (mt_next_word rand) :: rand.
 End mt_next_state.
 
-Section charactaristic.
+Section characteristic.
+Local Open Scope ring_scope.
+Local Open Scope quotient_scope.
 
 Variable M : 'M['F_2]_(19937, 19937).
 
@@ -90,8 +93,23 @@ Definition phi_M := char_poly M.
 
 Check phi_M.
 
-Check prime phi_M.
+Check prime_idealr .
 
+Definition I := fun r : {poly 'F_2} => gcdp phi_M r == phi_M.
+
+Lemma phi_M_primitive : prime_idealr I.
+Admitted.
+
+Let kI := keyed_pred phi_M_primitive.
+Variable i : kI.
+Check {ideal_quot i}.
+
+(* phi_M is primitive
+   <-> (phi_M) is prime
+   <-> {poly 'F_2} / (phi_M) is a field
+   <-> {1, t^2, t^3, t^4, .. , t^(2^p - 1)} is a cyclic group *)
+
+End characteristic.
 
 Import BinNat.
 
