@@ -63,6 +63,8 @@ Definition I_r : op :=
 Definition I_wr : op :=
   \matrix_(i < 32, j < 32) ((i == j) && (i < r) : 'F_2).
 
+(* A is the companion matrix of the bit sequence a
+   (coerced to a polynomial) *)
 Definition A : op :=
   \matrix_(i < 32, j < 32)
    ((i + 1 == j) || ((i == 31 :> nat) && (bool_of_F2 (a ord0 j))) : 'F_2).
