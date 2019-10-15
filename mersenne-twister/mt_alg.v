@@ -80,6 +80,17 @@ Definition mt_next_state (rand : state) : state :=
   (mt_next_word rand) :: rand.
 End mt_next_state.
 
+Section charactaristic.
+
+Variable M : 'M['F_2]_(19937, 19937).
+
+Definition phi_M := char_poly M.
+
+Check phi_M.
+
+Check prime phi_M.
+
+
 Import BinNat.
 
 Variable seed : state.
