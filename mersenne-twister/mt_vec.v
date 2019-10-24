@@ -107,6 +107,22 @@ suff H : forall x, linear (land^~ x)
 move=> x; rewrite /land (_ : mulmx^~ (M_land x) = mulmxr (M_land x)) //.
 exact: mulmxr_is_linear.
 Qed.
+
+Section land_Nland.
+Local Open Scope N_scope.
+Lemma land_Nland m n :
+  m < 2 ^ 32 -> n < 2 ^ 32 ->
+  N.land m n = N_of_word (land (word_of_N 32 m) (word_of_N 32 n)).
+Proof.
+move=> m232 n232.
+
+(*
+Ndigits.Nbit_faithful:
+  forall n n' : N, Ndigits.eqf (N.testbit_nat n) (N.testbit_nat n') -> n = n'
+*)
+
+Abort.
+End land_Nland.
 End land.
 
 Definition n : nat := 624. (* 'n' in tgfsr3.pdf, p.4 is 623*)
