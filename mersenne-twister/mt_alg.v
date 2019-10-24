@@ -36,6 +36,8 @@ Section tgfsr_next_state.
 Local Open Scope ring_scope.
 Variable A : op.
 
+Definition len : nat := 624.
+
 (* x_(l+n) = x_(l+m) + x_l *m A, n -> len *)
 (* indexの対応: l+n -> 0, l+m -> len - m, l -> len *)
 Definition tgfsr_next_word (rand : state) := 
@@ -51,7 +53,8 @@ Local Open Scope ring_scope.
 Section parameter_A.
 Import BinNat.
 Local Open Scope N_scope.
-Definition a := word_of_N 32 2567483615.
+Definition phi_A_seq := word_of_N 32 2567483615.
+Definition phi_A := rVpoly phi_A_seq.
 End parameter_A.
 
 Section matrix.
@@ -68,7 +71,11 @@ Definition I_wr : op :=
    (coerced to a polynomial) *)
 Definition A : op :=
   \matrix_(i < 32, j < 32)
-   ((i + 1 == j) || ((i == 31 :> nat) && (bool_of_F2 (a ord0 j))) : 'F_2).
+   ((i + 1 == j) || ((i == 31 :> nat) && (bool_of_F2 (phi_A_seq ord0 j))) : 'F_2).
+Lemma size_phi_A : (size phi_A).-1 = 32.
+Admitted.
+Definition A' : op := eq_rect _ (fun n => 'M['F_2]_(n, n)) (companionmx (rVpoly phi_A_seq)) _ size_phi_A.
+
 
 Definition B : op := I_r *m A.
 Definition C : op := I_wr *m A.
