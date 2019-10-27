@@ -1,0 +1,59 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{enumerate}
+\usepackage{url}
+\usepackage{mathrsfs}
+\usepackage{eucal}
+\usepackage{color}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage[amsmath,thmmarks]{ntheorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\theoremstyle{definition}
+\newtheorem*{exercise}{Exercise}
+\newtheorem*{remark}{Remark}
+\newtheorem*{example}{Example}
+
+\newcommand\NB[1]{{\color{red}(NB: #1)}}
+
+\title{Formal Verification and Code-Generation of the Mersenne-Twister Algorithm}
+\author{Takafumi Saikawa \and Kensaku Tanaka}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\NB{We want to advertize that this is the first formalization of
+  Mersenne-Twister. The literature needs to be checked.}
+\end{abstract}
+
+\section{Introduction}
+
+\section{Formalization of the Algorithm}
+One based on binary arithmetic : Ruby to OCaml to Coq.
+Another which is more algebraic : from the paper\cite{matsumoto1998acm}
+
+\section{Code Generation}
+Fairly easy using the codegen framework\cite{tanaka2018jip}
+
+\NB{Speed comparison between implementations?}
+
+\section{Related Work}
+
+\section{Conclusions and Future Work}
+
+% \appendix
+% 
+% \section{Detailed Proofs and Technicalities?}
+
+\bibliographystyle{plain}
+\bibliography{bib}
+
+\end{document}
