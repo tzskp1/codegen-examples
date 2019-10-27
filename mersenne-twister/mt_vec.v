@@ -125,6 +125,31 @@ Abort.
 End land_Nland.
 End land.
 
+Section lxor.
+Import GRing.Theory.
+Local Open Scope ring_scope.
+Local Open Scope N_scope.
+Definition lxor (u v : word) : word := u + v.
+Lemma lxor_Nlxor m n :
+  m < 2 ^ 32 -> n < 2 ^ 32 ->
+  N.lxor m n = N_of_word (lxor (word_of_N 32 m) (word_of_N 32 n)).
+Proof.  
+Abort.
+End lxor.
+
+Section lor.
+Import GRing.Theory.
+Local Open Scope ring_scope.
+Definition lor (u v : word) : word :=
+  \row_(i < 32) if bool_of_F2 (u 0 i) then 1 else v 0 1.
+Local Open Scope N_scope.
+Lemma lor_Nlor m n :
+  m < 2 ^ 32 -> n < 2 ^ 32 ->
+  N.lor m n = N_of_word (lor (word_of_N 32 m) (word_of_N 32 n)).
+Proof.  
+Abort.
+End lor.
+
 Definition n : nat := 624. (* 'n' in tgfsr3.pdf, p.4 is 623*)
 Definition m : nat := 397. (* 'm' in  tgfsr3.pdf, p.4 *)
 
