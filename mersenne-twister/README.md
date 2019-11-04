@@ -1,3 +1,43 @@
 # mersenne-twister
 
 using codegen of commit a2ae8b7c98d6dadc155e62327eb5c6339d9a3563 (Mon Jun 10 19:31:23 2019 +0900)
+
+# Outline for the proof of the long-period (cycle) property
+
+Lemma
+  mt.vの整数アルゴリズムと, mt_vec, mt_algの漸化式によるワード列の更新が同値であること
+
+Lemma
+  漸化式によるワード列の更新が, 19937次行列(松本1998では"matrix B". ここでもBとする)
+  の作用と同じであること
+
+Lemma
+  Bの特性多項式φBがprimitiveであることと,
+  non-zero F2-vector (bit sequence) vに対して
+  v, vB, vB^2, ...のperiodが2^19937-1であることが
+  同値であること
+
+Definition (naive)
+  primitivityの愚直な計算による判定を, coq内で計算できるように実装
+  （実用的な時間内に停止すればよいけれどしなければ次を試す）
+
+Definition (inversive-decimation)
+  inversive-decimation methodのアルゴリズムをcoq内で実用的な時間内で停止するように実装
+
+Lemma (reflection; naiveが我慢できる時間内に停止するようなら; 大変かも)
+  φBがprimitiveであることと,
+  naive algorithmがtrueを返すことが
+  同値であること
+
+Lemma (reflection; 大変だろう)
+  φBがprimitiveであることと,
+  inversive-decimation algorithmがtrueを返すことが
+  同値であること
+
+Lemma
+  temperingがbijectionであること
+
+Lemma
+  従って, temperingはperiodに影響を与えないこと
+
+
