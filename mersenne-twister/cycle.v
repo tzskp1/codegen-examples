@@ -10,7 +10,7 @@ Local Lemma exp2_dvd a b :
   2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
 Proof.
 elim: b => [|b IHb]; first by rewrite muln0 expn0 subn1 big_ord0 muln0.
-rewrite big_ord_recl mulnDr /= -IHb mulnBl !subn1 -mulnBl mulnS expnD.
+rewrite big_ord_recl mulnDr -IHb mulnBl !subn1 -mulnBl mulnS expnD.
 have H: forall a, 2 ^ a = 2 ^ a - 1 + 1 by move=> *; rewrite subnK // expn_gt0.
 by rewrite [in LHS]H mulnDl mul1n [X in _ + X]H addn1 !addnS !subn1.
 Qed.
@@ -34,11 +34,103 @@ rewrite !big_ord_recr /= subnn muln0 expn0 -[X in X < _]add0n ltn_add2r.
 by rewrite subSnn muln1 ltn_addl // expn_gt0.
 Qed.
 
+Definition stab a : {set 'I_(size phi * lead_coef phi)} :=
+[set n | ('X ^ (nat_of_ord n) * a %% phi == a %% phi)%R].
+
+Definition min_stab a :=
+foldl minn (size phi)
+      (filter (fun x => x > 0) (map (@nat_of_ord _) (enum (stab a)))).
+
+Lemma min_stab_in a :
+  min_stab a \in (filter (fun x => x > 0) (map (@nat_of_ord _) (enum (stab a)))).
+Proof.
+  rewrite /min_stab.
+  have: @Ordinal _ (lead_coef phi) _ \in enum (stab a).
+    rewrite /lead_coef.
+  rewrite 
+    rewrite /= mem_enum inE.
+    rewrite /= modpE /=.
+  elim: (enum (stab _)) => //.
+   rewrite /=.
+  elim: [seq x <- [seq i | i <- _] | 0 < x] => //.
+
+Lemma min_stab_cond a b :
+  (('X ^ (b * min_stab a)%N * a) %% phi == a %% phi)%R.
+Proof.
+  have H1: (('X ^ (min_stab a) * a) %% phi)%R == (a %% phi)%R.
+   suff: min_stab a \in (map (@nat_of_ord _) (enum (stab a))).
+    rewrite /stab.
+     have: {I : ordinal (size phi) | min_stab a = I}.
+      have H: (min_stab a < size phi).
+       rewrite /min_stab.
+       elim: [seq _ | _ <- _] => [|c l IH].
+        rewrite sp; move: m_is_prime.
+        case: m sp => // m'.
+        by case: (size phi) => // n <-.
+       apply/leq_ltn_trans/IH => {IH} /=.
+       have H : forall x y z, foldl minn x (y :: z) = minn y (foldl minn x z).
+        move=> x y z; elim: z x y => [*| ? z IH x y];
+        first by rewrite minnC.
+        by rewrite /= minnC -IH /= minnAC minnC.
+       case: ifP => //.
+       by rewrite H geq_minr.
+     by exists (@Ordinal (size phi) (min_stab a) H).
+    case=> I HI.
+    rewrite HI mem_map.
+     by rewrite mem_enum inE.
+    move=> ?? H; by apply/val_inj/H.
+   rewrite /min_stab.
+   have pos: 0 < size phi.
+    move: m_is_prime.
+    rewrite -sp.
+    by case: (size phi).
+   have: @Ordinal _ 0 pos \in enum (pred_of_set (stab a)).
+    by rewrite /= mem_enum inE GRing.mul1r.
+   set T:=  enum _.
+   case: T => //= ? l _.
+   case: ifP => /=.
+    rewrite i
+   rewrite /=.
+   rewrite in_cons => /orP [].
+    move/eqP <-.
+   Search (_ \in [seq _| _ <- _]).
+   Check mem_filter.
+   rewrite /=.
+   rewrite -inE.
+  elim: b => [|b IHb]; first by rewrite mul0n GRing.mul1r.
+  rewrite mulSn.
+  GRing.exprD.
+  suff H: forall b, (b < size phi)%N -> (('X ^ (b * min_stab a)%N * a) %% phi == a %% phi)%R.
+   rewrite (divn_eq b (size phi)).
+
+Lemma min_stab_dvd a x : x \in stab a -> min_stab a %| x.
+  rewrite inE /=.
+  rewrite (divn_eq x (min_stab a)).
+  move/eqP.
+  case: x => x i.
+  move/eqP.
+  rewrite 
+  
+  
+  Set Printing All.
+  rewrite setE.
+  rewrite mem_filter.
+  rewrite /mem
+  => H.
+  have: (('X ^ x * a) %% phi)%R == (a %% phi)%R.
+  case: H.
+  Search (_ \in [set _ | _]).
+  move/imsetP .
+  rewrite mem_
+
+Check #|stab 'X|.
+
 Lemma irreduciblity_equiv :
 reflect (irreducible_poly phi)
-(('X ^ 2 %% phi != 'X %% phi)%R && (('X ^ 2) ^ m %% phi == 'X %% phi)%R).
+(('X ^ 2 %% phi != 'X %% phi) && (('X ^ 2) ^ m %% phi == 'X %% phi))%R.
 Proof.
-  apply/(iffP idP).
+apply/(iffP idP).
+* case/andP.
   
 End irreduciblity.
   
