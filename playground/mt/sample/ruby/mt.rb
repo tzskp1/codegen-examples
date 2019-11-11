@@ -7,7 +7,7 @@ U = 11
 S = 7
 T = 15
 L = 18
-A = 0x9908B0DF
+A = 0x9908B0DF # the last row of the matrix A
 B = 0x9D2C5680
 C = 0xEFC60000
 
@@ -28,7 +28,7 @@ class MT
   def next
     z = @x[@i] & UPPER_MASK | @x[(@i + 1) % N] & LOWER_MASK
     
-    @x[@i] = @x[(@i + M) % N] ^ (z >> 1) ^ (z & 1 == 0 ? 0 : A)
+    @x[@i] = @x[(@i + M) % N] ^ (z >> 1) ^ (z & 1 == 0 ? 0 : A) # multiplying A
     
     y = @x[@i]
     y = y ^ (y >> U)
