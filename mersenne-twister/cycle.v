@@ -34,7 +34,7 @@ rewrite !big_ord_recr /= subnn muln0 expn0 -[X in X < _]add0n ltn_add2r.
 by rewrite subSnn muln1 ltn_addl // expn_gt0.
 Qed.
 
-Definition stab a : {set 'I_(2 ^ m)} :=
+Definition stab a : {set 'I_(2 ^ m).+1} :=
 [set n | ('X ^ (nat_of_ord n) * a %% phi == a %% phi)%R].
 
 Lemma foldl_min_cons x y z : foldl minn x (y :: z) = minn y (foldl minn x z).
@@ -44,7 +44,7 @@ Proof.
 Qed.
 
 Definition min_stab a :=
-foldl minn (2 ^ m).-1
+foldl minn (2 ^ m)
       (filter (fun x => x > 0) (map (@nat_of_ord _) (enum (stab a)))).
 
 Lemma gap_exp_num : size phi <= (2 ^ m) - 1.
@@ -60,8 +60,8 @@ Proof.
    by rewrite -[X in X < _]add0n ltn_add2r muln1 bin_gt0 ltnW.
 Qed.
 
-Definition min_stab_ord (a: {poly [finFieldType of 'F_2]}): ordinal (2 ^ m).
-  have H: (min_stab a < 2 ^ m).
+Definition min_stab_ord (a: {poly [finFieldType of 'F_2]}): ordinal (2 ^ m).+1.
+  have H: (min_stab a < (2 ^ m).+1).
    rewrite /min_stab.
    elim: [seq _ | _ <- _] => [|c l IH].
     by case: (2 ^ m) pm.
@@ -105,8 +105,7 @@ Lemma min_stab_in a y :
   min_stab a \in (filter (fun x => x > 0) (map (@nat_of_ord _) (enum (stab a)))).
 Proof.
   case: y => y Hy1 Hy2 y0.
-  apply/foldl_minn_in/hasP/ex_intro2;
-    last by rewrite prednK; first apply/Hy1.
+  apply/foldl_minn_in/hasP/ex_intro2/Hy1.
   rewrite mem_filter lt0n eq_sym y0.
   have->: y = Ordinal Hy1 by [].
   by rewrite mem_map ?mem_enum ?Hy2 // => *; apply/val_inj.
@@ -128,8 +127,7 @@ Qed.
 Lemma min_stab_gt0 a : 0 < min_stab_ord a.
 Proof.
   rewrite /min_stab_ord /min_stab /=.
-  elim: (enum (pred_of_set (stab a))) => [|a' l IH /=].
-   by rewrite -subn1; case: (2 ^ m - 1) pm.
+  elim: (enum (pred_of_set (stab a))) => [|a' l IH /=] //.
   case: ifP => //.
   case: a' => []//[]// a' ??.
   rewrite foldl_min_cons /=.
@@ -162,15 +160,15 @@ Lemma div_ord (a : nat) y (x : ordinal y) : ordinal y.
   by case: x.
 Defined.
 
-Lemma p_ord : ordinal (2 ^ m).
-  have H: 2 ^ m - 1 < 2 ^ m.
-   case: (2 ^ m) pm => // n.
-   by rewrite subn1.
-  apply: (Ordinal H).
+Lemma p_ord_prf : 2 ^ m - 1 < (2 ^ m).+1.
+  case: (2 ^ m) pm => // n.
+  by rewrite subn1.
 Defined.
 
-Lemma one_ord : ordinal (2 ^ m).
- have H: 1 < 2 ^ m.
+Definition p_ord := Ordinal p_ord_prf.
+
+Lemma one_ord : ordinal (2 ^ m).+1.
+ have H: 1 < (2 ^ m).+1.
   case/primeP: pm => pm' _.
   apply/(ltn_trans pm').
   rewrite subn1.
@@ -206,7 +204,89 @@ Proof.
   by rewrite mul1n.
 Qed.
 
-Lemma irreduciblity_equiv :
+Lemma min_stab_attain_base :
+  (min_stab 'X == (2 ^ m - 1)%N)%R ->
+  forall l, 0 < l < 2 ^ m - 1 -> ('X ^ l * 'X %% phi != 'X %% phi)%R.
+Proof.
+  move/eqP => H l /andP [] Hl0 Hl; apply/negP => /eqP C.
+   have Hl': l < (2 ^ m).+1.
+    apply (ltn_trans Hl).
+    by case: (2 ^ m) Hl => []//[]// n ?; rewrite subn2 /=.
+   have: Ordinal Hl' \in enum (stab 'X)
+    by rewrite mem_enum inE /= C.
+   have Hl2: (l < 2 ^ m - 1).
+    apply/(leq_trans Hl).
+    by case: (2 ^ m) pm => []//[]// ??.
+   rewrite lt0n eq_sym in Hl0.
+   rewrite mem_enum.
+   move/min_stab_min.
+   by rewrite /= Hl0 H leqNgt Hl2 => /implyP.
+Qed.
+
+Lemma ltn_subr a b : 0 < b < a -> a - b < a.
+Proof.
+  case/andP.
+  elim: a => // a IH.
+  case ab: (b == a).
+   move/eqP: ab => ->.
+   by rewrite subSnn !ltnS.
+  move/IH => {IH} IH.
+  rewrite ltnS leq_eqVlt ab => ba.
+  by rewrite subSn ?ltnS ?IH // ltnW.
+Qed.
+
+Lemma min_stab_attain :
+  ('X^(2 ^ m) %% phi)%R == ('X %% phi)%R ->
+  (min_stab 'X == (2 ^ m - 1)%N)%R ->
+  forall l k, 0 < l < 2 ^ m - 1 -> 0 < k < 2 ^ m - 1 ->
+  ('X ^ l * 'X %% phi = 'X ^ k * 'X %% phi)%R -> k = l.
+Proof.
+  move => m2 /min_stab_attain_base => Hl l k.
+  case kl: (k == l %[mod (2 ^ m - 1)])%N.
+   move: kl => + /andP [] Hl1 Hl2 /andP [] Hk1 Hk2.
+   by rewrite !modn_small // => /eqP ->.
+  move=> Hl2 Hk2.
+  case kl': (k > l).
+   have: (0 < l + (2 ^ m - 1 - k) < 2 ^ m - 1).
+    apply/andP; split.
+     rewrite lt0n addn_eq0; apply/negP => /andP [] /eqP l0 mk.
+     move: l0 mk kl => ->.
+     rewrite subn_eq0 leqNgt.
+     by case/andP: Hk2 => ? ->.
+    case/andP: Hk2 => ? Hk2.
+    rewrite addnBA; last by apply ltnW.
+    rewrite addnC -subnBA ?ltn_subr //; last by apply ltnW.
+    apply/andP; split.
+     by rewrite lt0n subn_eq0 -ltnNge.
+    by apply/(leq_ltn_trans (leq_subr _ _)).
+   move/Hl => + lk.
+   rewrite -exprnP GRing.exprD -GRing.mulrA GRing.mulrCA
+    !exprnP -modp_mul lk modp_mul -!exprnP
+    -GRing.mulrCA GRing.mulrA -GRing.exprD addnBA.
+    by rewrite addnC addnK subn1 GRing.mulrC -GRing.exprS prednK // m2.
+   by case/andP: Hk2 => ??; apply/ltnW.
+  move/negP/negP: kl'; rewrite -ltnNge ltnS leq_eqVlt => /orP [/eqP ->|] // kl'.
+  have: (0 < k + (2 ^ m - 1 - l) < 2 ^ m - 1).
+   apply/andP; split.
+    rewrite lt0n addn_eq0; apply/negP => /andP [] /eqP l0 mk.
+    move: l0 mk kl => ->.
+    rewrite subn_eq0 leqNgt.
+    by case/andP: Hl2 => ? ->.
+   case/andP: Hl2 => ? Hl2.
+   rewrite addnBA; last by apply ltnW.
+   rewrite addnC -subnBA ?ltn_subr //; last by apply ltnW.
+   apply/andP; split.
+    by rewrite lt0n subn_eq0 -ltnNge.
+   by apply/(leq_ltn_trans (leq_subr _ _)).
+  move/Hl => + lk.
+  rewrite -exprnP GRing.exprD -GRing.mulrA GRing.mulrCA
+   !exprnP -modp_mul -lk modp_mul -!exprnP
+   -GRing.mulrCA GRing.mulrA -GRing.exprD addnBA.
+   by rewrite addnC addnK subn1 GRing.mulrC -GRing.exprS prednK // m2.
+  by case/andP: Hl2 => ??; apply/ltnW.
+Qed.
+
+Lemma irreducibilityP :
 reflect (irreducible_poly phi)
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
 Proof.
@@ -218,12 +298,7 @@ apply/(iffP idP).
   have: one_ord \notin stab 'X by rewrite inE -exprnP GRing.mulrC -GRing.exprS.
   move/(min_stab_neq1 _ _ H) => -> /= => [x2m1|]; last by case: (2 ^ m - 1) o.
   constructor; first by case: (size phi) sp m_is_prime => [<- //|[]// <-].
-  move=> q.
-  apply/andP; split.
-  
-   rewrite GRing.exprD.
-   rewrite GRing.mulrA. 
-   GRing.exprD -GRing.mulrA !exprnP -modp_mul.
+  move/min_stab_attain: x2m1 => /(_ H2) x2m1.
   
 End irreduciblity.
   
