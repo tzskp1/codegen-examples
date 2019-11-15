@@ -71,7 +71,8 @@ def test_mt(a)
 end
 
 A = 0x9908B0DF # the last row of the matrix A
-
+A1 = 0x9908B0DD # the last row of the matrix A
+ 
 if test_mt(A) 
   p "ok" 
 else
