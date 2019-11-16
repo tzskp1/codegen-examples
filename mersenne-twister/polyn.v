@@ -465,6 +465,8 @@ Definition qpoly_comRingMixin :=
   ComRingMixin mul_qpolyA mul_qpolyC mul_1qpoly mul_qpolyDl qpoly1_neq0.
 Definition qpoly_ringType := Eval hnf in RingType {qpoly phi} qpoly_comRingMixin.
 Definition qpoly_comRingType := Eval hnf in ComRingType qpoly_ringType mul_qpolyC.
+End qpoly_ring.
+
 Module coerce_qpoly.
 Section coerce_qpoly.
 Context {R : fieldType}.

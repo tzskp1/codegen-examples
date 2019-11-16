@@ -410,131 +410,6 @@ rewrite /= -k0 ltn_mod.
 case: (2 ^ m - 1) pm => //.
 Qed.
 
-Require Import Coq.Arith.Wf_nat.
-
-Lemma ltn_wf : well_founded (fun x y => x < y).
-Proof.
-  elim => [//|? IHn]; constructor => y.
-  rewrite ltnS leq_eqVlt => /orP [/eqP -> //|].
-  by case: IHn => H /H.
-Qed.
-
-(* Lemma min_stab_attain3 : *)
-(* (forall l k : nat, ('X ^ l * 'X %% phi = 'X ^ k * 'X %% phi)%R -> k = l %[mod 2 ^ m - 1]) *)
-(* -> #|[seq pi ('X ^ (x : nat) * 'X)%R | x <- iota 0 (2 ^ m - 2)]| == 2 ^ m - 2. *)
-(* Proof. *)
-(*   move=> H. *)
-(*   case s: (#|[seq pi ('X ^ (x : nat) * 'X)%R | x <- iota 0 (2 ^ m - 2)]| > 2 ^ m - 2). *)
-(*    move: s. *)
-(*    rewrite ltnNge. *)
-(*    have H': (2 ^ m - 2 = size ([seq pi ('X ^ (x : nat) * 'X)%R | x <- iota 0 (2 ^ m - 2)])) *)
-(*     by rewrite size_map size_iota. *)
-(*    by rewrite [X in _ <= X]H' card_size. *)
-(*   move/negP/negP: s. *)
-(*   rewrite -ltnNge ltnS leq_eqVlt => /orP []//. *)
-  
-(*   #|[seq pi ('X ^ (x : nat))%R | x <- iota 0 (2 ^ m - 1)]| == 2 ^ m - 1 *)
-
-(* Check #|{qpoly phi}|. *)
-(* Check [comRingType of [ringType of {qpoly phi}]]. *)
-(* Compute iota 0 3. *)
-(* Require Import Coq.Logic.FunctionalExtensionality. *)
-
-(* Lemma map_pi_not_mem0 : *)
-(* 0%R \notin *)
-(* image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) 'Z_(2 ^ m - 1). *)
-(* Proof. *)
-(* have<-: *)
-(* (fun (x: 'I_(#|'Z_(2 ^ m - 1)|)) => pi ('X ^ (enum_val x) * 'X)%R) \o enum_rank *)
-(* = (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R). *)
-(*  apply/functional_extensionality => x. *)
-(*  by rewrite /= enum_rankK. *)
-(* have: *)
-(* [seq ((fun x : 'I_#|'Z_(2 ^ m - 1)| *)
-(* => pi ('X ^ enum_val x * 'X)%R) \o enum_rank) x | x : 'Z_(2 ^ m - 1)] *)
-(* = [seq (fun x : 'I_#|'Z_(2 ^ m - 1)| => *)
-(* pi ('X ^ enum_val x * 'X)%R) x | x <- [seq enum_rank x | x in 'Z_(2 ^ m - 1)]]. *)
-(* rewrite !map_comp /=. *)
-(* rewrite !map_comp /=. *)
-(* rewrite inE. *)
-(* rewrite /comp. *)
-(* Search [seq _ | x in [seq _ | _ in _]]. *)
-(* done. *)
-(* rewrite map_comp. *)
-(* rewrite  *)
-(*   th *)
-(*  case: . *)
-(*  rewrite -map_comp. *)
-(* Check enum_rank. *)
-(* rewrite /enum_rank. *)
- 
-(* by move=> x;  *)
-           
-(* rewrite enum_ *)
-(* Compute ord_enum 2. *)
-(* apply/eqP. *)
-(* rewrite eqE /=. *)
-
-(* move=> x. *)
-(* rewrite mem_map. *)
-(* Check enum_rankK _. *)
-(* apply/enum_val_inj. *)
-(* rewrite enum_rankK_in. *)
-
-(*   rewrite -disjoint1 disjoint_sym disjoint_has. *)
-(*   apply/negP => /hasP [] /= x. *)
-(*   rewrite inE. *)
-(*   move=> ?. *)
-  
-(*   rewrite /=. *)
-
-(* move=> x. *)
-(* move: (@enum_rankK [finType of 'Z_(2 ^ m - 1)]) => Hc. *)
-(* rewrite -> Hc. *)
-(* rewrite *)
-(* rewrite -mem_enum. *)
-(* rewrite /=. *)
-(* rewrite /=. *)
-(* rewrite inE. *)
-(* rewrite -map_comp. *)
-(* apply/val_inj. *)
-(* apply/eqP. *)
-(* rewrite eqE /=. *)
-(* move=> x. *)
-(*         map (fun x => pi ('X ^ (x : nat) * 'X)%R) (iota 0 (2 ^ m - 1)). *)
-(*   Check ord_enum. *)
-(*   Check @enum_rankK _. *)
-(*    rewrite *)
-(*    case: (2 ^ m - 1) pm => //= m' pm'. *)
-(*    apply/eqP. *)
-(*    rewrite -size_eq0. *)
-(*    rewrite size_map /=. *)
-(*    rewrite -cardT card_ord /Zp_trunc. *)
-(*    rewrite size_enum. *)
-   
-(*    done. *)
-(*    compute. *)
-(*    Check nilp. *)
-(*    rewrite map *)
-   
-(*    apply/val_inj. *)
-(*    rewrite iotann. *)
-(*    rewrite seqP. *)
-(*   done. *)
-(*   [seq qpolify size_phi_gt1 ('X ^ x * 'X) | x : 'Z_(2 ^ m - 1)] *)
-(*   rewrite /=. *)
-(*   rewrite /mem_image. *)
-
-Lemma map_pi_subset :
-image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) 'Z_(2 ^ m - 1)
-\subset (finset {qpoly phi} :\ (0 : {qpoly phi})%R).
-Proof.
-  rewrite subset_all.
-  apply/allP => x.
-  move=> x.
-  rewrite subsetE.
-  apply/subsetP.
-
 Lemma map_pi_inj :
 (forall l k : nat, ('X ^ l * 'X %% phi = 'X ^ k * 'X %% phi)%R -> k = l %[mod 2 ^ m - 1]) ->
 injective (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R).
@@ -567,20 +442,86 @@ Qed.
 
 Lemma map_piE :
 (forall l k : nat, ('X ^ l * 'X %% phi = 'X ^ k * 'X %% phi)%R -> k = l %[mod 2 ^ m - 1])
--> ((0 : {qpoly phi})%R \in
-   (image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) =>
-              pi ('X ^ x * 'X)%R) 'Z_(2 ^ m - 1))) \/
-(image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) 'Z_(2 ^ m - 1)
-=i finset {qpoly phi} :\ (0 : {qpoly phi})%R).
+-> (image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) 'Z_(2 ^ m - 1)
+=i (finset {qpoly phi} :\ (0 : {qpoly phi})%R)).
 (* =i {unit [comRingType of [ringType of {qpoly phi}]]}. *)
 Proof.
-  move/map_pi_card => H.
-  case pi0: (0%R \in [seq pi _%R | x in 'Z_(2 ^ m - 1)]); auto.
-  right; apply/subset_cardP.
-   rewrite cardsDS /=.
-   rewrite cardsT H card_npoly card_ord sp cards1 //.
-   by rewrite sub1set inE.
+  move=> H0; move/map_pi_card: (H0) => H.
+  apply/subset_cardP.
+   rewrite cardsDS /= ?sub1set ?inE //.
+   by rewrite cardsT H card_npoly card_ord sp cards1.
+  suff: codom (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R)
+        \subset (finset {qpoly phi} :\ (0 : {qpoly phi})%R)
+   by apply/subset_trans/subsetP/image_codom.
   apply/subsetP => x.
+  rewrite codomE !inE /=.
+  elim: (enum 'Z_(2 ^ m - 1)) => //= a l IH.
+  rewrite in_cons => /orP [|/IH -> //].
+  rewrite andbT !eqE /= !modp_mod => /eqP Hx.
+  rewrite Hx.
+  case: a Hx.
+  elim.
+   move=> /=.
+  case phix: ((('X ^ a * 'X) %% phi)%R == 0)%R => //.
+  move: (phix) => <-.
+  apply/negP => /dvdpP/dvdpP.
+  rewrite dvdp_eq.
+  rewrite (divp_eq ('X ^ a * 'X) phi).
+  move/eqP: (phix) => ->.
+  rewrite GRing.addr0.
+  rewrite 
+   phix'.
+  rewrite -modp_mod.
+  move/eqP: (phix) (phix') => ->.
+  move/esym/poly_idomainAxiom => /orP [].
+   
+   
+  rewrite -size_poly_eq0.
+  move/eqP: (phix) (@size1_polyC _ (('X ^ a * 'X) %% phi)%R).
+  move=> ->.
+  rewrite Hx -modp_mod.
+  rewrite modp_mod.
+  
+  move/implyP.
+  apply/negP.
+  rewrite negb_imply -ltnNge.
+  rewrite ltn_modpN0 // andbT.
+  rewrite size_modp.
+  
+  rewrite -Hx.
+  rewrite -Hx.
+  rewrite size_modp.
+  size_mul // ?size_polyX.
+  rewrite -!exprnP !size_polyXn !addn2 /=.
+  move/eqP: Hx.
+  rewrite eqE /=.
+  have<-: (size phi).-1.+1 = size phi by rewrite prednK.
+  rewrite sp ltnS => /implyP.
+  apply/negP; rewrite -ltnNge.
+  have: ((size ('X^a)).-1.+1 = size ('X^a))%R.
+  rewrite size_exp.
+   leqNgt.
+  rewrite 
+  rewrite //=.
+   have: (map nat_of_ord (enum 'Z_(2 ^ m - 1) = (iota 0 (2 ^ m - 1)).
+   
+   rewrite ord_enum.
+  apply image_codom.
+  rewrite t
+  rewrite -> subsetIidr.
+  apply/subsetD1P. 
+  
+  have: (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) @: 'Z_(2 ^ m - 1)
+  = (image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) 'Z_(2 ^ m - 1)).
+  rewrite subsetE.
+  move=> x.
+  rewrite /=.
+  Check predD.
+  apply/setIidPl.
+  apply/setIidPr.
+  
+  rewrite subsetD.
+  apply/subsetDP.
   rewrite !inE.
   case x0: (x != 0)%R => //.
   by move/eqP: x0 pi0 => -> ->.
