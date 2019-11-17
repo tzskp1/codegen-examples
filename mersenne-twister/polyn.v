@@ -496,15 +496,10 @@ repeat constructor; move=> *; apply/eqP.
 Defined.
 Local Definition pi := RMorphism rm_qp.
 
-Lemma eqr_pi p q : pi p == pi q = (p %% phi == q %% phi).
-  by rewrite eqE /=.
-Qed.
-
 End coerce_qpoly.
 Module Exports.
 Definition canon_surj (R : fieldType) (phi : {poly R}) (H : size phi > 1)
   := pi H.
-Notation eqr_pi := eqr_pi.
 End Exports.
 End coerce_qpoly.
 Export coerce_qpoly.Exports.

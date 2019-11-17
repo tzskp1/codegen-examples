@@ -392,7 +392,7 @@ Lemma map_pi_inj :
   -> injective (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R).
 Proof.
   move=> H x y /eqP.
-  rewrite eqr_pi => /eqP /H.
+  rewrite eqE /= => /eqP /H.
   case: y => y yH.
   case: x => x xH.
   rewrite !modn_small //=.
