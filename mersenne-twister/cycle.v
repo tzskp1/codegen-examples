@@ -510,58 +510,36 @@ apply/(iffP idP).
    apply/negP => /eqP q0'.
    move: q0' q0 => ->.
    by rewrite size_polyC eqxx.
-have: (pi 1%:P)%R \in (finset {qpoly phi} :\ (0 : {qpoly phi})%R).
- rewrite !inE andbT eqE /= -size_poly_eq0 modp_small // ?ltn_size_polyC_X ?size_polyC //.
- by case: (size phi) sp m_is_prime => [<-|] //[]// <-.
-rewrite -!(map_piE H H2 x2m1).
-move: (min_stab_attain2 H H2 x2m1) => H0.
-case/(map_piP _ H0) => one onee.
-case/(map_piP _ H0) => q1 <-.
-have pq0: pi ('X ^ q1 * 'X)%R != 0%R.
- rewrite /= Xn_phi_neq0 => //.
-case/Pdiv.RingMonic.rdvdpP; first by apply/f2p_monic.
-move=> x pxp.
-case x0: (x == 0)%R.
- move/eqP: x0 pxp phi_neq0 => ->.
- rewrite GRing.mul0r => <-.
- by rewrite eqxx.
-case px: (pi x == 0)%R.
- move/eqP: px => /(f_equal val) /modp_eq0P/dvdp_leq.
- have/dvdp_leq: (x %| phi)%R by rewrite pxp dvdp_mulr.
- rewrite phi_neq0 x0 /= leqNgt => /implyP /negPf xp.
- rewrite leq_eqVlt xp orbF => /implyP /eqP px.
- have: size phi = size (x * pi ('X ^ q1 * 'X))%R by rewrite /= -pxp.
- rewrite size_mul ?x0 //= px => /eqP.
- by rewrite -subn1 -[X in X == _]addn0 -addnBA ?lt0n ?size_poly_eq0 // eqn_add2l
-            eq_sym subn_eq0.
-have/dvdp_leq: (x %| phi)%R by rewrite pxp dvdp_mulr.
-rewrite phi_neq0 => /implyP /=.
-rewrite leq_eqVlt => /orP [/eqP|] xp.
- have: size phi = size (x * pi ('X ^ q1 * 'X))%R by rewrite /= -pxp.
- rewrite size_mul ?x0 //= xp => /eqP.
- by rewrite -subn1 -[X in X == _]addn0 -addnBA ?lt0n ?size_poly_eq0 // eqn_add2l
-            eq_sym subn_eq0.
-have xx: x = pi x by rewrite /= modp_small.
-have: pi phi == pi (x * pi ('X ^ q1 * 'X))%R by rewrite -pxp.
- rewrite GRing.rmorphM.
-have: (pi x)%R \in (finset {qpoly phi} :\ (0 : {qpoly phi})%R)
- by rewrite !inE andbT eqE /= -size_poly_eq0 modp_small //
-         ?ltn_size_polyC_X ?size_polyC // size_poly_eq0 x0.
-rewrite -!(map_piE H H2 x2m1).
-case/(map_piP _ H0) => x1 <-.
-rewrite -GRing.rmorphM eqE /= modpp modp_mul.
-rewrite GRing.mulrCA !GRing.mulrA -GRing.exprD GRing.mulrC.
-rewrite GRing.mulrA -GRing.exprS eq_sym => /negPn.
-rewrite Xn_phi_neq0 //.
-
-   rewrite inE in_set1; apply/andP; split.
-   by rewrite inE.
-  rewrite q0.
-  apply/implyP.
-  move=> x.
-  constructor.
-  Focus 2.
-  move=> ip.
+  rewrite -!(map_piE H H2 x2m1).
+  move: (min_stab_attain2 H H2 x2m1) => H0.
+  case/(map_piP _ H0) => q1 <-.
+  have pq0: pi ('X ^ q1 * 'X)%R != 0%R.
+   rewrite /= Xn_phi_neq0 => //.
+  case/Pdiv.RingMonic.rdvdpP; first by apply/f2p_monic.
+  move=> x pxp.
+  case x0: (x == 0)%R.
+   move/eqP: x0 pxp phi_neq0 => ->.
+   rewrite GRing.mul0r => <-.
+   by rewrite eqxx.
+  have/dvdp_leq: (x %| phi)%R by rewrite pxp dvdp_mulr.
+  rewrite phi_neq0 => /implyP /=.
+  rewrite leq_eqVlt => /orP [/eqP|] xp.
+   have: size phi = size (x * pi ('X ^ q1 * 'X))%R by rewrite /= -pxp.
+   rewrite size_mul ?x0 //= xp => /eqP.
+   by rewrite -subn1 -[X in X == _]addn0 -addnBA ?lt0n ?size_poly_eq0
+              // eqn_add2l eq_sym subn_eq0.
+  have xx: x = pi x by rewrite /= modp_small.
+  have: pi phi == pi (x * pi ('X ^ q1 * 'X))%R by rewrite -pxp.
+  have: (pi x)%R \in (finset {qpoly phi} :\ (0 : {qpoly phi})%R)
+   by rewrite !inE andbT eqE /= -size_poly_eq0 modp_small //
+           ?ltn_size_polyC_X ?size_polyC // size_poly_eq0 x0.
+  rewrite GRing.rmorphM -!(map_piE H H2 x2m1).
+  case/(map_piP _ H0) => x1 <-.
+  rewrite -GRing.rmorphM eqE /= modpp modp_mul
+          GRing.mulrCA !GRing.mulrA -GRing.exprD GRing.mulrC
+          GRing.mulrA -GRing.exprS eq_sym => /negPn.
+  by rewrite Xn_phi_neq0.
+* 
   case: (@galLgen _ L [aspace of 1%VS]).
   rewrite /=.
   
