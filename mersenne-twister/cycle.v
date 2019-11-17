@@ -61,9 +61,6 @@ Variable phi : {poly [finFieldType of 'F_2]}.
 Definition m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
 
-(* Variable m : nat. *)
-(* Hypothesis sp : (size phi).-1 = m. *)
-
 Local Lemma exp2_dvd a b :
   2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
 Proof.
@@ -492,8 +489,7 @@ apply/(iffP idP).
   case/min_stab_dvd: (H) pm => + /primeP [] o pm' => /pm' {pm'}.
   have: one_ord \notin stab 'X by rewrite inE -exprnP GRing.mulrC -GRing.exprS.
   move/(@min_stab_neq1 _ _ H) => -> /= => [x2m1|]; last by case: (2 ^ m - 1) o.
-  apply/irreducibleP/andP.
-  constructor => //.
+  apply/irreducibleP/andP; constructor => //.
   apply/forallP => q; apply/implyP.
   case q0: (size q == 0); first by move/eqP: q0 => ->.
   have: q \in (finset {qpoly phi} :\ (0 : {qpoly phi})%R).
@@ -528,7 +524,42 @@ apply/(iffP idP).
           GRing.mulrCA !GRing.mulrA -GRing.exprD GRing.mulrC
           GRing.mulrA -GRing.exprS eq_sym => /negPn.
   by rewrite Xn_phi_neq0.
-* move=> ip; case/irredp_FAdjoin: (ip) => L + [] z zsp.
+* (*
+   This direction is trivial.
+   Because the statement just says that the galois group is nontrivial.
+  *)
+  move=> ip; case/irredp_FAdjoin: (ip) => L dL [] z zsp sL.
+  set f : {qpoly phi} -> L := (fun g => (map_poly (GRing.in_alg L) g).[z])%R.
+  have rmf: rmorphism f.
+   repeat constructor.
+   * move=> x y; subst f.
+     by rewrite /= !GRing.rmorphB hornerD hornerN.
+   * move=> x y; subst f.
+     rewrite /= -hornerM -GRing.rmorphM.
+     set T := (_ * _)%R.
+     rewrite [in RHS](divp_eq T phi) GRing.rmorphD hornerD GRing.rmorphM hornerM.
+     move/rootP: zsp => ->.
+     by rewrite GRing.mulr0 GRing.add0r.
+   * subst f.
+     by rewrite /= modp_small ?GRing.rmorph1 ?hornerC // size_polyC.
+  Check RMorphism rmf.
+  have: {linear {qpoly phi} -> L}%R.
+  constructor.
+  apply (lmorphism _).
+  
+  Check ((map_poly (GRing.in_alg L) phi).[z])%R.
+  Check ((@map_poly phi) z)%R.
+  Check phi.[z]%R.
+  Check z : [finFieldType of 'F_2].
+  Check @Fermat's_little_theorem _ L [aspace of 1%VS].
+   rewrite -sL.
+  have: {rmorphism L -> {qpoly phi}}%R.
+   rewrite -sL.
+  rewrite /root /map_poly /= in zsp.
+  Check finField_galois_generator.
+  apply/(RMorphism _).
+       /(_ : rmorphism (f L)).
+  
   Check ([aspace of 1%VS] : {subfield L})%R.
   case: (@galLgen _ L [aspace of 1%VS]).
   rewrite /=.
@@ -538,8 +569,6 @@ apply/(iffP idP).
   Check (@SubFieldExtType _ L _ z _ _ ip).
   (* have f: [finFieldType of 'F_2] -> L by []. *)
    (* Show Proof. *)
-  have: {rmorphism [finFieldType of 'F_2] -> L}%R.
-   apply/(RMorphism _)/(_ : rmorphism (f L)).
    constructor.
    case => [][|[]//] ? [][|[]//] ?.
    by rewrite !GRing.subr0.
