@@ -5,6 +5,117 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Section ext.
+Variable R : fieldType.
+Implicit Types (p : {poly R}) (c : R) (n : nat).
+Import GRing.Theory.
+Local Open Scope ring_scope.
+
+Lemma ltn_size_polyC_X c p : p != 0 -> (size (c%:P) < size (p * 'X)%R)%N.
+Proof.
+move=> ?; rewrite size_mul ?polyX_eq0 // size_polyX size_polyC addn2.
+case: (c != 0) => //.
+by rewrite ltnS lt0n size_poly_eq0.
+Qed.
+
+Lemma polyX_neq0 : ('X : {poly R}) != 0.
+Proof. by rewrite -size_poly_eq0 size_polyX. Qed.
+
+Hint Resolve ltn_size_polyC_X polyX_neq0 : core.
+
+Lemma lem1 q n : prime q -> (n < q -> n.+1 != n %[mod q])%N.
+Proof.
+  move=> Hq nq.
+  case n0: (n == 0)%N.
+   move/eqP: n0 => ->.
+   rewrite mod0n modn_small //.
+   by case: q Hq nq => []//[].
+  case nsq: (n.+1 == q).
+   move/eqP: nsq => <-.
+   by rewrite modnn modn_small // eq_sym n0.
+  have nsq': (n.+1 < q)%N
+   by rewrite ltn_neqAle nq nsq.
+  rewrite !modn_small //.
+  by elim n.
+Qed.
+
+(* Lemma size_poly_eq2 p : *)
+(*   p \is monic -> (size p == 2) -> (p == 'X). *)
+(* Proof. *)
+(*   move=> Hp. *)
+(*   rewrite -eqp_monic ?monicX //. *)
+(*   case pX: (p %= 'X). *)
+(*    by rewrite (eqp_size pX) size_polyX. *)
+(*   apply/implyP/negP => /eqP p2. *)
+(*   move/negP/negP: pX. *)
+(*   rewrite negb_and => /orP [] /negP; apply. *)
+(*   move: p p2 Hp. *)
+(*   apply: poly_ind. *)
+(*    by rewrite size_polyC eqxx. *)
+(*   move=> p c _. *)
+(*   case p0: (p != 0). *)
+(*    rewrite size_addl ?ltn_size_polyC_X // size_mul // size_polyX addn2. *)
+(*    case. *)
+  
+(*   move/negP; apply. *)
+  
+(*   apply/implyP. *)
+(*   apply/negP. *)
+(*   rewrite negb_negb. *)
+(*   rewrite *)
+(*   rewrite /eqp. *)
+(*   move=> Hp. *)
+(*   rewrite eqp_monic // ?monicX // . *)
+(*   case pX: (p == 'X). *)
+(*    move/eqP: pX => ->. *)
+(*    by rewrite size_polyX. *)
+(*   move: p Hp pX. *)
+(*   apply: poly_ind. *)
+(*    move/eqP/esym/eqP => /=. *)
+(*    by rewrite lead_coef0 oner_eq0. *)
+(*   move=> p c _. *)
+(*   case p0: (p != 0). *)
+(*    rewrite size_addl ?ltn_size_polyC_X // size_mul // size_polyX addn2 eqSS. *)
+(*   hp *)
+(*   done. *)
+
+Lemma polyXn_eq0 n : (('X^n : [ringType of {poly R}]) == 0) = false.
+Proof. by rewrite -size_poly_eq0 size_polyXn. Qed.
+
+(* Lemma factor_powX n p : *)
+(* p \is monic -> *)
+(* p %| 'X ^ n * 'X -> *)
+(* exists (m : nat), p = 'X ^ m. *)
+(* Proof. *)
+(*   move=> pm H. *)
+(*   have p0: (p != 0). *)
+(*    apply/eqP => Hc. *)
+(*    move: Hc H => ->. *)
+(*    rewrite dvd0p -exprnP mulrC -exprS. *)
+(*    by rewrite -size_poly_eq0 size_polyXn. *)
+(*   move: H. *)
+(*   rewrite -exprnP mulrC -exprS. *)
+(*   case/dvdpP => x xp. *)
+(*    have: (size ('X^n.+1 : [ringType of {poly R}]) = size (x * p)) *)
+(*     by rewrite xp. *)
+(*    case x0: (x != 0); last first. *)
+(*     move/negP/negP/eqP: x0 xp => -> /eqP. *)
+(*     by rewrite mul0r polyXn_eq0. *)
+(*    rewrite size_polyXn size_mul //. *)
+(*    move x0': (size x) => X. *)
+(*    case: X x0' x0. *)
+(*     by rewrite -size_poly_eq0 => ->. *)
+(*    case; last first. *)
+(*     case => [|?]. *)
+(*      have: lead_coef 'X^n.+1 = lead_coef (x * p) *)
+(*       by rewrite xp. *)
+(*      rewrite lead_coefXn lead_coef_Mmonic //. *)
+(*      have: ('X^n.+1).[0] = (x * p).[0] *)
+(*       by rewrite xp. *)
+(*      rewrite horner_exp_comm /comm_poly ?mulr0 ?mul0r // hornerX exprS mul0r. *)
+     (* rewrite hornerM_comm /comm_poly ?mulr0 ?mul0r //. *)
+End ext.
+
 Section irreduciblity.
 Variable m : nat.
 Variable phi : {poly [finFieldType of 'F_2]}.
@@ -65,11 +176,6 @@ Proof. by []. Qed.
 (* rewrite /L. *)
 (* by case: (FinSplittingFieldFor _). *)
 (* Qed. *)
-
-Lemma polyX_neq0 : (('X : {poly [finFieldType of 'F_2]}) != 0)%R.
-Proof.
-  by rewrite -size_poly_eq0 size_polyX.
-Qed.
 
 (* Definition canonical_poly : {poly [finFieldType of 'F_2]} := ('X ^ m - 1)%R. *)
 (* Lemma cp_neq0 : (canonical_poly != 0)%R. *)
@@ -441,12 +547,16 @@ Proof.
 Qed.
 
 Lemma map_piE :
-(forall l k : nat, ('X ^ l * 'X %% phi = 'X ^ k * 'X %% phi)%R -> k = l %[mod 2 ^ m - 1])
--> (image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) 'Z_(2 ^ m - 1)
+  p_ord \in stab 'X ->
+  ('X^(2 ^ m) %% phi)%R == ('X %% phi)%R ->
+  (min_stab 'X == (2 ^ m - 1)%N)%R ->
+(image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) 'Z_(2 ^ m - 1)
 =i (finset {qpoly phi} :\ (0 : {qpoly phi})%R)).
 (* =i {unit [comRingType of [ringType of {qpoly phi}]]}. *)
 Proof.
-  move=> H0; move/map_pi_card: (H0) => H.
+  move=> H1 H2 H3.
+  move: (min_stab_attain2 H1 H2 H3) => H0.
+  move/map_pi_card: (H0) => H.
   apply/subset_cardP.
    rewrite cardsDS /= ?sub1set ?inE //.
    by rewrite cardsT H card_npoly card_ord sp cards1.
@@ -456,75 +566,16 @@ Proof.
   apply/subsetP => x.
   rewrite codomE !inE /=.
   elim: (enum 'Z_(2 ^ m - 1)) => //= a l IH.
-  rewrite in_cons => /orP [|/IH -> //].
-  rewrite andbT !eqE /= !modp_mod => /eqP Hx.
-  rewrite Hx.
-  case: a Hx.
-  elim.
-   move=> /=.
-  case phix: ((('X ^ a * 'X) %% phi)%R == 0)%R => //.
-  move: (phix) => <-.
-  apply/negP => /dvdpP/dvdpP.
-  rewrite dvdp_eq.
-  rewrite (divp_eq ('X ^ a * 'X) phi).
-  move/eqP: (phix) => ->.
-  rewrite GRing.addr0.
-  rewrite 
-   phix'.
-  rewrite -modp_mod.
-  move/eqP: (phix) (phix') => ->.
-  move/esym/poly_idomainAxiom => /orP [].
-   
-   
-  rewrite -size_poly_eq0.
-  move/eqP: (phix) (@size1_polyC _ (('X ^ a * 'X) %% phi)%R).
-  move=> ->.
-  rewrite Hx -modp_mod.
-  rewrite modp_mod.
-  
-  move/implyP.
-  apply/negP.
-  rewrite negb_imply -ltnNge.
-  rewrite ltn_modpN0 // andbT.
-  rewrite size_modp.
-  
-  rewrite -Hx.
-  rewrite -Hx.
-  rewrite size_modp.
-  size_mul // ?size_polyX.
-  rewrite -!exprnP !size_polyXn !addn2 /=.
-  move/eqP: Hx.
-  rewrite eqE /=.
-  have<-: (size phi).-1.+1 = size phi by rewrite prednK.
-  rewrite sp ltnS => /implyP.
-  apply/negP; rewrite -ltnNge.
-  have: ((size ('X^a)).-1.+1 = size ('X^a))%R.
-  rewrite size_exp.
-   leqNgt.
-  rewrite 
-  rewrite //=.
-   have: (map nat_of_ord (enum 'Z_(2 ^ m - 1) = (iota 0 (2 ^ m - 1)).
-   
-   rewrite ord_enum.
-  apply image_codom.
-  rewrite t
-  rewrite -> subsetIidr.
-  apply/subsetD1P. 
-  
-  have: (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) @: 'Z_(2 ^ m - 1)
-  = (image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R) 'Z_(2 ^ m - 1)).
-  rewrite subsetE.
-  move=> x.
-  rewrite /=.
-  Check predD.
-  apply/setIidPl.
-  apply/setIidPr.
-  
-  rewrite subsetD.
-  apply/subsetDP.
-  rewrite !inE.
-  case x0: (x != 0)%R => //.
-  by move/eqP: x0 pi0 => -> ->.
+  rewrite in_cons => /orP [/eqP ->|/IH -> //].
+  rewrite andbT !eqE /= !modp_mod.
+  apply/negP => /eqP Hc.
+  move: (H0 a a.+1).
+  rewrite -!exprnP GRing.exprS -GRing.mulrA -[X in _ = X]modp_mul
+          Hc GRing.mulr0 mod0p => /(_ erefl)/eqP.
+  apply/negP/lem1 => //.
+  case: a Hc => a /=.
+  by rewrite !prednK //;
+  case: (2 ^ m - 1) pm => []//[]//.
 Qed.
 
 Lemma surj_mod_ring :
