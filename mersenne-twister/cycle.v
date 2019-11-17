@@ -482,6 +482,11 @@ Lemma irreducibleP :
 reflect (irreducible_poly phi)
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
 Proof.
+(*
+based on:
+ http://www.math.sci.hiroshima-u.ac.jp/~m-mat/TEACH/0407-2.pdf
+ P. 27
+*)
 apply/(iffP idP).
 * case/andP => H1 H2.
   have H: p_ord \in stab 'X
@@ -542,6 +547,79 @@ apply/(iffP idP).
      by rewrite GRing.mulr0 GRing.add0r.
    * subst f.
      by rewrite /= modp_small ?GRing.rmorph1 ?hornerC // size_polyC.
+  set rf := RMorphism rmf.
+  have z2z: (z ^ 2 != z)%R.
+   apply/negP => /eqP z2z.
+   move: dL => /=.
+   rewrite -sL Fadjoin_eq_sum /Fadjoin_sum.
+   case: (adjoin_degree 1%AS z).
+    move: m_is_prime.
+    rewrite big_ord0 dimv0 /m.
+    by case: (size phi) => []//[].
+   case.
+    move: m_is_prime.
+    rewrite /= big_ord1 GRing.expr0 prodv1 dimv1 /m.
+    by case: (size phi) => []//[]//[].
+   case.
+    move: m_is_prime.
+    rewrite !big_ord_recl big_ord0 !prod1v GRing.expr0 GRing.expr1.
+    rewrite addv0 dimv_disjoint_sum.
+     rewrite dimv1 add1n.
+     rewrite dim_algid.
+    rewrite add1v.
+    rewrite -z2z.
+    rewrite -exprnP.
+    rewrite !GRing.exprS GRing.expr0.
+    Check (fun x y => (x + y)%VS).
+    rewrite GRing.addr0.
+   move=> n.
+   rewrite !big_ord_recl /=.
+   rewrite /=.
+   prod1v.
+   
+   Check (fun x y => (x * y)%VS).
+   set T := (_ * _)%VS.
+   have: T = 1%VS.
+   Check (1 * 1).
+   rewrite /= GRing.mul1r.
+    rewrite 
+    move/(f_equal val).
+   have: \dim (1 * 1) = \dim 1.
+   rewrite GRing.mulr1.
+   Set Printing All.
+   rewrite scale1mx.
+   rewrite mul1mx.
+   Check Vector.InternalTheory.vs2mx .
+   rewrite /dimv.
+   set T := (_ * _)%R.
+   rewrite dimv1.
+   rewrite GRing.mulr1.
+   rewrite /=.
+   rewrite eq_bigr.
+   rewrite big_
+    case=> //.
+    case=> //.
+    rewrite /=.
+    case:
+   rewrite adjoin_degreeE.
+   rewrite -sL dim_Fadjoin 
+   rewrite dim_Fadjoin adjoin_degreeE.
+   rewrite /=.
+   Check (<<_; _>>)%R.
+   Locate "<<_;_>>".
+   rewrite span_cat.
+   Set Printing All.
+   rewrite span_cons.
+  
+  Compute z \in L.
+  move: (@Fermat's_little_theorem _ L [aspace of 1%VS] (rf (pi 1))%R).
+  rewrite /=.
+  rewrite \dim.
+  Check [finFieldType of L].
+  have: #|[finFieldType of L]| = 2 ^ m.
+  have bif: bijective f.
+  rewrite /bijective.
+   constructor.
   Check RMorphism rmf.
   have: {linear {qpoly phi} -> L}%R.
   constructor.
@@ -551,7 +629,6 @@ apply/(iffP idP).
   Check ((@map_poly phi) z)%R.
   Check phi.[z]%R.
   Check z : [finFieldType of 'F_2].
-  Check @Fermat's_little_theorem _ L [aspace of 1%VS].
    rewrite -sL.
   have: {rmorphism L -> {qpoly phi}}%R.
    rewrite -sL.
