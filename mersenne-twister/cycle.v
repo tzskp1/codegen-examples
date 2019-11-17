@@ -99,17 +99,17 @@ Proof.
   by case: (size phi).
 Qed.
 
-Lemma size_phi_gt1 : size phi > 1.
+Lemma phi_gt1 : 1 < size phi.
 Proof.
   move: m_is_prime; rewrite /m.
   by case: (size phi) => []//[].
 Qed.
 
 Local Canonical qpoly_ringType_phi :=
-  Eval hnf in qpoly_ringType size_phi_gt1.
+  Eval hnf in qpoly_ringType phi_gt1.
 Local Canonical qpoly_comRingType_phi :=
-  Eval hnf in qpoly_comRingType size_phi_gt1.
-Local Definition pi := canon_surj size_phi_gt1.
+  Eval hnf in qpoly_comRingType phi_gt1.
+Local Definition pi := canon_surj phi_gt1.
 
 Definition stab a : {set 'I_(2 ^ m).+1} :=
 [set n | ('X ^ (nat_of_ord n) * a %% phi == a %% phi)%R].
@@ -138,12 +138,6 @@ Lemma phi_gt0 : 0 < size phi.
 Proof.
   move: m_is_prime; rewrite /m.
   by case: (size phi).
-Qed.
-
-Lemma phi_gt1 : 1 < size phi.
-Proof.
-  move: m_is_prime; rewrite /m.
-  by case: (size phi) => []//[].
 Qed.
 
 Lemma power_gt0 : 0 < 2 ^ m.
