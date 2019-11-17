@@ -424,38 +424,48 @@ Proof.
   by case: (size phi) H (ltn_modpN0 s phi_neq0).
 Defined.
 
+Local Lemma rmodphi_qpolyR (s : {poly R}) :
+  Pdiv.Ring.rmodp s phi \is a poly_of_size (size phi).-1.
+Proof.
+  apply/eqP/eqP; rewrite subn_eq0.
+  by case: (size phi) H (Pdiv.Ring.ltn_rmodpN0 s phi_neq0).
+Defined.
+
 Definition qpolify s :=
-  NPoly_of (Phant R) (modphi_qpolyR (s %% phi)).
+  NPoly_of (Phant R) (modphi_qpolyR s).
+
+Definition rqpolify s :=
+  NPoly_of (Phant R) (rmodphi_qpolyR s).
 
 Definition mul_qpoly p q := qpolify ((p : {poly R}) * q).
 
 Fact mul_qpolyC : commutative mul_qpoly.
 move=> p q; apply/eqP.
-by rewrite eqE /= !modp_mod mulrC.
+by rewrite eqE /= ?modp_mod mulrC.
 Qed.
 
 Fact mul_qpolyA : associative mul_qpoly.
 Proof.
 move=> p q r; apply/eqP.
-by rewrite eqE /mul_qpoly /qpolify !modp_mul !mulrA
-        /= !modp_mod [X in _ == X %% _]mulrC modp_mul [X in _ == X %% _]mulrC.
+by rewrite eqE /mul_qpoly /qpolify /= !modp_mul !mulrA
+        [X in _ == X %% _]mulrC modp_mul [X in _ == X %% _]mulrC.
 Qed.
 
 Fact mul_1qpoly : left_id (qpolify (1%:P)) mul_qpoly.
 Proof.
 move=> p; apply/eqP.
-rewrite eqE /mul_qpoly /qpolify /= !modp_mod mulrC modp_mul mulr1 modp_small //.
+rewrite eqE /mul_qpoly /qpolify /= mulrC modp_mul mulr1 modp_small //.
 by case: p => /=; case: (size phi) H.
 Qed.
 
 Fact mul_qpolyDl : left_distributive mul_qpoly +%R.
 Proof.
 move=> p q r; apply/eqP.
-by rewrite eqE /= !modp_mod mulrDl modp_add.
+by rewrite eqE /= mulrDl modp_add.
 Qed.
 
 Fact qpoly1_neq0 : qpolify (1%:P) != 0.
-  rewrite eqE /= !modp_mod.
+  rewrite eqE /=.
   apply/negP => /dvdpP/dvdpP /dvdp_leq.
   rewrite oner_neq0 => /implyP.
   by rewrite size_polyC oner_neq0 leqNgt H.
@@ -487,7 +497,7 @@ Defined.
 Local Definition pi := RMorphism rm_qp.
 
 Lemma eqr_pi p q : pi p == pi q = (p %% phi == q %% phi).
-  by rewrite eqE /= !modp_mod.
+  by rewrite eqE /=.
 Qed.
 
 End coerce_qpoly.
