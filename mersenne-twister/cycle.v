@@ -8,20 +8,18 @@ Unset Printing Implicit Defensive.
 Section ext.
 Variable R : fieldType.
 Implicit Types (p : {poly R}) (c : R) (n : nat).
-Import GRing.Theory.
-Local Open Scope ring_scope.
 
-Lemma ltn_size_polyC_X c p : p != 0 -> (size (c%:P) < size (p * 'X)%R)%N.
+Lemma ltn_subr a b : 0 < b < a -> a - b < a.
 Proof.
-move=> ?; rewrite size_mul ?polyX_eq0 // size_polyX size_polyC addn2.
-case: (c != 0) => //.
-by rewrite ltnS lt0n size_poly_eq0.
+  case/andP.
+  elim: a => // a IH.
+  case ab: (b == a).
+   move/eqP: ab => ->.
+   by rewrite subSnn !ltnS.
+  move/IH => {IH} IH.
+  rewrite ltnS leq_eqVlt ab => ba.
+  by rewrite subSn ?ltnS ?IH // ltnW.
 Qed.
-
-Lemma polyX_neq0 : ('X : {poly R}) != 0.
-Proof. by rewrite -size_poly_eq0 size_polyX. Qed.
-
-Hint Resolve ltn_size_polyC_X polyX_neq0 : core.
 
 Lemma lem1 q n : prime q -> (n < q -> n.+1 != n %[mod q])%N.
 Proof.
@@ -39,15 +37,32 @@ Proof.
   by elim n.
 Qed.
 
+Import GRing.Theory.
+Local Open Scope ring_scope.
+
+Lemma ltn_size_polyC_X c p : p != 0 -> (size (c%:P) < size (p * 'X)%R)%N.
+Proof.
+move=> ?; rewrite size_mul ?polyX_eq0 // size_polyX size_polyC addn2.
+case: (c != 0) => //.
+by rewrite ltnS lt0n size_poly_eq0.
+Qed.
+
+Lemma polyX_neq0 : ('X : {poly R}) != 0.
+Proof. by rewrite -size_poly_eq0 size_polyX. Qed.
+
+Hint Resolve ltn_size_polyC_X polyX_neq0 : core.
+
 Lemma polyXn_eq0 n : (('X^n : [ringType of {poly R}]) == 0) = false.
 Proof. by rewrite -size_poly_eq0 size_polyXn. Qed.
 End ext.
 
 Section irreduciblity.
-Variable m : nat.
 Variable phi : {poly [finFieldType of 'F_2]}.
+Definition m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
-Hypothesis sp : (size phi).-1 = m.
+
+(* Variable m : nat. *)
+(* Hypothesis sp : (size phi).-1 = m. *)
 
 Local Lemma exp2_dvd a b :
   2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
@@ -78,21 +93,23 @@ by rewrite subSnn muln1 ltn_addl // expn_gt0.
 Qed.
 
 Lemma phi_neq0 : (phi != 0)%R.
-  rewrite -size_poly_eq0.
-  by case: (size phi) sp m_is_prime => // <-.
+Proof.
+  move: m_is_prime.
+  rewrite -size_poly_eq0 /m.
+  by case: (size phi).
 Qed.
 
 Lemma size_phi_gt1 : size phi > 1.
-Proof. by case: (size phi) sp m_is_prime => [<- //|+ <-] => [][]. Qed.
+Proof.
+  move: m_is_prime; rewrite /m.
+  by case: (size phi) => []//[].
+Qed.
 
 Local Canonical qpoly_ringType_phi :=
   Eval hnf in qpoly_ringType size_phi_gt1.
 Local Canonical qpoly_comRingType_phi :=
   Eval hnf in qpoly_comRingType size_phi_gt1.
 Local Definition pi := canon_surj size_phi_gt1.
-
-Lemma mem_trivial n : pi ('X ^ n)%R \in {qpoly phi}.
-Proof. by []. Qed.
 
 Definition stab a : {set 'I_(2 ^ m).+1} :=
 [set n | ('X ^ (nat_of_ord n) * a %% phi == a %% phi)%R].
@@ -107,19 +124,6 @@ Definition min_stab a :=
 foldl minn (2 ^ m)
       (filter (fun x => x > 0) (map (@nat_of_ord _) (enum (stab a)))).
 
-Lemma gap_exp_num : size phi <= (2 ^ m) - 1.
-Proof.
-   case: (size phi) sp m_is_prime => [<-|m' <-] //=.
-   rewrite (erefl : 2 = 1 + 1) Pascal.
-   rewrite subn1 big_ord_recr !exp1n binn !mul1n /= addn1.
-   case: m' => // m'.
-   rewrite big_ord_recr !exp1n !mul1n binSn muln1.
-   case: m' => // m' _.
-   rewrite big_ord_recr !exp1n !mul1n /= -addnA.
-   apply/leq_trans/leq_addl.
-   by rewrite -[X in X < _]add0n ltn_add2r muln1 bin_gt0 ltnW.
-Qed.
-
 Definition min_stab_ord (a: {poly [finFieldType of 'F_2]}): ordinal (2 ^ m).+1.
   have H: (min_stab a < (2 ^ m).+1).
    rewrite /min_stab.
@@ -130,12 +134,21 @@ Definition min_stab_ord (a: {poly [finFieldType of 'F_2]}): ordinal (2 ^ m).+1.
  by apply (Ordinal H).
 Defined.
 
-Lemma phi_is_not_zero' : size phi > 0.
-Proof. by case: (size phi) sp m_is_prime=> [<-|/= ? ->]. Qed.
+Lemma phi_gt0 : 0 < size phi.
+Proof.
+  move: m_is_prime; rewrite /m.
+  by case: (size phi).
+Qed.
+
+Lemma phi_gt1 : 1 < size phi.
+Proof.
+  move: m_is_prime; rewrite /m.
+  by case: (size phi) => []//[].
+Qed.
 
 Lemma power_gt0 : 0 < 2 ^ m.
 Proof. by case: (2 ^ m) pm. Qed.
-Hint Resolve phi_is_not_zero' power_gt0 phi_neq0 polyX_neq0 : core.
+Hint Resolve phi_gt0 phi_gt1 power_gt0 phi_neq0 polyX_neq0 : core.
 
 Lemma foldl_minn_in xs m' :
   has (fun x => x < m'.+1) xs -> foldl minn m' xs \in xs.
@@ -156,9 +169,6 @@ Proof.
   by rewrite /minn ltnSn -/minn => /IH ->; rewrite orbT.
   by rewrite /minn ltnW // -/minn => /IH ->; rewrite orbT.
 Qed.
-
-Lemma phi_is_not_zero : lead_coef phi != 0%R.
-Proof. by rewrite lead_coef_eq0 -size_poly_gt0. Qed.
 
 Lemma min_stab_in a y :
   y \in stab a -> 0 != y ->
@@ -281,18 +291,6 @@ Proof.
    rewrite mem_enum.
    move/min_stab_min.
    by rewrite /= Hl0 H leqNgt Hl2 => /implyP.
-Qed.
-
-Lemma ltn_subr a b : 0 < b < a -> a - b < a.
-Proof.
-  case/andP.
-  elim: a => // a IH.
-  case ab: (b == a).
-   move/eqP: ab => ->.
-   by rewrite subSnn !ltnS.
-  move/IH => {IH} IH.
-  rewrite ltnS leq_eqVlt ab => ba.
-  by rewrite subSn ?ltnS ?IH // ltnW.
 Qed.
 
 Lemma min_stab_attain :
@@ -434,8 +432,7 @@ Proof.
   move: (H0 a a.+1).
   rewrite -!exprnP GRing.exprS -GRing.mulrA -[X in _ = X]modp_mul
           Hc GRing.mulr0 mod0p => /(_ erefl)/eqP.
-  rewrite (divn_eq a (2 ^ m - 1)).
-  rewrite -addnS !modnMDl.
+  rewrite (divn_eq a (2 ^ m - 1)) -addnS !modnMDl.
   apply/negP/lem1 => //.
   rewrite ltn_mod.
   by case: (2 ^ m - 1) pm.
@@ -454,7 +451,7 @@ Proof.
   move/map_pi_card: (H0) => H.
   apply/subset_cardP.
    rewrite cardsDS /= ?sub1set ?inE //.
-   by rewrite cardsT H card_npoly card_ord sp cards1.
+   by rewrite cardsT H card_npoly card_ord /m cards1.
   suff: codom (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R)
         \subset (finset {qpoly phi} :\ (0 : {qpoly phi})%R)
    by apply/subset_trans/subsetP/image_codom.
@@ -490,7 +487,7 @@ Proof.
   by apply/val_inj.
 Qed.
 
-Lemma irreducibilityP :
+Lemma irreducibleP :
 reflect (irreducible_poly phi)
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
 Proof.
@@ -502,7 +499,7 @@ apply/(iffP idP).
   have: one_ord \notin stab 'X by rewrite inE -exprnP GRing.mulrC -GRing.exprS.
   move/(@min_stab_neq1 _ _ H) => -> /= => [x2m1|]; last by case: (2 ^ m - 1) o.
   apply/irreducibleP/andP.
-  constructor; first by case: (size phi) sp m_is_prime => [<- //|[]// <-].
+  constructor => //.
   apply/forallP => q; apply/implyP.
   case q0: (size q == 0); first by move/eqP: q0 => ->.
   have: q \in (finset {qpoly phi} :\ (0 : {qpoly phi})%R).
@@ -513,10 +510,8 @@ apply/(iffP idP).
   rewrite -!(map_piE H H2 x2m1).
   move: (min_stab_attain2 H H2 x2m1) => H0.
   case/(map_piP _ H0) => q1 <-.
-  have pq0: pi ('X ^ q1 * 'X)%R != 0%R.
-   rewrite /= Xn_phi_neq0 => //.
-  case/Pdiv.RingMonic.rdvdpP; first by apply/f2p_monic.
-  move=> x pxp.
+  have pq0: pi ('X ^ q1 * 'X)%R != 0%R by rewrite /= Xn_phi_neq0.
+  case/Pdiv.RingMonic.rdvdpP => [|x pxp]; first by apply/f2p_monic.
   case x0: (x == 0)%R.
    move/eqP: x0 pxp phi_neq0 => ->.
    rewrite GRing.mul0r => <-.
@@ -539,13 +534,13 @@ apply/(iffP idP).
           GRing.mulrCA !GRing.mulrA -GRing.exprD GRing.mulrC
           GRing.mulrA -GRing.exprS eq_sym => /negPn.
   by rewrite Xn_phi_neq0.
-* 
+* move=> ip; case/irredp_FAdjoin: (ip) => L + [] z zsp.
+  Check ([aspace of 1%VS] : {subfield L})%R.
   case: (@galLgen _ L [aspace of 1%VS]).
   rewrite /=.
   
   Check [finFieldType of L].
-  (* move/FinSplittingFieldFor : (phi). *)
-  (* case/irredp_FAdjoin: (ip) => L + [] z zsp. *)
+  move/FinSplittingFieldFor : (phi).
   Check (@SubFieldExtType _ L _ z _ _ ip).
   (* have f: [finFieldType of 'F_2] -> L by []. *)
    (* Show Proof. *)
