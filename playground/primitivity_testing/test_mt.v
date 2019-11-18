@@ -23,10 +23,10 @@ Definition word_seq := seq N.
 
 Record random_state := {index : nat; state : word_seq}.
 
-Fixpoint range (n : nat) : seq N :=
-  match n with
+Fixpoint range (i : nat) : seq N :=
+  match i with
   | 0%nat => [::]
-  | S m => (N_of_nat m) :: (range m)
+  | S i' => (N_of_nat (minus n i)) :: (range i')
   end.
 
 Definition initial_state : word_seq := range n.
@@ -38,11 +38,11 @@ Definition next a rand :=
   let i1 := Nat.modulo (i + 1%nat) n in
   let s := (state rand) in
   let z := N.lor (N.land (nth 0 s i) upper_mask)
-                (N.land (nth 0 s i1) lower_mask) in
+                 (N.land (nth 0 s i1) lower_mask) in
   let im := Nat.modulo (i + m) n in
-  let xi := N.lxor (N.lxor (nth 0 s m)
-                          (N.shiftr z 1))
-                  (if N.eqb (N.land z 1) 0 then 0 else a) in
+  let xi := N.lxor (N.lxor (nth 0 s im)
+                           (N.shiftr z 1))
+                   (if N.eqb (N.land z 1) 0 then 0 else a) in
   let next_rand := {|
         index := i1;
         state := set_nth 0 s i xi;
