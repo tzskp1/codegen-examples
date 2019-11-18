@@ -477,6 +477,87 @@ Definition qpoly_ringType := Eval hnf in RingType {qpoly phi} qpoly_comRingMixin
 Definition qpoly_comRingType := Eval hnf in ComRingType qpoly_ringType mul_qpolyC.
 End qpoly_ring.
 
+Module qpoly_field.
+Section qpoly_field.
+Context {R : fieldType}.
+Variable phi : {poly R}.
+Hypothesis H : irreducible_poly phi.
+
+Local Lemma phi_gt1 : size phi > 1.
+Proof. by case H. Qed.
+
+Local Canonical qpoly_ringType' := qpoly_ringType phi_gt1.
+Local Canonical qpoly_comRingType' := qpoly_comRingType phi_gt1.
+
+Lemma irreducible_coprimep (p : {qpoly phi}) :
+  p != 0 -> coprimep p phi.
+Proof.
+  move=> p0.
+  apply/coprimepP => d.
+  rewrite -size_poly_eq1.
+  case d1: (size d == 1)%N => //.
+  case: H => _ /(_ d).
+  rewrite d1 => + + dp => /(_ _ dp) /= /implyP + /dvdp_leq.
+  rewrite p0 -dvdp_size_eqp //= => /eqP ->.
+  case: p {p0} => p /= /eqP/eqP + /implyP /= /leq_trans pp.
+  rewrite subn_eq0 => /pp.
+  case: (size phi) phi_gt1 => //= ??.
+  by rewrite ltnn.
+Qed.
+
+Local Lemma qpoly_inv_well_defed (p : {qpoly phi}) :
+size (((lead_coef ((egcdp phi p).1 * phi + (egcdp phi p).2 * p)))^-1 *:
+      (egcdp phi p).2 %% phi) <= (size phi).-1.
+Proof.
+  move: (fun x => ltn_modp x phi).
+  rewrite phi_neq0 ?phi_gt1 //.
+  case: p => p.
+  by case: (size phi) phi_gt1 => // ???; apply.
+Qed.
+
+Definition qpoly_inv
+  (p : [ringType of {qpoly phi}]) : [ringType of {qpoly phi}]
+:= if p == 0 then 0 else NPoly (qpoly_inv_well_defed p).
+
+Lemma qpoly_mulVf : GRing.Field.axiom qpoly_inv.
+Proof.
+  move=> p /negPf i.
+  rewrite /qpoly_inv.
+  case: ifP => [|_]; first by rewrite i.
+  apply/val_inj.
+  rewrite /= mulrC modp_mul mulrC.
+  set C := (lead_coef _)^-1.
+  have<-: (C *: ((egcdp phi p).1 * phi + (egcdp phi p).2 * p)) %% phi =
+          (C *: (egcdp phi p).2 * p) %% phi
+   by rewrite scalerDr modp_add scalerCA !scalerAr
+             -modp_mul modp_scalel modpp scaler0 mulr0 mod0p add0r.
+  have Hc: ((egcdp phi p).1 * phi + (egcdp phi p).2 * p) %= 1.
+   rewrite eqp_sym.
+   apply/eqp_trans/egcdpE.
+   by rewrite eqp_sym -size_poly_eq1 coprimep_size_gcd //
+              coprimep_sym irreducible_coprimep ?i.
+  move/eqp_eq: (Hc).
+  rewrite lead_coefC scale1r => ->.
+  rewrite scalerA mulVr ?unitfE ?lead_coef_eq0
+  ?alg_polyC ?modp_small ?size_polyC ?oner_neq0 ?phi_gt1 //.
+  apply/negP => /eqP H0.
+  move: H0 Hc => ->.
+  by rewrite -size_poly_eq1 size_polyC eqxx.
+Qed.
+
+Lemma qpoly_inv0 : qpoly_inv 0 = 0.
+Proof. by rewrite /qpoly_inv eqxx. Qed.
+
+Definition qpoly_fieldMixin :=
+  @FieldMixin _ qpoly_inv qpoly_mulVf qpoly_inv0.
+Definition qpoly_fieldType := Eval hnf in FieldType _ qpoly_fieldMixin.
+End qpoly_field.
+Module Exports.
+Notation qpoly_fieldType := qpoly_fieldType.
+End Exports.
+End qpoly_field.
+Export qpoly_field.Exports.
+
 Module coerce_qpoly.
 Section coerce_qpoly.
 Context {R : fieldType}.
