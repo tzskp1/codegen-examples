@@ -102,6 +102,33 @@ Proof.
   by case: (size phi) => []//[].
 Qed.
 
+Lemma phi_gt2 : 2 < size phi.
+Proof.
+  move: m_is_prime; rewrite /m.
+  by case: (size phi) => []//[]//[].
+Qed.
+
+Lemma phi_gt0 : 0 < size phi.
+Proof.
+  move: m_is_prime; rewrite /m.
+  by case: (size phi).
+Qed.
+
+Lemma power_gt0 : 0 < 2 ^ m.
+Proof. by case: (2 ^ m) pm. Qed.
+
+Lemma phi_gtb (b : bool) : b < size phi.
+Proof.
+  by case: b; rewrite ?phi_gt1 ?phi_gt0.
+Qed.
+
+Lemma predphi_neq0 : (size phi).-1 != 0.
+Proof.
+  move: m_is_prime.
+  rewrite /m.
+  by case: (size phi).-1.
+Qed.
+
 Local Canonical qpoly_ringType_phi :=
   Eval hnf in qpoly_ringType phi_gt1.
 Local Canonical qpoly_comRingType_phi :=
@@ -131,15 +158,8 @@ Definition min_stab_ord (a: {poly [finFieldType of 'F_2]}): ordinal (2 ^ m).+1.
  by apply (Ordinal H).
 Defined.
 
-Lemma phi_gt0 : 0 < size phi.
-Proof.
-  move: m_is_prime; rewrite /m.
-  by case: (size phi).
-Qed.
-
-Lemma power_gt0 : 0 < 2 ^ m.
-Proof. by case: (2 ^ m) pm. Qed.
-Hint Resolve phi_gt0 phi_gt1 power_gt0 phi_neq0 polyX_neq0 : core.
+Hint Resolve phi_gt0 phi_gt1 phi_gt2 phi_gtb predphi_neq0
+     power_gt0 phi_neq0 polyX_neq0 : core.
 
 Lemma foldl_minn_in xs m' :
   has (fun x => x < m'.+1) xs -> foldl minn m' xs \in xs.
@@ -534,154 +554,445 @@ apply/(iffP idP).
    Because the statement just says that the galois group is nontrivial.
   *)
   move=> ip; case/irredp_FAdjoin: (ip) => L dL [] z zsp sL.
-  set f : {qpoly phi} -> L := (fun g => (map_poly (GRing.in_alg L) g).[z])%R.
-  have rmf: rmorphism f.
-   repeat constructor.
-   * move=> x y; subst f.
+  set e0 : {qpoly phi} -> L := (fun g => (map_poly (GRing.in_alg L) g).[z])%R.
+  have rme: rmorphism (e0 : (qpoly_fieldType ip) -> _).
+   subst e0; repeat constructor.
+   * move=> x y.
      by rewrite /= !GRing.rmorphB hornerD hornerN.
-   * move=> x y; subst f.
+   * move=> x y.
      rewrite /= -hornerM -GRing.rmorphM.
      set T := (_ * _)%R.
      rewrite [in RHS](divp_eq T phi) GRing.rmorphD hornerD GRing.rmorphM hornerM.
      move/rootP: zsp => ->.
      by rewrite GRing.mulr0 GRing.add0r.
-   * subst f.
-     by rewrite /= modp_small ?GRing.rmorph1 ?hornerC // size_polyC.
-  set rf := RMorphism rmf.
-  have z2z: (z ^ 2 != z)%R.
-   apply/negP => /eqP z2z.
-   move: dL => /=.
-   rewrite -sL Fadjoin_eq_sum /Fadjoin_sum.
-   case: (adjoin_degree 1%AS z).
-    move: m_is_prime.
-    rewrite big_ord0 dimv0 /m.
-    by case: (size phi) => []//[].
-   case.
-    move: m_is_prime.
-    rewrite /= big_ord1 GRing.expr0 prodv1 dimv1 /m.
-    by case: (size phi) => []//[]//[].
-   case.
-    move: m_is_prime.
-    rewrite !big_ord_recl big_ord0 !prod1v GRing.expr0 GRing.expr1.
-    rewrite addv0 dimv_disjoint_sum.
-     rewrite dimv1 add1n.
-     rewrite dim_algid.
-    rewrite add1v.
-    rewrite -z2z.
-    rewrite -exprnP.
-    rewrite !GRing.exprS GRing.expr0.
-    Check (fun x y => (x + y)%VS).
-    rewrite GRing.addr0.
-   move=> n.
-   rewrite !big_ord_recl /=.
-   rewrite /=.
-   prod1v.
-   
-   Check (fun x y => (x * y)%VS).
-   set T := (_ * _)%VS.
-   have: T = 1%VS.
-   Check (1 * 1).
-   rewrite /= GRing.mul1r.
+   * by rewrite /= modp_small ?GRing.rmorph1 ?hornerC // size_polyC.
+  set e := RMorphism rme.
+  have inje: injective e by apply GRing.fmorph_inj.
+  have a1f: agenv ([aspace of 1%AS] : {subfield L}) = fullv -> False.
+   have K1: ((\sum_(i < (size phi).-1)
+         ([aspace of 1%AS] : {subfield L}) ^+ i)%VS = 1%VS).
+    have: (size phi).-1 != 0 by [].
+    elim: (size phi).-1 => // n IHn _.
+    rewrite big_ord_recr expv1n /=.
+    case n0: (n == 0).
+     move/eqP: n0 => ->.
+     by rewrite big_ord0 add0v.
+    by rewrite IHn ?n0 // addvv.
+   rewrite -dL in K1.
+   rewrite /agenv K1.
+   move: dL => + f1.
+   rewrite -f1 dimv1 => p1.
+   move: m_is_prime.
+   by rewrite /m -p1.
+  apply/andP; split.
+   suff: (pi ('X ^ 2) != pi ('X))%R by rewrite eqE.
+   apply/negP => /eqP.
+   have Xu: ((pi 'X : qpoly_fieldType ip) \is a GRing.unit)%R.
+    rewrite GRing.unitfE.
+    apply/negP => /eqP /(f_equal e).
+    rewrite GRing.rmorph0.
+    subst e e0.
+    rewrite /= modp_small ?size_polyX //
+     map_polyX hornerX => z0.
+    move: z0 sL => ->.
+    by rewrite addv0 => /a1f.
+   move/(f_equal (fun x => (pi 'X : qpoly_fieldType ip)^-1 * x))%R.
+   rewrite GRing.mulVr //.
+   have ->: ((pi ('X ^ 2) : qpoly_fieldType ip)
+            = ((pi 'X) : qpoly_fieldType ip) * ((pi 'X) : qpoly_fieldType ip))%R.
+    rewrite -exprnP GRing.exprS GRing.expr1 GRing.rmorphM.
+    by apply/val_inj.
+   rewrite GRing.mulKr // => /(f_equal e)/eqP.
+   subst e e0.
+   rewrite /= !modp_small ?size_polyC ?size_polyX //
+           map_polyC hornerC map_polyX hornerX  /= => /eqP z1.
+   rewrite GRing.scale1r in z1.
+   move: z1 sL => ->.
+   by rewrite /= addvv => /a1f.
+  Search (1%:A)%R.
+  
+  move: (GRing.mulKr Xu).
+  set T := (pi 'X)%R.
+  move=> /= H.
+  move/(f_e
+  rewrite (H T).
+  rewrite 
+  rewrite H.
+  move=>->.
+  rewrite /=.
+  rewrite /=.
+  rewrite GRing.mulrC.
+  rewrite -GRing.divKr.
+  rewrite GRing.divr1_eq.
+  rewrite GRing.mulrC.
+  Search ((_)^-1 * (_ * _))%R.
+  rewrite Ging.
+  rewrite GRing.mulrC.
+  rewrite -GRing.mulrA.
+  rewrite GRing.divrr.
+  rewrite GRing.mulrV //.
+   rewrite -GRing.mulrA.
+  Check GRing.divrr _.
+    case: (size phi).-1
+    case: (size phi).-1.
+    rewrite /= in K1.
+     rewrite /m big_ord0 dimv0 => + mp.
+     by rewrite -mp.
+    move=> n IHn.
+    rewrite big_ord_recr expv1n /=.
+    rewrite addvC.
+    rewrite addv_complf.
+    rewrite dimv.
+    => /GRing.addr0_eq /=.
     rewrite 
-    move/(f_equal val).
-   have: \dim (1 * 1) = \dim 1.
-   rewrite GRing.mulr1.
-   Set Printing All.
-   rewrite scale1mx.
-   rewrite mul1mx.
-   Check Vector.InternalTheory.vs2mx .
-   rewrite /dimv.
-   set T := (_ * _)%R.
-   rewrite dimv1.
-   rewrite GRing.mulr1.
-   rewrite /=.
-   rewrite eq_bigr.
-   rewrite big_
-    case=> //.
-    case=> //.
+    case: \
+    set T := (\sum_(_ < _) _ ^+ _)%VS.
+    have: (T = \sum_(i < \dim fullv) 1)%VS.
+    rewrite z0 addv0 in sL.
+    have: (agenv 1 == 1)%AS.
+     move=> ??.
+     rewrite /agenv.
+     rewrite dL.
+     elim: (\dim fullv).
+      rewrite big_ord0.
+    rewrite /= /agenv.
+    set T := <<1>>%AS.
+    have: \dim T <= size .
+    Check  @dim_span. _ _ ([aspace of 1%AS] : {subfield L}). [:: T].
+    move/eqP.
+    rewrite eqE /=.
+    rewrite addv0.
+    rewrite dim_algid .
+    rewrite /dimv.
+    rewrite mxrank_gen.
     rewrite /=.
-    case:
-   rewrite adjoin_degreeE.
-   rewrite -sL dim_Fadjoin 
-   rewrite dim_Fadjoin adjoin_degreeE.
-   rewrite /=.
-   Check (<<_; _>>)%R.
-   Locate "<<_;_>>".
-   rewrite span_cat.
-   Set Printing All.
-   rewrite span_cons.
-  
-  Compute z \in L.
-  move: (@Fermat's_little_theorem _ L [aspace of 1%VS] (rf (pi 1))%R).
-  rewrite /=.
-  rewrite \dim.
-  Check [finFieldType of L].
-  have: #|[finFieldType of L]| = 2 ^ m.
-  have bif: bijective f.
-  rewrite /bijective.
-   constructor.
-  Check RMorphism rmf.
-  have: {linear {qpoly phi} -> L}%R.
-  constructor.
-  apply (lmorphism _).
-  
-  Check ((map_poly (GRing.in_alg L) phi).[z])%R.
-  Check ((@map_poly phi) z)%R.
-  Check phi.[z]%R.
-  Check z : [finFieldType of 'F_2].
-   rewrite -sL.
-  have: {rmorphism L -> {qpoly phi}}%R.
-   rewrite -sL.
-  rewrite /root /map_poly /= in zsp.
-  Check finField_galois_generator.
-  apply/(RMorphism _).
-       /(_ : rmorphism (f L)).
-  
-  Check ([aspace of 1%VS] : {subfield L})%R.
-  case: (@galLgen _ L [aspace of 1%VS]).
-  rewrite /=.
-  
-  Check [finFieldType of L].
-  move/FinSplittingFieldFor : (phi).
-  Check (@SubFieldExtType _ L _ z _ _ ip).
-  (* have f: [finFieldType of 'F_2] -> L by []. *)
-   (* Show Proof. *)
-   constructor.
-   case => [][|[]//] ? [][|[]//] ?.
-   by rewrite !GRing.subr0.
-   rewrite !GRing.sub0r.
-   rewrite /f /=.
+    rewrite /vline.
+    rewrite dim_vline.
+    Set Printing All.
+    Print T.
+    Check [aspace of 1%AS].
+    Search (\dim <<_>>)%AS.
+    Search (agenv _)%AS.
+    rewrite dimv1.
+    expv1n.
+    rewrite /agenv.
+    rewrite expv1.
+    rewrite dimv1.
+    rewrite agenvEl prod1v.
+    rewrite addv1.
+    rewrite agenvEl.
+    rewrite adjoin_nil.
+    
     rewrite /=.
-   done.
-    move=> ?.
-   constructor.
-  Check splitting_field_normal _.
-  move/SubFieldExtType .
-  Check subfx_irreducibleP.
-  case/splittingFieldForL.
-  Check @PrimePowerField 2 m.
-  Check [ fieldExtType _ of [finFieldType of 'F_2 ]].
-  rewrite /root.
-  apply/polyn.irreducibleP/andP.
-  Check @subfx_irreducibleP _.
-  rewrite /=.
-  constructor; first by case: (size phi) sp m_is_prime => [<- //|[]// <-].
-  apply/forallP => q; apply/implyP.
-  case: q; apply: poly_ind.
-  rewrite /=.
-  move/eqP.
-  move: q.
-  rewrite /=.
-  apply (forallPP (idP).
-  move=> q.
-  rewrite /=.
    
-  apply FiniteQuant.Quantified.
-  constructor.
-  apply/
-  Set Printing All.
-  apply/implyP.
-  move=> ?.
+    /inje.
+   eqE /=.
+    Print coprimep.
+   Check GRing.unit.
+   move: (@Fermat's_little_theorem _ L <<[:: z]>>%VS (e (pi 'X))%R).
+   Check inje _ _.
+   move/inje.
+    by rewrite eqE /= => /eqP.
+   
+    move=> /= ->.
+  set i : ('F_2 -> L)%R := (fun x => x *: 1)%R.
+  have rmi: rmorphism i.
+   subst i.
+   repeat constructor.
+   * move=> x y.
+     by rewrite GRing.scalerBl.
+   * case=> [][|[]//] x [][|[]//] y.
+     apply/GRing.subr0_eq.
+     rewrite -!GRing.scalerA.
+     apply/val_inj.
+     rewrite 
+     congr_ord.
+     have: (val x = 0.
+     apply/eqP; rewrite eqE //=.
+     rewrite GRing.scalerDl.
+     rewrite -GRing.scalerBr.
+     
+     rewrit 
+   rewrite  /GRing.addr0_eq /=.
+     
+     compute.
+     rewrite GRing.mul0r.
+     apply/eqP; rewrite !eqE /=.
+   * move=> x y.
+     rewrite /GRing.scale /=.
+     rewrite [RHS]GRing.scalerD.
+     rewrite -[RHS]GRing.scalerA.
+     rewrite GRing.mulrC.
+     rewrite !GRing.scalerA.
+     rewrite GRing.scalerDr.
+     rewrite 
+     rewrite GRing.scale1r.
+     Check {morph *:%R 1 : x y / x + y}%R.
+   Check map_poly_inj (GRing.scalerDr (1 : L)%R).
+   Check map_poly_inj {morph *:%R 1 : x y / x + y}%R.
+    Search ((_ - _)%:A)%R.
+    rmorphD.
+            
+  Check (fun x => x%:A)%R.
+    rewrite 
+  Check {rmorphism 'F_2 -> L}%R.
+  ([aspace of 1%VS] : {subfield L})
+   Check 
+   subst e e0.
+   rewrite /=.
+   Check subfx_inj.
+   Check (GRing.in_alg L).
+   rewrite /=.
+   case.
+  apply/andP; split.
+   move=> x2p.
+  Check @id L = (fun x => z * x)%R.
+  case: (linear_of_free [seq (z ^+ x)%R | x <- iota 0 m]
+                        [seq (pi 'X ^+ x)%R | x <- iota 0 m]) => f0.
+  rewrite !size_map => /(_ _ erefl) lf.
+  have: free [seq (z ^+ x)%R | x <- iota 0 m].
+  rewrite /agenv dL in sL.
+  apply/freeP => k.
+  have Hi: (\sum_(i < m) k i *: [seq z ^+ x | x <- iota 0 m]`_i)%R =
+           (\sum_(i < m) k i *: z ^+ i)%R.
+    apply eq_bigr => [][] i Hi.
+    by rewrite (@nth_map _ 0 _ 0%R (fun x => z ^+ x)%R i) ?size_iota ?nth_iota.
+   rewrite /= Hi {Hi}.
+   move: k; rewrite /m => k.
+   elim: (size phi).-1 k sL => [? ? ? [] //|m IHm k sL].
+   rewrite big_ord_recr => /GRing.addr0_eq /=.
+   set K := k _.
+   case K0: (K == 0)%R.
+    rewrite (eqP K0) GRing.scale0r -GRing.oppr0 => /GRing.oppr_inj Hk i.
+    case im: (i == (Ordinal (ltnSn m))); first by rewrite (eqP im) -(eqP K0).
+    have Hi': i < m.
+     case: i im => /= i Hi.
+     rewrite eqE /= => im.
+     by rewrite ltnS leq_eqVlt im in Hi.
+    rewrite -(IHm (fun x => k (widen_ord (leqnSn m) x)) _ (Ordinal Hi')).
+     by congr k; apply/val_inj.
+    by rewrite -[RHS]Hk GRing.oppr0.
+    apply/eq_big.
+    
+    rewrite Hk
+    
+    suff
+      Hi'' : (\sum_(i < m) (fun x : 'I_m => k (widen_ord (leqnSn m) x)) i *: z ^+ i)%R = 0%R.
+    rewrite /=.
+    rewrite /=.
+    
+    congr k.
+    subst K.
+    
+    apply/val_inj.
+    
+    rewrite /=.
+    subst K.
+    rewrite /=.
+     rewrite 
+     move
+    rewrite /sum_.
+    rewrite /=.
+    move=> H /H.
+    Check @widen_ord m m.+1.
+                        (lift (@Ordinal m.+1 m (ltnSn m)) x))).
+    Check ltnSn.
+    Check @Ordinal m.+1 m _.
+    Check 
+   Check split. 
+    Check bump.
+    case.
+    Search ((- 1) *  _)%R.
+    rewrite 
+    rewrite -GRing.scaleN1r.
+    Check (fun x y => (x *: y))%R.
+    Check *:%R.
+    rewrite GRing.mul0r.
+   
+   move=> ? ? [] //.
+   case.
+   case=> //.
+    => zi i.
+   apply/eqP/negP => ki.
+   have{ki} ki: k i == 1%R by case: (k i) ki => []//[]//[].
+   elim: m k i ki zi => [?[]//|m IHm k i ki].
+   rewrite /=.
+   move/(f_equal val).
+   case: i ki => i Hi ki.
+  (*  case im: (m == i). *)
+  (*   rewrite /= in ki. *)
+  (*   rewrite  *)
+  (*   move/eqP: im => ->. *)
+  (*   rewrite /ord_max /=. *)
+  (*   move/(f_equal val). *)
+  (*  rewrite /=. *)
+  (*   rewrite /=. *)
+   
+  (*    case=> //. *)
+  (*    case=> //. *)
+  (*   rewrite /=. *)
+  (*  move: zi. *)
+  (*  under Hi. *)
+  (*  move=> /= ->. *)
+  (*   rewrite (@nth_map _ _ _ 0%R (fun x => z ^+ x)%R i). *)
+    
+  (*  Check nth. *)
+  (*   Compute (size (iota  0 3)). *)
+  (* have: forall x, x < (2 ^ m - 1) -> f0 (z ^+ x)%R = ((pi 'X) ^+ x)%R. *)
+  
+  (*  elim. *)
+  (*   rewrite /=. *)
+  
+  (*         !size_iota in lf. *)
+  (* lf. *)
+  (* have rmf: rmorphism (f0 : L -> {qpoly phi}). *)
+  (*  constructor; first by case: f0 lf => [] ? []. *)
+  (*  constructor. *)
+  (*  rewrite !size_map !size_iota in lf. *)
+  (*   move=> x y. *)
+  (*   Check x : vectType L. *)
+   
+  (* rewrite /= /free. *)
+  (* have f0: vectType L -> {qpoly phi}. *)
+  (*  move=> x. *)
+  (*  move: (@memv_span L x). *)
+  (*  have h: x \in L by []. *)
+  (* set e0 : {qpoly phi} -> L := (fun g => (map_poly (GRing.in_alg L) g).[z])%R. *)
+  
+  (* have z2z: (z ^ 2 != z)%R. *)
+  (*  apply/negP => /eqP z2z. *)
+  (*  move: dL => /=. *)
+  (*  rewrite -sL Fadjoin_eq_sum /Fadjoin_sum. *)
+  (*  case: (adjoin_degree 1%AS z). *)
+  (*   move: m_is_prime. *)
+  (*   rewrite big_ord0 dimv0 /m. *)
+  (*   by case: (size phi) => []//[]. *)
+  (*  case. *)
+  (*   move: m_is_prime. *)
+  (*   rewrite /= big_ord1 GRing.expr0 prodv1 dimv1 /m. *)
+  (*   by case: (size phi) => []//[]//[]. *)
+  (*  case. *)
+  (*   move: m_is_prime. *)
+  (*   rewrite !big_ord_recl big_ord0 !prod1v GRing.expr0 GRing.expr1. *)
+  (*   rewrite addv0 dimv_disjoint_sum. *)
+  (*    rewrite dimv1 add1n. *)
+  (*    rewrite dim_algid. *)
+  (*   rewrite add1v. *)
+  (*   rewrite -z2z. *)
+  (*   rewrite -exprnP. *)
+  (*   rewrite !GRing.exprS GRing.expr0. *)
+  (*   Check (fun x y => (x + y)%VS). *)
+  (*   rewrite GRing.addr0. *)
+  (*  move=> n. *)
+  (*  rewrite !big_ord_recl /=. *)
+  (*  rewrite /=. *)
+  (*  prod1v. *)
+   
+  (*  Check (fun x y => (x * y)%VS). *)
+  (*  set T := (_ * _)%VS. *)
+  (*  have: T = 1%VS. *)
+  (*  Check (1 * 1). *)
+  (*  rewrite /= GRing.mul1r. *)
+  (*   rewrite  *)
+  (*   move/(f_equal val). *)
+  (*  have: \dim (1 * 1) = \dim 1. *)
+  (*  rewrite GRing.mulr1. *)
+  (*  Set Printing All. *)
+  (*  rewrite scale1mx. *)
+  (*  rewrite mul1mx. *)
+  (*  Check Vector.InternalTheory.vs2mx . *)
+  (*  rewrite /dimv. *)
+  (*  set T := (_ * _)%R. *)
+  (*  rewrite dimv1. *)
+  (*  rewrite GRing.mulr1. *)
+  (*  rewrite /=. *)
+  (*  rewrite eq_bigr. *)
+  (*  rewrite big_ *)
+  (*   case=> //. *)
+  (*   case=> //. *)
+  (*   rewrite /=. *)
+  (*   case: *)
+  (*  rewrite adjoin_degreeE. *)
+  (*  rewrite -sL dim_Fadjoin  *)
+  (*  rewrite dim_Fadjoin adjoin_degreeE. *)
+  (*  rewrite /=. *)
+  (*  Check (<<_; _>>)%R. *)
+  (*  Locate "<<_;_>>". *)
+  (*  rewrite span_cat. *)
+  (*  Set Printing All. *)
+  (*  rewrite span_cons. *)
+  
+  (* Compute z \in L. *)
+  (* move: (@Fermat's_little_theorem _ L [aspace of 1%VS] (rf (pi 1))%R). *)
+  (* rewrite /=. *)
+  (* rewrite \dim. *)
+  (* Check [finFieldType of L]. *)
+  (* have: #|[finFieldType of L]| = 2 ^ m. *)
+  (* have bif: bijective f. *)
+  (* rewrite /bijective. *)
+  (*  constructor. *)
+  (* Check RMorphism rmf. *)
+  (* have: {linear {qpoly phi} -> L}%R. *)
+  (* constructor. *)
+  (* apply (lmorphism _). *)
+  
+  (* Check ((map_poly (GRing.in_alg L) phi).[z])%R. *)
+  (* Check ((@map_poly phi) z)%R. *)
+  (* Check phi.[z]%R. *)
+  (* Check z : [finFieldType of 'F_2]. *)
+  (*  rewrite -sL. *)
+  (* have: {rmorphism L -> {qpoly phi}}%R. *)
+  (*  rewrite -sL. *)
+  (* rewrite /root /map_poly /= in zsp. *)
+  (* Check finField_galois_generator. *)
+  (* apply/(RMorphism _). *)
+  (*      /(_ : rmorphism (f L)). *)
+  
+  (* Check ([aspace of 1%VS] : {subfield L})%R. *)
+  (* case: (@galLgen _ L [aspace of 1%VS]). *)
+  (* rewrite /=. *)
+  
+  (* Check [finFieldType of L]. *)
+  (* move/FinSplittingFieldFor : (phi). *)
+  (* Check (@SubFieldExtType _ L _ z _ _ ip). *)
+  (* (* have f: [finFieldType of 'F_2] -> L by []. *) *)
+  (*  (* Show Proof. *) *)
+  (*  constructor. *)
+  (*  case => [][|[]//] ? [][|[]//] ?. *)
+  (*  by rewrite !GRing.subr0. *)
+  (*  rewrite !GRing.sub0r. *)
+  (*  rewrite /f /=. *)
+  (*   rewrite /=. *)
+  (*  done. *)
+  (*   move=> ?. *)
+  (*  constructor. *)
+  (* Check splitting_field_normal _. *)
+  (* move/SubFieldExtType . *)
+  (* Check subfx_irreducibleP. *)
+  (* case/splittingFieldForL. *)
+  (* Check @PrimePowerField 2 m. *)
+  (* Check [ fieldExtType _ of [finFieldType of 'F_2 ]]. *)
+  (* rewrite /root. *)
+  (* apply/polyn.irreducibleP/andP. *)
+  (* Check @subfx_irreducibleP _. *)
+  (* rewrite /=. *)
+  (* constructor; first by case: (size phi) sp m_is_prime => [<- //|[]// <-]. *)
+  (* apply/forallP => q; apply/implyP. *)
+  (* case: q; apply: poly_ind. *)
+  (* rewrite /=. *)
+  (* move/eqP. *)
+  (* move: q. *)
+  (* rewrite /=. *)
+  (* apply (forallPP (idP). *)
+  (* move=> q. *)
+  (* rewrite /=. *)
+   
+  (* apply FiniteQuant.Quantified. *)
+  (* constructor. *)
+  (* apply/ *)
+  (* Set Printing All. *)
+  (* apply/implyP. *)
+  (* move=> ?. *)
   
 End irreduciblity.
   
