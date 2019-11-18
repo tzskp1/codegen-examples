@@ -555,6 +555,7 @@ apply/(iffP idP).
   *)
   move=> ip; case/irredp_FAdjoin: (ip) => L dL [] z zsp sL.
   set e0 : {qpoly phi} -> L := (fun g => (map_poly (GRing.in_alg L) g).[z])%R.
+  set qpF := qpoly_fieldType ip.
   have rme: rmorphism (e0 : (qpoly_fieldType ip) -> _).
    subst e0; repeat constructor.
    * move=> x y.
@@ -584,18 +585,18 @@ apply/(iffP idP).
    rewrite -f1 dimv1 => p1.
    move: m_is_prime.
    by rewrite /m -p1.
+  have Xu: ((pi 'X : qpoly_fieldType ip) \is a GRing.unit)%R.
+   rewrite GRing.unitfE.
+   apply/negP => /eqP /(f_equal e).
+   rewrite GRing.rmorph0.
+   subst e e0.
+   rewrite /= modp_small ?size_polyX //
+    map_polyX hornerX => z0.
+   move: z0 sL => ->.
+   by rewrite addv0 => /a1f.
   apply/andP; split.
    suff: (pi ('X ^ 2) != pi ('X))%R by rewrite eqE.
    apply/negP => /eqP.
-   have Xu: ((pi 'X : qpoly_fieldType ip) \is a GRing.unit)%R.
-    rewrite GRing.unitfE.
-    apply/negP => /eqP /(f_equal e).
-    rewrite GRing.rmorph0.
-    subst e e0.
-    rewrite /= modp_small ?size_polyX //
-     map_polyX hornerX => z0.
-    move: z0 sL => ->.
-    by rewrite addv0 => /a1f.
    move/(f_equal (fun x => (pi 'X : qpoly_fieldType ip)^-1 * x))%R.
    rewrite GRing.mulVr //.
    have ->: ((pi ('X ^ 2) : qpoly_fieldType ip)
@@ -609,6 +610,111 @@ apply/(iffP idP).
    rewrite GRing.scale1r in z1.
    move: z1 sL => ->.
    by rewrite /= addvv => /a1f.
+  suff: (pi ('X ^ (2 ^ m)%N) = pi ('X))%R by move/(f_equal val) => /= ->.
+  apply/inje/eqP.
+  suff: (e \o pi) ('X ^ (2 ^ m)%N)%R == ((e \o pi) 'X%R) by [].
+  (* workaround *)
+  have rme': rmorphism e0.
+   subst e0; repeat constructor.
+   * move=> x y.
+     by rewrite /= !GRing.rmorphB hornerD hornerN.
+   * move=> x y.
+     rewrite /= -hornerM -GRing.rmorphM.
+     set T := (_ * _)%R.
+     rewrite [in RHS](divp_eq T phi) GRing.rmorphD hornerD GRing.rmorphM hornerM.
+     move/rootP: zsp => ->.
+     by rewrite GRing.mulr0 GRing.add0r.
+   * by rewrite /= modp_small ?GRing.rmorph1 ?hornerC // size_polyC.
+  set e' := RMorphism rme'.
+  have epi: rmorphism (e' \o pi).
+   constructor.
+   apply GRing.comp_is_additive.
+   apply GRing.comp_is_multiplicative.
+  have<-: (e' \o pi) =1 (e \o pi) by [].
+  rewrite !GRing.rmorphX.
+  have /= ->: (e' \o pi) 'X%R = z.
+   subst e e0.
+   by rewrite /= !modp_small ?size_polyC ?size_polyX //
+              map_polyX hornerX.
+   
+  set T := [aspace of 1%VS] : {subfield L}.
+   Check <<T; z >>%VS.
+  Check (@Fermat's_little_theorem _ L <<T; z >>%VS).
+                                   <<z>>%VS (e (pi 'X))%R).
+  
+  
+   rewrite /=.
+   done.
+   apply GRing.comp_is_additive.
+   apply GRing.comp_rmorphism.
+  rewrite !GRing.rmorphX.
+  set T := (pi 'X ^+ (2 ^ m))%R.
+  have->: (T = ((pi 'X: qpoly_fieldType ip) ^+ (2 ^ m) : qpoly_fieldType ip))%R.
+   subst T.
+   apply/val_inj.
+   rewrite /=.
+   congr (_ ^+ _)%R.
+   rewrite //.
+   rewrie
+   by [].
+  set S := (pi 'X ^+ (2 ^ m))%R.
+   done.
+  have/(_ (pi 'X)%R): forall x, (e (x ^+ (2 ^ m)) = (e x) ^+ (2 ^ m))%R
+   by move=> *; rewrite !GRing.rmorphX.
+  move=> 
+  suff->: (z ^+ (2 ^ m) = z)%R.
+  move=> <-.
+  apply/eqP.
+  apply erefl.
+  destruct e.
+  destruct c.
+  rewrite eqxx.
+  done.
+  apply/val_inj.
+  congr e.
+       /inje.
+  subst e e0.
+  rewrite eqE /=.
+  rewrite eqxx.
+  done.
+  done.
+  
+  move=> H.
+  rewrite H.
+  apply/eqP/val_inj.
+  /etrans.
+  exact H.
+  move/(f_equal val).
+  rewrite eqE /=.
+  move=> ->.
+  rewrite /pi /=.
+  rewrite !modp_small.
+  subst e e0.
+  rewrite /= !modp_small ?size_polyC ?size_polyX //
+           map_polyX hornerX.
+  rewrite /qpolify /=.
+  rewrite eqE /=.
+  
+  rewrite exprnP.
+           rewrite map_polyXn hornerXn.
+  rewrite eqE /=.
+  
+  set T := (pi 'X)%R.
+  rewrite (GRing.rmorphX e).
+  
+  have<-: (pi 'X : qpoly_fieldType ip)%R = T.
+    by [].
+   done.
+  
+  Check ((pi 'X) ^+ (2 ^ m))%R.
+  rewrite /pi /=.
+  rewrite GRing.exprMn .
+  rewrite !GRing.rmorphX.
+  rewrite exprnP.
+  rewrite exprnP.
+  rewrite !GRing.rmorphX.
+  rewrite eqE /=.
+  rewrite //=.
   Search (1%:A)%R.
   
   move: (GRing.mulKr Xu).
