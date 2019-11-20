@@ -478,39 +478,10 @@ Proof.
   by apply/val_inj.
 Qed.
 
-(* Lemma mem_qpoly_phi x : *)
-(*   (x != 0 -> irreducible_poly phi -> exists y, pi 'X ^+ y = x)%R. *)
-(* Proof. *)
-(* move=> + ip. *)
-(* case: x. *)
-(* apply: poly_ind => [?|x c IH w]; first by rewrite eqE /= eqxx. *)
-(* case x0: (x == 0)%R. *)
-(*  move/eqP: x0 w => ->. *)
-(*  rewrite GRing.mul0r GRing.add0r. *)
-(*  case: c => [][|[]//] /= i w; first by rewrite -size_poly_gt0 size_polyC /= ltnn. *)
-(*  exists 0; apply/val_inj => /=. *)
-(*  rewrite modp_small ?size_polyC //. *)
-(*   by congr (_ %:P)%R; apply/val_inj. *)
-(* have X: x \is a poly_of_size (size phi).-1. *)
-(*  apply/eqP/eqP; move/eqP/eqP: w. *)
-(*  rewrite size_addl size_mul ?x0 ?polyX_neq0 ?size_polyX ?addn2 // ?subn_eq0. *)
-(*  by apply/leq_trans/ltnW. *)
-(*  rewrite size_polyC. *)
-(*  case: (c != 0%R) => //. *)
-(*  by rewrite ltnS leqNgt ltnS leqn0 size_poly_eq0 x0. *)
-(* case: (IH X); first by rewrite eqE /= x0. *)
-(* move=> y /(f_equal val). *)
-(* rewrite /=. *)
-
 Lemma X2m_eqXE : 
 (('X ^ (2 ^ m)%N %% phi == 'X %% phi) = (p_ord \in stab (pi 'X) (pi 'X)))%R.
 by rewrite inE -!GRing.rmorphX -!GRing.rmorphM -!exprnP !eqE /=
            -GRing.exprSr subn1 prednK.
-Qed.
-
-Lemma z2m_eqzE (L : ringType) (z : L)  : 
-((z ^+ (2 ^ m)%N == z) = (p_ord \in stab z z))%R.
-  by rewrite inE -GRing.exprSr /= subn1 prednK.
 Qed.
 
 Lemma X2_neqXE : 
@@ -518,6 +489,21 @@ Lemma X2_neqXE :
 by rewrite inE -!GRing.rmorphX -!GRing.rmorphM -!exprnP !eqE /=
            -GRing.exprSr.
 Qed.
+
+Section avoid_terrible_unification.
+Variable ip : irreducible_poly phi.
+
+Local Canonical qpoly_fieldType_phi := qpoly_fieldType ip.
+
+Local Definition incl:
+  [finFieldType of qpoly_fieldType_phi] -> [ringType of {qpoly phi}] := id.
+
+Lemma Xn_eq (x : {qpoly phi}) (m : nat) :
+  (x ^+ m : [finFieldType of qpoly_fieldType_phi])%R
+= (x ^+ m : [ringType of {qpoly phi}])%R.
+  by [].
+Qed.
+End avoid_terrible_unification.
 
 Lemma irreducibleP :
 reflect (irreducible_poly phi)
@@ -575,8 +561,9 @@ apply/(iffP idP).
    Because the statement just says that the galois group is nontrivial.
   *)
   move=> ip; case/irredp_FAdjoin: (ip) => L dL [] z zsp sL.
+  set fT := qpoly_fieldType ip.
   set e0 : {qpoly phi} -> L := (fun g => (map_poly (GRing.in_alg L) g).[z])%R.
-  have rme: rmorphism (e0 : (qpoly_fieldType ip) -> _).
+  have rme: rmorphism (e0 : fT -> _).
    subst e0; repeat constructor.
    * move=> x y.
      by rewrite /= !GRing.rmorphB hornerD hornerN.
@@ -605,21 +592,21 @@ apply/(iffP idP).
    rewrite -f1 dimv1 => p1.
    move: m_is_prime.
    by rewrite /m -p1.
-  have Xu: ((pi 'X : qpoly_fieldType ip) \is a GRing.unit)%R.
-   rewrite GRing.unitfE.
+  have piX_neq0 : pi 'X%R != 0%R.
    apply/negP => /eqP /(f_equal e).
    rewrite GRing.rmorph0.
    subst e e0.
    rewrite /= modp_small ?size_polyX // map_polyX hornerX => z0.
    move: z0 sL => ->.
    by rewrite addv0 => /a1f.
-  apply/andP; split.
-   suff: (pi ('X ^ 2) != pi ('X))%R by rewrite eqE.
+  have Xu: ((pi 'X : fT) \is a GRing.unit)%R
+   by rewrite GRing.unitfE piX_neq0.
+  have piX2X: (pi ('X ^ 2) != pi ('X))%R.
    apply/negP => /eqP.
-   move/(f_equal (fun x => (pi 'X : qpoly_fieldType ip)^-1 * x))%R.
+   move/(f_equal (fun x => (pi 'X : fT)^-1 * x))%R.
    rewrite GRing.mulVr //.
-   have ->: ((pi ('X ^ 2) : qpoly_fieldType ip)
-            = ((pi 'X) : qpoly_fieldType ip) * ((pi 'X) : qpoly_fieldType ip))%R.
+   have ->: ((pi ('X ^ 2) : fT)
+            = ((pi 'X) : fT) * ((pi 'X) : fT))%R.
     rewrite -exprnP GRing.exprS GRing.expr1 GRing.rmorphM.
     by apply/val_inj.
    rewrite GRing.mulKr // => /(f_equal e)/eqP.
@@ -629,99 +616,40 @@ apply/(iffP idP).
    rewrite GRing.scale1r in z1.
    move: z1 sL => ->.
    by rewrite /= addvv => /a1f.
-  suff: (pi ('X ^ (2 ^ m)%N) = pi ('X))%R by move/(f_equal val) => /= ->.
-  (* suff H: (pi 'X ^+ (2 ^ m - 1) = 1)%R. *)
-  (*  have->: (2 ^ m) = (2 ^ m - 1).+1 by rewrite subn1 prednK. *)
-  (*  by rewrite GRing.rmorphX GRing.exprS H GRing.mulr1. *)
-  (* apply/eqP/negP => /negP Hc. *)
-  (* have/setD1P: ((pi 'X ^+ (2 ^ m - 1))%R != 1%R) /\ *)
-  (*              ((pi 'X ^+ (2 ^ m - 1))%R \in (finset {qpoly phi})) *)
-  (* by rewrite inE. *)
-  apply/inje/eqP.
-  suff: (e \o pi) ('X ^ (2 ^ m)%N)%R == ((e \o pi) 'X%R) by [].
-  (* workaround *)
-  have rme': rmorphism e0.
-   subst e0; repeat constructor.
-   * move=> x y.
-     by rewrite /= !GRing.rmorphB hornerD hornerN.
-   * move=> x y.
-     rewrite /= -hornerM -GRing.rmorphM.
-     set T := (_ * _)%R.
-     rewrite [in RHS](divp_eq T phi) GRing.rmorphD hornerD GRing.rmorphM hornerM.
-     move/rootP: zsp => ->.
-     by rewrite GRing.mulr0 GRing.add0r.
-   * by rewrite /= modp_small ?GRing.rmorph1 ?hornerC // size_polyC.
-  set e' := RMorphism rme'.
-  have epi: rmorphism (e' \o pi).
-   constructor.
-   apply GRing.comp_is_additive.
-   apply GRing.comp_is_multiplicative.
-  have<-: (e' \o pi) =1 (e \o pi) by [].
-  rewrite !GRing.rmorphX.
-  have /= ->: (e' \o pi) 'X%R = z.
-   subst e e0.
-   by rewrite /= !modp_small ?size_polyC ?size_polyX //
-              map_polyX hornerX.
-  
-   have: ((z ^+ (2 ^ m)) \in <<1; z>>%VS)%R.
-    rewrite Fadjoin_eq_sum /=.
-    rewrite /Fadjoin_sum.
-    rewrite /adjoin_degree.
-    rewrite /= sL.
-    rewrite dL.
-    rewrite dimv1.
-    rewrite divn1.
-    rewrite prod1v.
-    rewrite div
-    move=> x.
-    rewrite /=.
-    apply/eqP/eqP.
-    rewrite inE.
-    done.
-  Check Fadjoin_polyP.
-  suff H: (z ^+ (2 ^ m - 1) = 1)%R.
+  apply/andP; split; first by rewrite eqE in piX2X.
+  suff: (pi ('X ^ (2 ^ m)%N) = (pi 'X))%R by move/(f_equal val) => /= ->.
+  suff H: (pi 'X ^+ (2 ^ m - 1) = 1)%R.
    have->: (2 ^ m) = (2 ^ m - 1).+1 by rewrite subn1 prednK.
-   by rewrite GRing.exprS H GRing.mulr1.
-   
-  have: (forall l k : nat, (z ^+ l * z = z ^+ k * z)%R -> k = l %[mod 2 ^ m - 1]).
-   move=> l k.
-   rewrite [X in (_ ^+ X * _)%R](divn_eq l (2 ^ m - 1)).
-   rewrite [X in _ = (_ ^+ X * _)%R](divn_eq k (2 ^ m - 1)).
-have base: forall l, (0 < l < 2 ^ m - 1)%N -> t ^+ l * t != t.
- move/eqP: H3 => H l /andP [] Hl0 Hl; apply/negP => /eqP C.
-  have Hl': (l < (2 ^ m).+1)%N.
-   by apply (ltn_trans Hl).
-  have: Ordinal Hl' \in enum (stab t)
-   by rewrite mem_enum inE /= C.
-  have Hl2: (l < 2 ^ m - 1)%N.
-   by apply/(leq_trans Hl).
-  rewrite lt0n eq_sym in Hl0.
-  rewrite mem_enum.
-  move/min_stab_min.
- by rewrite /= Hl0 H leqNgt Hl2 => /implyP.
- 
-  move: sL.
-  
-  rewrite agenvE .
-  have zm: forall m : nat, (<[z]> * <<1; z ^+ m>> = <<1; z ^+ m.+1>>)%VS.
-   elim.
-    rewrite GRing.expr0 GRing.expr1 addvv.
-    rewrite prodv_line.
-    rewrite expv0.
-   rewrite -expvSr.
-   move=> m.
-   rewrite agenvEl prodvDl prod1v.
-  rewrite addvC.
-  rewrite -agenvEr. prodvDl prod1v.
-  rewrite [X in (1 + (_ + _ * X))%VS = _]agenvEl.
-  rewrite agenvEl. prodvDl prod1v.
-  prodv1.
-  rewrite agenvEr.
-  rewrite agenvEr .
-  rewrite agenvEr .
-  Check [finType of L].
-  Check #|L|.
-  
+   by rewrite GRing.rmorphX GRing.exprS H GRing.mulr1.
+  set piX := (FinRing.unit [finFieldType of fT] Xu). 
+  suff: (piX ^+ (2 ^ m - 1))%g = 1%g.
+   subst piX => /(f_equal val).
+   rewrite !FinRing.val_unit1 !FinRing.val_unitX.
+   set O := 1%R.
+   set O' := 1%R.
+   have->: O' = O by apply/val_inj.
+   move=> <- /=.
+   set P := qpolify _ _.
+   elim: (2 ^ m - 1) => [|m IHm].
+    rewrite !GRing.expr0.
+    by apply/val_inj.
+   apply/val_inj.
+   by rewrite !GRing.exprSr // IHm //.
+  have<-: #[piX]%g = 2 ^ m - 1.
+  have/cyclic.order_dvdG: piX \in [group of [set: {unit [finFieldType of fT]}]]
+    by rewrite inE.
+  rewrite /= card_finField_unit card_npoly card_ord.
+  case/primeP: pm => _.
+  rewrite !subn1 => H.
+  move/H => /orP [|/eqP //].
+  rewrite order_eq1 => piX1.
+  move: piX2X; subst piX; move: piX1.
+  rewrite GRing.rmorphX.
+  rewrite !eqE /= !eqE /=.
+  move/eqP => ->.
+  by rewrite !modp_small ?GRing.mulr1 ?size_polyC ?eqxx.
+  by rewrite expg_order.
+Qed.
 End irreduciblity.
   
 From codegen Require Import codegen.
