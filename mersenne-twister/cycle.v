@@ -490,21 +490,6 @@ by rewrite inE -!GRing.rmorphX -!GRing.rmorphM -!exprnP !eqE /=
            -GRing.exprSr.
 Qed.
 
-Section avoid_terrible_unification.
-Variable ip : irreducible_poly phi.
-
-Local Canonical qpoly_fieldType_phi := qpoly_fieldType ip.
-
-Local Definition incl:
-  [finFieldType of qpoly_fieldType_phi] -> [ringType of {qpoly phi}] := id.
-
-Lemma Xn_eq (x : {qpoly phi}) (m : nat) :
-  (x ^+ m : [finFieldType of qpoly_fieldType_phi])%R
-= (x ^+ m : [ringType of {qpoly phi}])%R.
-  by [].
-Qed.
-End avoid_terrible_unification.
-
 Lemma irreducibleP :
 reflect (irreducible_poly phi)
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
@@ -629,26 +614,21 @@ apply/(iffP idP).
    set O' := 1%R.
    have->: O' = O by apply/val_inj.
    move=> <- /=.
-   set P := qpolify _ _.
    elim: (2 ^ m - 1) => [|m IHm].
     rewrite !GRing.expr0.
     by apply/val_inj.
    apply/val_inj.
    by rewrite !GRing.exprSr // IHm //.
-  have<-: #[piX]%g = 2 ^ m - 1.
+  suff<-: #[piX]%g = 2 ^ m - 1 by rewrite expg_order.
   have/cyclic.order_dvdG: piX \in [group of [set: {unit [finFieldType of fT]}]]
     by rewrite inE.
   rewrite /= card_finField_unit card_npoly card_ord.
   case/primeP: pm => _.
-  rewrite !subn1 => H.
-  move/H => /orP [|/eqP //].
+  rewrite !subn1 => H /H /orP [|/eqP //].
   rewrite order_eq1 => piX1.
   move: piX2X; subst piX; move: piX1.
-  rewrite GRing.rmorphX.
-  rewrite !eqE /= !eqE /=.
-  move/eqP => ->.
+  rewrite GRing.rmorphX !eqE /= !eqE /= => /eqP ->.
   by rewrite !modp_small ?GRing.mulr1 ?size_polyC ?eqxx.
-  by rewrite expg_order.
 Qed.
 End irreduciblity.
   
