@@ -56,7 +56,7 @@ Lemma polyXn_eq0 n : (('X^n : [ringType of {poly R}]) == 0) = false.
 Proof. by rewrite -size_poly_eq0 size_polyXn. Qed.
 End ext.
 
-Section irreduciblity.
+Section irreducibility.
 Variable phi : {poly [finFieldType of 'F_2]}.
 Definition m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
@@ -612,8 +612,7 @@ apply/(iffP idP).
   suff: (piX ^+ (2 ^ m - 1))%g = 1%g.
    subst piX => /(f_equal val).
    rewrite !FinRing.val_unit1 !FinRing.val_unitX.
-   set O := 1%R.
-   set O' := 1%R.
+   set O := 1%R; set O' := 1%R.
    have->: O' = O by apply/val_inj.
    move=> <- /=.
    elim: (2 ^ m - 1) => [|m IHm].
@@ -632,4 +631,4 @@ apply/(iffP idP).
   rewrite GRing.rmorphX !eqE /= !eqE /= => /eqP ->.
   by rewrite !modp_small ?GRing.mulr1 ?size_polyC ?eqxx.
 Qed.
-End irreduciblity.
+End irreducibility.
