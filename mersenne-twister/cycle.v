@@ -1,6 +1,18 @@
 From mathcomp Require Import all_ssreflect all_algebra all_field all_fingroup.
 From codegen Require Import codegen.
-Require Import mt irreducible.
+Require Import irreducible mt.
+(* Definition mersenne_exponent := 19937. *)
+Section phi.
+Variables n m w r : nat.
+Variables a : w.-tuple [finFieldType of 'F_2].
+Local Open Scope ring_scope.
+Definition phi :=
+  \poly_(i < r.+1) (a`_i *: (('X ^+ n + 'X ^+ m) ^+ (w - r))
+  * (('X ^+ (n - 1) + 'X ^+ (m - 1)) ^+ (r - i)))
+  + \poly_(i < w - r.-1)
+     (a`_(r.-1 + i) *: (('X ^+ n + 'X ^+ m) ^+ (w - r - i))).
+End phi.
+Check irreducibleP _.
 
 From infotheo Require Import f2 ssralg_ext.
 Require Import BinNat.
