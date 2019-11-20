@@ -5,5 +5,6 @@ generate.v
 mt_vec.v
 mt_alg.v
 polyn.v
+irreducible.v
 cycle.v
 -R . mt
