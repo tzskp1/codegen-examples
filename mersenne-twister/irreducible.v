@@ -58,7 +58,7 @@ End ext.
 
 Section irreducibility.
 Variable phi : {poly [finFieldType of 'F_2]}.
-Definition m := (size phi).-1.
+Local Definition m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
 
 Local Lemma exp2_dvd a b :
@@ -158,7 +158,7 @@ Hint Resolve phi_gt0 phi_gt1 phi_gt2 phi_gtb
      predphi_neq0 predpower_neq0 predpower_gt0
      p_ord_prf predpower_gt_succpower power_gt0 phi_neq0 polyX_neq0 : core.
 
-Lemma div_ord (a : nat) y (x : ordinal y) : ordinal y.
+Lemma mod_ord (a : nat) y (x : ordinal y) : ordinal y.
   apply/(@Ordinal _ (x %% a))/(leq_ltn_trans (leq_mod _ _)).
   by case: x.
 Defined.
@@ -283,8 +283,8 @@ Lemma min_stab_dvd a x : x \in stab a -> (min_stab a %| x)%N.
   rewrite inE (divn_eq x (min_stab a)) addnC GRing.exprD
   -GRing.mulrA (eqP (@min_stab_cond a (x %/ min_stab a) x H x0)) => H0.
   rewrite dvdn_addr ?dvdn_mull //.
-  case x0': (0 != @div_ord (min_stab a) _ x).
-   have: @div_ord (min_stab a) _ x \in stab a by rewrite inE H0.
+  case x0': (0 != @mod_ord (min_stab a) _ x).
+   have: @mod_ord (min_stab a) _ x \in stab a by rewrite inE H0.
    move/(fun x => @min_stab_min a _ x x0') => H1.
    suff: false by [].
    move: (@ltn_pmod x _ (min_stab_gt0 a)).
