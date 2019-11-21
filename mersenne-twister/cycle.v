@@ -15,8 +15,9 @@ Variables a : w.-tuple [finFieldType of 'F_2].
 
 Local Open Scope ring_scope.
 Definition phi :=
-  \poly_(i < r.+1) (a`_i *: (('X ^+ n + 'X ^+ m) ^+ (w - r))
-  * (('X ^+ (n - 1) + 'X ^+ (m - 1)) ^+ (r - i)))
+  (('X ^+ n + 'X ^+ m) ^+ (w - r)) * (('X ^+ (n - 1) + 'X ^+ (m - 1)) ^+ r)
+  + \poly_(i < r.-1) (a`_i *: (('X ^+ n + 'X ^+ m) ^+ (w - r))
+  * (('X ^+ (n - 1) + 'X ^+ (m - 1)) ^+ (r.-1 - i)))
   + \poly_(i < w - r.-1)
      (a`_(r.-1 + i) *: (('X ^+ n + 'X ^+ m) ^+ (w - r - i))).
 End phi.
