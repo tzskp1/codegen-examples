@@ -22,6 +22,16 @@ Definition phi :=
      (a`_(r.-1 + i) *: (('X ^+ n + 'X ^+ m) ^+ (w - r - i))).
 End phi.
 
+Lemma a32 : size ([:: 1; 0; 0; 1; 1; 0; 0; 1; 0; 0; 0; 0; 1; 0; 0; 0; 1; 0; 1;
+                     1; 0; 0; 0; 0; 1; 1; 0; 1; 1; 1; 1; 1] : seq 'F_2)%R == 32.
+Proof. by []. Qed.
+Definition p := phi (Tuple a32).
+(* can not compute *)
+(*
+Compute ((('X ^ 2 %% p)%R != ('X %% p)%R)
+   && (('X ^ (2 ^ (size p).-1)%N %% p)%R == ('X %% p)%R)).
+*)
+
 From infotheo Require Import f2 ssralg_ext.
 Require Import BinNat.
 
