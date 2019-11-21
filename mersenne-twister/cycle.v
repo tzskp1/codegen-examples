@@ -11,19 +11,19 @@ Local Definition w := 32.
 Local Definition n := 624.
 Local Definition m := 397.
 Local Definition r := 31.
-Variables a : w.-tuple [finFieldType of 'F_2].
+Variable a : w.-tuple [finFieldType of 'F_2].
 
 Local Open Scope ring_scope.
 Definition phi :=
   (('X ^+ n + 'X ^+ m) ^+ (w - r)) * (('X ^+ (n - 1) + 'X ^+ (m - 1)) ^+ r)
   + \poly_(i < r.-1) (a`_i *: (('X ^+ n + 'X ^+ m) ^+ (w - r))
-  * (('X ^+ (n - 1) + 'X ^+ (m - 1)) ^+ (r.-1 - i)))
+                     * (('X ^+ (n - 1) + 'X ^+ (m - 1)) ^+ (r.-1 - i)))
   + \poly_(i < w - r.-1)
      (a`_(r.-1 + i) *: (('X ^+ n + 'X ^+ m) ^+ (w - r - i))).
 End phi.
 
 Lemma a32 : size ([:: 1; 0; 0; 1; 1; 0; 0; 1; 0; 0; 0; 0; 1; 0; 0; 0; 1; 0; 1;
-                     1; 0; 0; 0; 0; 1; 1; 0; 1; 1; 1; 1; 1] : seq 'F_2)%R == 32.
+                     1; 0; 0; 0; 0; 1; 1; 0; 1; 1; 1; 1; 1]: seq 'F_2)%R == 32.
 Proof. by []. Qed.
 Definition p := phi (Tuple a32).
 (* can not compute *)
