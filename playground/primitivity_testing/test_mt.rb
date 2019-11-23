@@ -30,6 +30,18 @@ class MT
   end
 end
 
+$timer = 0
+
+def print_state(state)
+  $timer = $timer + 1
+  if $timer == 2 then
+    N.times do |i|
+      puts state[i]
+    end
+    exit
+  end
+end
+
 def test_mt(a)
   x = []
   initial = []
@@ -40,6 +52,7 @@ def test_mt(a)
   end
 
   P.times do |i|
+    print_state(x)
     mt = MT.new(x[0,N])
     (2*P-N).times {|i| x[N+i] = mt.next  } # generate
     1.upto(P) do |j|

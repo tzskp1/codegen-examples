@@ -86,12 +86,12 @@ let check initial_words last_words =
     in
        aux initial_words last_words 1;;
 
-let initial_words = Array.init (2 * p) (fun x -> x);;
+let initial_words () = Array.init (2 * p) (fun x -> x);;
 
 let test_ml a = 
-  let last_words = process_rec a (copy_words initial_words) p
+  let last_words = process_rec a (initial_words ()) p
   in
-    check initial_words last_words;;
+    check (initial_words ()) last_words;;
 
 let a = 0x9908B0DF;;
 let a1 = 0x9908B0DD;;
