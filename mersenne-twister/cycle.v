@@ -40,9 +40,96 @@ Local Definition rmH : rmorphism (H0 : qpoly_fieldType_phi -> _).
 Qed.
 Local Definition H := RMorphism rmH.
 
-(*    Check rVnpoly. *)
-(*    Check delta_mx. *)
-(* Check (fun j => (canon_mat H *m delta_mx j (@Ordinal 1 0 erefl)) *)
+(* Check iter . *)
+(* Check <[(H (pi 'X))%R]>%VS. *)
+(* Check (agenv (1%VS + <[(H (pi 'X))%R]>%VS)). *)
+(* Check <<1%VS; (H (pi 'X))%R>>%VS. *)
+(* map_tuple (fun x => H x) *)
+
+Lemma dimvm : m = \dim (fullv : {vspace {qpoly phi}}).
+ by rewrite /m dim_polyn.
+Defined.
+
+Lemma expHpE : iter m H (pi 'X)%R = pi ('X ^ (2 ^ m)%N)%R.
+Proof.
+  elim: m => // p' IHp.
+  rewrite -[X in (2 ^ X)%N]addn1 iterS IHp /H /H0 /= GRing.Frobenius_autE.
+  set T := (qpolify phi_gt1 _).
+  have ->: T = pi ('X ^ (2 ^ p')%N)%R by [].
+  by rewrite -GRing.rmorphX expnD expn1 muln2 -addnn exprzD_nat GRing.expr2.
+Qed.
+
+Lemma H1E : H (pi 'X)%R = pi ('X ^ 2)%R.
+Proof.
+  rewrite /H /H0 /= GRing.Frobenius_autE.
+  set T := (qpolify phi_gt1 _).
+  have ->: T = pi 'X%R by [].
+  by rewrite -GRing.rmorphX.
+Qed.
+
+Local Definition e0 :=
+  map_tuple (fun j => (iter j H) (pi 'X))%R
+            (iota_tuple (\dim (fullv:{vspace {qpoly phi}})) 0).
+
+Lemma basis_e0 : basis_of fullv e0.
+Proof.
+  rewrite basisEfree size_tuple leqnn subvf !andbT.
+  apply/freeP => k.
+   set T := (\sum_(_ < _) _)%R.
+   have {T} ->: T = (\sum_(i < \dim fullv) k i *: (iter i H) (pi 'X))%R.
+    subst T.
+    apply eq_big => //= i _.
+    congr (_ *: _)%R.
+    by rewrite (@nth_map _ 0 _ 0%R (fun j => iter j H0 (qpolify phi_gt1 'X)) i
+                      (iota 0 (\dim fullv))) ?size_iota // nth_iota ?add0n //.
+   elim: (\dim fullv) k => [++ []//|n IHn k].
+   rewrite big_ord_recr /=.
+   set T := k _.
+   case kn: (T == 0)%R.
+    move/eqP: (kn) => ->.
+    rewrite /= GRing.scale0r GRing.addr0 => /IHn H i.
+    case ni : (i == Ordinal (ltnSn n)).
+     subst T.
+     by move/eqP: ni kn => -> /eqP ->.
+    have ni': i < n.
+     case: i ni => i i'.
+     rewrite eqE /= => ni.
+     move: i'.
+     by rewrite leq_eqVlt ltnS eqSS ni.
+    move/H: (Ordinal ni') => <-.
+    congr k.
+    by apply/val_inj.
+   move/eqP.
+   rewrite GRing.addr_eq0.
+   move/eqP.
+   rewrite /=.
+    case:
+    rewrite ltn_neqAle.
+   rewrite eqE /=.
+   
+   case: 
+   rewrite dimvm.
+    apply/val_inj.
+    compute.
+    apply/val_inj.
+    rewrite /=.
+    set T := 0%R.
+    last by case: i => i H; rewrite size_tuple.
+    rewrite /H0 !GRing.Frobenius_autE.
+    case: (x i) => [][|[]//] j.
+    * have->: (Ordinal j = 0)%R by apply/val_inj.
+      by rewrite !GRing.scale0r GRing.expr0n.
+    * have->: (Ordinal j = 1)%R by apply/val_inj.
+      by rewrite !GRing.scale1r.
+   set T := (\sum_(_ < _) _)%R.
+   have {T} ->: T = H (\sum_(i < \dim fullv) (x i *: e1`_i))%R.
+    subst T.
+    apply/esym/(big_morph H).
+    move=> y z.
+    rewrite /H /H0 /= GRing.Frobenius_autD_comm //.
+    by apply/eqP; rewrite eqE /= GRing.mulrC.
+    by rewrite GRing.rmorph0.
+  
 
 Local Definition e1 :=
   map_tuple (fun j => pi 'X ^+ j)%R
@@ -53,10 +140,6 @@ Proof.
   apply/val_inj.
   by rewrite /= -modp_scalel.
 Qed.
-
-Lemma dimvm : m = \dim (fullv : {vspace {qpoly phi}}).
- by rewrite /m dim_polyn.
-Defined.
 
 Lemma basis_e1 : basis_of fullv e1.
 Proof.
@@ -220,23 +303,6 @@ Qed.
 (* by have->: m = \dim (fullv : {vspace {qpoly phi}}) *)
 (*  by rewrite /m dim_polyn. *)
 (* Defined. *)
-
-Lemma expHpE : iter m H (pi 'X)%R = pi ('X ^ (2 ^ m)%N)%R.
-Proof.
-  elim: m => // p' IHp.
-  rewrite -[X in (2 ^ X)%N]addn1 iterS IHp /H /H0 /= GRing.Frobenius_autE.
-  set T := (qpolify phi_gt1 _).
-  have ->: T = pi ('X ^ (2 ^ p')%N)%R by [].
-  by rewrite -GRing.rmorphX expnD expn1 muln2 -addnn exprzD_nat GRing.expr2.
-Qed.
-
-Lemma H1E : H (pi 'X)%R = pi ('X ^ 2)%R.
-Proof.
-  rewrite /H /H0 /= GRing.Frobenius_autE.
-  set T := (qpolify phi_gt1 _).
-  have ->: T = pi 'X%R by [].
-  by rewrite -GRing.rmorphX.
-Qed.
 
 Local Definition canon_mat' f :=
   let m := \dim (fullv : {vspace {qpoly phi}}) in

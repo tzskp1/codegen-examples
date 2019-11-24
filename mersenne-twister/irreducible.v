@@ -631,4 +631,121 @@ apply/(iffP idP).
   rewrite GRing.rmorphX !eqE /= !eqE /= => /eqP ->.
   by rewrite !modp_small ?GRing.mulr1 ?size_polyC ?eqxx.
 Qed.
+
+Hypothesis (ip : irreducible_poly phi).
+
+Lemma irreducible_distinct :
+(forall l k : nat, pi 'X ^+ l * pi 'X = pi 'X ^+ k * pi 'X -> k = l %[mod 2 ^ m - 1])%R.
+Proof.
+move/irreducibleP: ip; case/andP => H1 H2.  
+have H: (p_ord \in stab (pi 'X) (pi 'X))%R by rewrite -X2m_eqXE.
+case/min_stab_dvd: (H) pm => + /primeP [] o pm' => /pm' {pm'}.
+have: (one_ord \notin stab (pi 'X) (pi 'X))%R by rewrite -X2_neqXE.
+move/(@min_stab_neq1 _ _ _ _ H) => -> //= x2m1.
+apply/(min_stab_attain H x2m1).
+Qed.
+
+Definition qpoly_fieldType_phi := Eval hnf in qpoly_fieldType ip.
+Local Lemma char2_V : 2 \in [char {qpoly phi}]%R.
+Proof.
+by apply/(GRing.rmorph_char pi)/(GRing.rmorph_char (polyC_rmorphism _)).
+Qed.
+Local Definition H0 : {qpoly phi} -> {qpoly phi} := Frobenius_aut char2_V.
+Local Definition rmH : rmorphism (H0 : qpoly_fieldType_phi -> _).
+  repeat constructor.
+  * move=> x y.
+    rewrite /H0 /= !GRing.Frobenius_autD_comm ?GRing.Frobenius_autN //.
+    by apply/eqP; rewrite eqE /= GRing.mulrC.
+  * move => x y.
+    rewrite /H0 -GRing.Frobenius_autM_comm //.
+    by apply/eqP; rewrite eqE /= GRing.mulrC.
+  * apply/eqP.
+    by rewrite eqE /= modp_mul GRing.mulr1 modp_mod.
+Qed.
+Local Definition H := RMorphism rmH.
+
+Lemma dimvm : m = \dim (fullv : {vspace {qpoly phi}}).
+ by rewrite /m dim_polyn.
+Defined.
+
+Lemma expHpE : iter m H (pi 'X)%R = pi ('X ^ (2 ^ m)%N)%R.
+Proof.
+  elim: m => // p' IHp.
+  rewrite -[X in (2 ^ X)%N]addn1 iterS IHp /H /H0 /= GRing.Frobenius_autE.
+  set T := (qpolify phi_gt1 _).
+  have ->: T = pi ('X ^ (2 ^ p')%N)%R by [].
+  by rewrite -GRing.rmorphX expnD expn1 muln2 -addnn exprzD_nat GRing.expr2.
+Qed.
+
+Lemma H1E : H (pi 'X)%R = pi ('X ^ 2)%R.
+Proof.
+  rewrite /H /H0 /= GRing.Frobenius_autE.
+  set T := (qpolify phi_gt1 _).
+  have ->: T = pi 'X%R by [].
+  by rewrite -GRing.rmorphX.
+Qed.
+
+Local Definition e0 :=
+  map_tuple (fun j => (iter j H) (pi 'X))%R
+            (iota_tuple (\dim (fullv:{vspace {qpoly phi}})) 0).
+
+Lemma basis_e0 : basis_of fullv e0.
+  Admitted.
+(* Proof. *)
+(*   rewrite basisEfree size_tuple leqnn subvf !andbT. *)
+(*   apply/freeP => k. *)
+(*    set T := (\sum_(_ < _) _)%R. *)
+(*    have {T} ->: T = (\sum_(i < \dim fullv) k i *: (iter i H) (pi 'X))%R. *)
+(*     subst T. *)
+(*     apply eq_big => //= i _. *)
+(*     congr (_ *: _)%R. *)
+(*     by rewrite (@nth_map _ 0 _ 0%R (fun j => iter j H0 (qpolify phi_gt1 'X)) i *)
+(*                       (iota 0 (\dim fullv))) ?size_iota // nth_iota ?add0n //. *)
+(*    elim: (\dim fullv) k => [++ []//|n IHn k /eqP]. *)
+(*    rewrite big_ord_recr /= GRing.addr_eq0 => /eqP + i. *)
+(*    case ni : (i == Ordinal (ltnSn n)). *)
+(*      move/eqP: ni => -> /eqP. *)
+(*    set T := k _. *)
+(*    case kn: (T == 0)%R. *)
+(*     move/eqP: (kn) => ->. *)
+(*     rewrite /= GRing.scale0r GRing.addr0 => /IHn H i. *)
+(*     case ni : (i == Ordinal (ltnSn n)). *)
+(*      subst T. *)
+(*      by move/eqP: ni kn => -> /eqP ->. *)
+(*     have ni': i < n. *)
+(*      case: i ni => i i'. *)
+(*      rewrite eqE /= => ni. *)
+(*      move: i'. *)
+(*      by rewrite leq_eqVlt ltnS eqSS ni. *)
+(*     move/H: (Ordinal ni') => <-. *)
+(*     congr k. *)
+(*     by apply/val_inj. *)
+(*    rewrite /=. *)
+(*     case: *)
+(*     rewrite ltn_neqAle. *)
+(*    rewrite eqE /=. *)
+   
+(*    case:  *)
+(*    rewrite dimvm. *)
+(*     apply/val_inj. *)
+(*     compute. *)
+(*     apply/val_inj. *)
+(*     rewrite /=. *)
+(*     set T := 0%R. *)
+(*     last by case: i => i H; rewrite size_tuple. *)
+(*     rewrite /H0 !GRing.Frobenius_autE. *)
+(*     case: (x i) => [][|[]//] j. *)
+(*     * have->: (Ordinal j = 0)%R by apply/val_inj. *)
+(*       by rewrite !GRing.scale0r GRing.expr0n. *)
+(*     * have->: (Ordinal j = 1)%R by apply/val_inj. *)
+(*       by rewrite !GRing.scale1r. *)
+(*    set T := (\sum_(_ < _) _)%R. *)
+(*    have {T} ->: T = H (\sum_(i < \dim fullv) (x i *: e1`_i))%R. *)
+(*     subst T. *)
+(*     apply/esym/(big_morph H). *)
+(*     move=> y z. *)
+(*     rewrite /H /H0 /= GRing.Frobenius_autD_comm //. *)
+(*     by apply/eqP; rewrite eqE /= GRing.mulrC. *)
+(*     by rewrite GRing.rmorph0. *)
+  
 End irreducibility.
