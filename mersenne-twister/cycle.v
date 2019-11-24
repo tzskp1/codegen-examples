@@ -7,6 +7,30 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Section phi.
+Variables w n m r : nat.
+Variable a : w.-tuple [finFieldType of 'F_2].
+
+Local Open Scope ring_scope.
+Definition phi' :=
+  ('X ^+ n + 'X ^+ m) ^+ (w - r) * ('X ^+ n.-1 + 'X ^+ m.-1) ^+ r
+  + \sum_(i < r.-1) a`_i *: ('X ^+ n + 'X ^+ m) ^+ (w - r)
+                     * ('X ^+ n.-1 + 'X ^+ m.-1) ^+ (r.-1 - i)
+  + \sum_(i < w - r.-1)
+     a`_(r.-1 + i) *: ('X ^+ n + 'X ^+ m) ^+ (w - r - i).
+End phi.
+
+Lemma a32 : size ([:: 1; 0; 0; 1; 1; 0; 0; 1; 0; 0; 0; 0; 1; 0; 0; 0; 1; 0; 1;
+                     1; 0; 0; 0; 0; 1; 1; 0; 1; 1; 1; 1; 1]: seq 'F_2)%R == 32.
+Proof. by []. Qed.
+Definition phi := phi' 624 397 31 (Tuple a32).
+Local Definition f := companionmx phi.
+
+Require Import Extraction.
+Require Import ExtrOcamlNatInt.
+Definition cphi := phi : seq 'F_2.
+Extraction "phi.ml" cphi.
+
 Section irreducible_cyclic.
 Variable phi : {poly [finFieldType of 'F_2]}.
 Local Notation m := (size phi).-1.
