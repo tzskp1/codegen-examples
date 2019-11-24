@@ -747,5 +747,211 @@ Lemma basis_e0 : basis_of fullv e0.
 (*     rewrite /H /H0 /= GRing.Frobenius_autD_comm //. *)
 (*     by apply/eqP; rewrite eqE /= GRing.mulrC. *)
 (*     by rewrite GRing.rmorph0. *)
+
+Local Definition canon_mat' f :=
+  let m := \dim (fullv : {vspace {qpoly phi}}) in
+  (\matrix_(i < m , j < m) coord e0 i (f e0`_j))%R.
+
+Local Definition mat_inj :
+  'M['F_2]_(\dim (fullv : {vspace {qpoly phi}})) -> 'M['F_2]_m.
+move=> x; apply (castmx (esym dimvm, esym dimvm) x).
+Defined.
+
+Definition canon_mat := mat_inj \o canon_mat'.
+
+Lemma step y (x : ordinal y) : ordinal y.
+  apply/(@Ordinal _ (x.+1 %% y)).
+  case: x => x /= xy.
+  case xy': (x.+1 == y).
+   move/eqP: xy' => <-.
+   by rewrite modnn.
+  by rewrite modn_small ltn_neqAle xy' xy.
+Defined.
+(* Check (fun j => (canon_mat H *m delta_mx j (@Ordinal 1 0 erefl)) *)
+(* = (canon_mat H *m delta_mx (step j) (@Ordinal 1 0 erefl)))%R. *)
+
+Lemma sum_col_delta (R : ringType) n (f : nat -> R) j :
+  (\sum_(i < n) f i * (i == j)%:R)%R = f j.
+Proof.
+  elim: n j => [[]//|n IHn [] j].
+  case jn: (j == n).
+   move/eqP: jn => -> /= ?.
+   rewrite big_ord_recr /= eqE /= eqxx GRing.mulr1.
+   apply/eqP.
+   rewrite -GRing.subr_eq0 GRing.addrK.
+   apply/eqP/etrans.
+   apply: (_ : _ = \sum_(i < n) 0)%R.
+   apply/eq_big => [//|[] i ni _].
+   set T := _ == _.
+   have->: T = false.
+    subst T.
+    rewrite /= eqE /=.
+    apply/negP => /eqP ni'.
+    move: ni' ni => ->.
+    by rewrite ltnn.
+   by rewrite GRing.mulr0.
+   rewrite big_const card_ord.
+   elim n => // n'.
+   by rewrite iterS GRing.add0r.
+  move=> i. 
+  rewrite big_ord_recr /=.
+  set T := _ == _.
+  have->: T = false.
+   subst T.
+   by rewrite eqE /= eq_sym jn.
+  rewrite GRing.mulr0 GRing.addr0 /=.
+  have jn': j < n.
+   move: i T.
+   by rewrite ltnS leq_eqVlt jn /=.
+  by move: (IHn (Ordinal jn')) => /= <-.
+Qed.
+
+Lemma canon_matK M j :
+  (canon_mat M *m delta_mx j (@Ordinal 1 0 erefl) =
+   castmx (esym dimvm, erefl) (\col_(i < \dim fullv) coord e0 i (M e0`_j)))%R.
+Proof.
+  apply/matrixP => k [][]//= i.
+  rewrite /canon_mat /canon_mat' /mat_inj !castmxE !mxE /=.
+  apply/etrans.
+  apply eq_big => [//| s /= _].
+  rewrite !castmxE !mxE andbT (nth_map 0).
+  apply/erefl.
+  rewrite /= size_tuple -dimvm.
+  by case: s.
+  rewrite /= (nth_map 0).
+  by rewrite (sum_col_delta (fun i0 => coord e0 (cast_ord (esym (esym dimvm)) k)
+             (M (iter (nth 0 (iota 0 (\dim fullv)) i0) H0 (qpolify phi_gt1 'X))))).
+  rewrite /= size_tuple -dimvm.
+  by case: j.
+Qed.
+
+Lemma X2m_eqX : iter m H (pi 'X)%R = (pi 'X)%R.
+Proof.
+  rewrite expHpE.
+  case/irreducibleP/andP: ip => _ /eqP H.
+  by apply/val_inj.
+Qed.
+
+Lemma mulHE j : 
+  (canon_mat H *m delta_mx j (@Ordinal 1 0 erefl)
+= delta_mx (step j) (@Ordinal 1 0 erefl))%R.
+Proof.
+  rewrite canon_matK.
+  apply/matrixP => i [][]// ?.
+  rewrite !castmxE !mxE andbT /= esymK (nth_map 0) ?size_iota ?(esym dimvm) //.
+  move: (coord_free (cast_ord dimvm i) (step (cast_ord dimvm j))
+                    (basis_free basis_e0)).
+  have ->: (cast_ord dimvm i == step (cast_ord dimvm j)) = (i == step j).
+   by rewrite !eqE /= -dimvm.
+  move=> <-.
+  rewrite coord_free ?(basis_free basis_e0) // eqE /=
+          nth_iota ?(esym dimvm) //= add0n -iterS.
+  case: j => // j.
+  case jm: (j.+1 == m).
+   move/eqP: jm => ->.
+   rewrite X2m_eqX -[in RHS]dimvm modnn.
+   have O: 0 < m by case: m m_is_prime.
+   have->: (pi 'X = e0`_(cast_ord dimvm (Ordinal O)))%R.
+    rewrite /e0 /=.
+    by case: (\dim fullv) dimvm m_is_prime => // ->.
+    by rewrite coord_free ?(basis_free basis_e0) // eqE /= eq_sym.
+  move=> jm'.
+  have mj : j.+1 < m
+   by rewrite ltn_neqAle jm jm'.
+  rewrite /= -iterS.
+  set T := iter _ _ _.
+  have->: (T = e0`_(cast_ord dimvm (Ordinal mj)))%R.
+   subst T => /=.
+   case: (\dim fullv) dimvm m_is_prime => [-> //|] d md.
+   rewrite /= (nth_map 0) ?size_iota ?nth_iota; try by rewrite -ltnS -md.
+   by rewrite add1n -iterS // -ltnS -md.
+  by rewrite coord_free ?(basis_free basis_e0) // eqE /=
+  -[in RHS]dimvm modn_small // eq_sym.
+Qed.
+
+Lemma mulCE j : 
+  ((companionmx phi)^T *m delta_mx j (@Ordinal 1 0 erefl)
+ = delta_mx (step j) (@Ordinal 1 0 erefl))%R.
+Proof.
+  apply/matrixP => i [][]// ?.
+  rewrite /companionmx /= !mxE andbT /=.
+  apply/etrans.
+  apply eq_big => [//|i0 _].
+  rewrite !mxE !eqE /= !eqxx andbT /=.
+  apply/erefl.
+  rewrite /= (sum_col_delta (fun i0 => (if eqn i0 (size phi).-2
+                                     then - phi`_i else (eqn i0.+1 i)%:R)))%R.
+  case: i => i /= i0.
+  case: j => j /= j0.
+  rewrite !eqE /=.
+  case: ifP => jm; last first.
+   have ?: j.+1 < (size phi).-1.
+    rewrite ltn_neqAle j0 andbT.
+    move: m_is_prime; rewrite /m.
+    case: (size phi).-1 j0 jm => //= ?? /eqP jn _.
+    rewrite eqSS.
+    by apply/negP => /eqP /jn.
+   by rewrite modn_small // eq_sym eqE /=.
+  have->: j.+1 = (size phi).-1.
+   rewrite (eqP jm) prednK //.
+   move: m_is_prime; rewrite /m.
+   by case: (size phi).-1 => //.
+  rewrite modnn GRing.oppr_char2 //.
+  
+  apply/val_inj.
+  rewrite /=.
+  
+   esymK (nth_map 0) ?size_iota ?(esym dimvm) //.
+  
+
+Lemma compHE : canon_mat H = .
+Proof.
+  apply/matrixP => i j.
+  rewrite !castmxE /= !mxE.
+  rewrite /canon_mat /canon_mat' /= /mat_inj /companionmx.
+  case: i j => [i Hi][j ?] /=.
+  case: ifP.
+   move=> /eqP He.
+   rewrite /e2 /e1 (nth_map 0%R) /=.
+   move: He Hi => -> Hi.
+   rewrite /=.
+  apply/val_inj.
+   move=> H'.
+   
+   
+   rewrite /coord /=.
+   rewrite /=.
+   move/eqP => ->.
+  rewrite /=.
+  rewrite /=.
+  rewrite 
+  apply/val_inj.
+  Check fun_of_matrix.
+  rewrite /=.
+  Search (((\matrix_(_, _) _) _ _)%R).
+  
+  rewrite cast_ordK.
+  rewrite /=.
+  Check map_mx_companion.
+  Check map_mx H.
+  Check lin1_mx.
+  
+  apply/row_matrixP => j.
+  rewrite /= /row /companionmx /=.
+  apply/val_inj.
+  rewrite /=.
+  
+  destruct eq_rect.
+  rewrite /=.
+  move=> x.
+  rewrite /canon_fun /e /e0 /H GRing.Frobenius_autE /=.
+Check Phi _ == pi 'X.
+Check (H (pi 'X) != pi 'X) && (iter p H (pi 'X) == pi 'X).
+End inverse_decimation_method.
+Check (fun x => x ^ 2)%R.
+   (@mulmx [finFieldType of 'F_2] p p 1 f
+                     (\col_(k < p) coord e k v)) i (@Ordinal 1 0 erefl) *: e`_i.
+Local Definition canon_mat f := \matrix_(i < p , j < p) coord e i (f e`_j).
+
   
 End irreducibility.
