@@ -61,7 +61,7 @@ Variable phi : {poly [finFieldType of 'F_2]}.
 Local Notation m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
 
-Local Lemma exp2_dvd a b :
+Lemma exp2_dvd a b :
   2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
 Proof.
 elim: b => [|b IHb]; first by rewrite muln0 expn0 subn1 big_ord0 muln0.
@@ -158,13 +158,16 @@ Proof.
   by case: (size phi).-1 => []//[].
 Qed.
 
-Local Canonical qpoly_ringType_phi :=
-  Eval hnf in qpoly_ringType phi_gt1.
-Local Canonical qpoly_comRingType_phi :=
-  Eval hnf in qpoly_comRingType phi_gt1.
-Local Definition pi := canon_surj phi_gt1.
+Lemma predphi_neq0 : (size phi).-1 != 0.
+Proof. by case: m (m_is_prime pm). Qed.
 
-Hint Resolve phi_gt0 phi_gt1 phi_gt2 phi_gtb
+Canonical qpoly_ringType_phi :=
+  Eval hnf in qpoly_ringType phi_gt1.
+Canonical qpoly_comRingType_phi :=
+  Eval hnf in qpoly_comRingType phi_gt1.
+Definition pi := canon_surj phi_gt1.
+
+Hint Resolve phi_gt0 phi_gt1 phi_gt2 phi_gtb predphi_neq0
      predpredpower_power predpredpower_gt0 predphi_gt1 predphi_geq1
      predphi_neq0 predpower_neq0 predpower_gt0
      p_ord_prf predpower_gt_succpower power_gt0 phi_neq0 polyX_neq0 : core.
@@ -657,12 +660,12 @@ apply/(min_stab_attain H x2m1).
 Qed.
 
 Definition qpoly_fieldType_phi := Eval hnf in qpoly_fieldType ip.
-Local Lemma char2_V : 2 \in [char {qpoly phi}]%R.
+Lemma char2_V : 2 \in [char {qpoly phi}]%R.
 Proof.
 by apply/(GRing.rmorph_char pi)/(GRing.rmorph_char (polyC_rmorphism _)).
 Qed.
-Local Definition H0 : {qpoly phi} -> {qpoly phi} := Frobenius_aut char2_V.
-Local Definition rmH : rmorphism (H0 : qpoly_fieldType_phi -> _).
+Definition H0 : {qpoly phi} -> {qpoly phi} := Frobenius_aut char2_V.
+Definition rmH : rmorphism (H0 : qpoly_fieldType_phi -> _).
   repeat constructor.
   * move=> x y.
     rewrite /H0 /= !GRing.Frobenius_autD_comm ?GRing.Frobenius_autN //.
@@ -673,7 +676,7 @@ Local Definition rmH : rmorphism (H0 : qpoly_fieldType_phi -> _).
   * apply/eqP.
     by rewrite eqE /= modp_mul GRing.mulr1 modp_mod.
 Qed.
-Local Definition H := RMorphism rmH.
+Definition H := RMorphism rmH.
 
 Lemma dimvm : m = \dim (fullv : {vspace {qpoly phi}}).
  by rewrite dim_polyn.
@@ -696,20 +699,21 @@ Proof.
   by rewrite -GRing.rmorphX.
 Qed.
 
-Local Definition e0 :=
+Definition e0 :=
   map_tuple (fun j => (iter j H) (pi 'X))%R
             (iota_tuple (\dim (fullv:{vspace {qpoly phi}})) 0).
 
 Lemma basis_e0 : basis_of fullv e0.
 Proof.
   rewrite basisEfree size_tuple leqnn subvf !andbT.
+  apply/freeP.
 Admitted.
 
-Local Definition canon_mat' f :=
+Definition canon_mat' f :=
   let m := \dim (fullv : {vspace {qpoly phi}}) in
   (\matrix_(i < m , j < m) coord e0 i (f e0`_j))%R.
 
-Local Definition mat_inj :
+Definition mat_inj :
   'M['F_2]_(\dim (fullv : {vspace {qpoly phi}})) -> 'M['F_2]_m.
 move=> x; apply (castmx (esym dimvm, esym dimvm) x).
 Defined.
@@ -884,35 +888,9 @@ Proof.
   by apply/val_inj.
 Qed.
 
-(* Lemma ord_enumS n : *)
-(*   ord_enum n.+1 = ord0 :: map (lift ord0) (ord_enum n). *)
-(* Proof. *)
-(*   elim: n => [|n IHn]. *)
-(*    rewrite /ord_enum. *)
-(*    rewrite insubK. *)
-(*    rewrite /= -enum1. *)
-(*    Check ord_enum 1. *)
-(*    rewrite /ord_enum /= /oapp. *)
-(*    apply/val_inj. *)
-(*    rewrite /=. *)
-(*   rewrite /ord_enum /=. *)
-
 Lemma enum_ord_enum_mem n :
   enum 'I_n = @enum_mem _ (@mem _ (predPredType _) (fun _ : ordinal n => true)).
 Proof. by []. Qed.
-
-(* Lemma enum_cast : *)
-(*   [seq cast_ord sizem i | i <- enum 'I_(size phi).-1] *)
-(* = enum 'I_(size ('X ^ (size phi).-1 + 1)%R).-1. *)
-(* Proof. *)
-(*   case: (size phi).-1 sizem => h. *)
-
-Lemma ltn_wf : well_founded (fun x y => x < y).
-Proof.
-  elim => [//|? IHn]; constructor => y.
-  rewrite ltnS leq_eqVlt => /orP [/eqP -> //|].
-  by case: IHn => H /H.
-Qed.
 
 Lemma compHE :
   (castmx (sizem, sizem) (canon_mat H) =

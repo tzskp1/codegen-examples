@@ -148,13 +148,39 @@ case: u Xs distXs IH => [Xs distXs IH k /(_ 1%R)/eqP|u Xs distXs IH].
  rewrite big_ord1 eE GRing.rmorph1
         GRing.scaler_eq0 GRing.oner_eq0 orbF => /eqP k0 [][]// ?.
   by rewrite -[RHS]k0; congr k; apply/val_inj.
+ 
 case: u Xs distXs IH => [Xs distXs IH k H|u Xs distXs IH].
+
+suff : exists c, c \in independents Xs.
+min_dim
  set Oi := @Ordinal 2 0 erefl.
  set Ti := @Ordinal 2 1 erefl.
  case:(distXs Oi Ti _) => // t t12; move: (H t).
- rewrite !big_ord_recr big_ord0 !eE /= GRing.add0r.
-
-
+ rewrite !big_ord_recr big_ord0 !eE /= GRing.add0r => H1 i.
+ apply/eqP/negP => /negP ki.
+ move/eqP: H1.
+ rewrite GRing.addr_eq0.
+ case: i ki => [][|[]//] i ki.
+ move/eqP/(f_equal (fun x => (k (Ordinal i))^-1 *: x))%R.
+ have ->: (widen_ord (leqnSn 1) ord_max = Ordinal i) by apply/val_inj.
+ rewrite GRing.scalerK // -GRing.scalerN GRing.scalerA GRing.scalerN.
+ apply/eqP.
+ rewrite -GRing.addr_eq0.
+ apply/negP.
+ 
+ rewrite GRing.scalerAl.
+ Check GRing.divrI _.
+ Check GRing.mulKr  _  _.
+ Check GRing.invrK _.
+ Check GRing.invr_inj _.
+ Check (@GRing.scaler_injl _ _ (k (Ordinal i)) _ _).
+ move/(@GRing.scaler_injl _ _ (k (Ordinal i))).
+ move/(@GRing.mulrI _ (k (Ordinal i)) _).
+ 
+  Check GRing.mulVr  _.
+ 
+ rewrite /=.
+Check GRing.mulrI _ _.
 
 
  
