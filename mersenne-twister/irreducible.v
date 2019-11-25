@@ -884,13 +884,35 @@ Proof.
   by apply/val_inj.
 Qed.
 
-(* Lemma mulHE' j : *)
-(* (castmx (sizem, sizem) (canon_mat H) *m delta_mx j (Ordinal (erefl (0 < 1)%N)))%R *)
-(* = delta_mx (step j) (Ordinal (erefl (0 < 1))). *)
+(* Lemma ord_enumS n : *)
+(*   ord_enum n.+1 = ord0 :: map (lift ord0) (ord_enum n). *)
 (* Proof. *)
-(*   apply/matrixP => i [][]// ?. *)
-(*   rewrite !mxE. *)
-(*    !castmxE. *)
+(*   elim: n => [|n IHn]. *)
+(*    rewrite /ord_enum. *)
+(*    rewrite insubK. *)
+(*    rewrite /= -enum1. *)
+(*    Check ord_enum 1. *)
+(*    rewrite /ord_enum /= /oapp. *)
+(*    apply/val_inj. *)
+(*    rewrite /=. *)
+(*   rewrite /ord_enum /=. *)
+
+Lemma enum_ord_enum_mem n :
+  enum 'I_n = @enum_mem _ (@mem _ (predPredType _) (fun _ : ordinal n => true)).
+Proof. by []. Qed.
+
+(* Lemma enum_cast : *)
+(*   [seq cast_ord sizem i | i <- enum 'I_(size phi).-1] *)
+(* = enum 'I_(size ('X ^ (size phi).-1 + 1)%R).-1. *)
+(* Proof. *)
+(*   case: (size phi).-1 sizem => h. *)
+
+Lemma ltn_wf : well_founded (fun x y => x < y).
+Proof.
+  elim => [//|? IHn]; constructor => y.
+  rewrite ltnS leq_eqVlt => /orP [/eqP -> //|].
+  by case: IHn => H /H.
+Qed.
 
 Lemma compHE :
   (castmx (sizem, sizem) (canon_mat H) =
@@ -904,125 +926,59 @@ Proof.
   apply/etrans.
    apply/eq_big => [//|s _].
    rewrite !castmxE /= !esymK !cast_ord_comp.
-   rewrite castmx_id.
    apply/erefl.
   move/matrixP: (mulHE (cast_ord (esym sizem) (Ordinal Hj)))
    => /(_ (cast_ord (esym sizem) (Ordinal Hi)) k).
   rewrite !mxE !eqE /= [in RHS]sizem => <-.
-  Search (etrans (esym _) _).
-  apply/etrans.
-   apply/eq_big => [//|s _].
-   rewrite !cast_ord_comp.
-   rewrite -castmxE /=.
-  rewrite !mxE !eqE /=.
-  rewrite /=.
-  move: (mulHE (cast_ord (esym sizem) (Ordinal Hj))).
-  rewrite /=.
-   
-   under -sizem.
-  castmxE.
-  
-  move: (Hj) => Hj'.
-  rewrite -sizem in Hj.
-  rewrite 
-  have <-: (Ordinal Hj = Ordinal Hj').
-  elim: (size ('X ^ (size phi).-1 + 1)%R).-1 m sizem Hj => // s IHs.
-   rewrite /=.
-  rewrite !mxE.
-  apply/etrans.
-   apply/eq_big => [//|s _].
-   rewrite !castmxE /=.
-   apply/erefl.
-  rewrite -big_ord_widen_cond.
-  rewrite big_ord_narrow.
-  apply big_map.
-  elim: m sizem Hi Hj => //.
-  rewrite /=.
-   apply/eq_big => [//|s _].
-  
-  apply/val_inj.
-  rewrite /=.
-  apply/matrixP.
-  rewrite -summxE .
-  apply/eq_big => [//|s _].
-  
-  have: (((i == (j.+1 %% (size phi).-1)%N) && (k == 0))%:R)%R = 
-  (((i == (j.+1 %% (size ('X ^ (size phi).-1 + 1)%R).-1)%N) && (k == 0))%:R)%R.
-  set T := (i == _..
-     => H.
-  have: 
-   mulHE.
-  rewrite (castmxE (sizem, sizem))t.
-  apply/castmx_sym.
-  move: (mulHE (cast_ord (esym sizem) j)).
-  have: 
-    ((canon_mat H) *m delta_mx j (Ordinal (erefl (0 < 1)%N))
-     = castmx (sizem, sizem) 
-     (canon_mat H *m delta_mx (cast_ord (esym sizem) j) (Ordinal (erefl (0 < 1)%N))))%R.
-  apply/matrixP => k l.
-  delta_mx (step j) (Ordinal (erefl (0 < 1))) k l = 
-  delta_mx (step (cast_ord (esym sizem) j)) (Ordinal (erefl (0 < 1)))
-           (cast_ord (esym sizem) k) l.
-  have->: delta_mx (step j) (Ordinal (erefl (0 < 1))) k l = 
-          delta_mx (step (cast_ord (esym sizem) j)) (Ordinal (erefl (0 < 1)))
-                   (cast_ord (esym sizem) k) l.
-   move=> ?.
-   apply/val_inj.
-   have: (step j = step (cast_ord (esym sizem) j)).
-   congr delta_mx.
-  apply/matrixP => s s'.
-  rewrite !castmxE.
-  => /(_ (cast_ord (esym sizem) k) l).
-  rewrite /=.
-  have: (step (cast_ord (esym sizem) j) = step j).
-  rewrite /=.
-  rewrite 
-  rewrite mulHE. mulCE 
-  
-  rewrite /canon_mat /canon_mat' /= /mat_inj /companionmx.
-  case: i j => [i Hi][j ?] /=.
-  case: ifP.
-   move=> /eqP He.
-   rewrite /e2 /e1 (nth_map 0%R) /=.
-   move: He Hi => -> Hi.
-   rewrite /=.
-  apply/val_inj.
-   move=> H'.
-   
-   
-   rewrite /coord /=.
-   rewrite /=.
-   move/eqP => ->.
-  rewrite /=.
-  rewrite /=.
-  rewrite 
-  apply/val_inj.
-  Check fun_of_matrix.
-  rewrite /=.
-  Search (((\matrix_(_, _) _) _ _)%R).
-  
-  rewrite cast_ordK.
-  rewrite /=.
-  Check map_mx_companion.
-  Check map_mx H.
-  Check lin1_mx.
-  
-  apply/row_matrixP => j.
-  rewrite /= /row /companionmx /=.
-  apply/val_inj.
-  rewrite /=.
-  
-  destruct eq_rect.
-  rewrite /=.
-  move=> x.
-  rewrite /canon_fun /e /e0 /H GRing.Frobenius_autE /=.
-Check Phi _ == pi 'X.
-Check (H (pi 'X) != pi 'X) && (iter p H (pi 'X) == pi 'X).
-End inverse_decimation_method.
-Check (fun x => x ^ 2)%R.
-   (@mulmx [finFieldType of 'F_2] p p 1 f
-                     (\col_(k < p) coord e k v)) i (@Ordinal 1 0 erefl) *: e`_i.
-Local Definition canon_mat f := \matrix_(i < p , j < p) coord e i (f e`_j).
-
-  
+  rewrite -big_image_id -[RHS]big_image_id /=.
+  apply congr_big => [|//|//].
+  rewrite /image_mem -!enum_ord_enum_mem.
+  have: map val (enum 'I_(size phi).-1)
+      = map val (enum 'I_(size ('X ^ (size phi).-1 + 1 : {poly 'F_2})%R).-1).
+   by rewrite -!sizem.
+  case: (enum 'I_(size phi).-1) => [/(f_equal size)|].
+   rewrite /= size_map size_enum_ord => H0.
+   suff: false by [].
+   move: H0 m_is_prime.
+   by rewrite size_addl ?size_polyXn ?size_polyC //= => <-.
+  case: (enum 'I_(size ('X ^ (size phi).-1 + 1)%R).-1) => //= a l r r0 [] H1 H2.
+  set A := (canon_mat' _ _ _ * _)%R.
+  set B := (canon_mat _ _ _ * _)%R.
+  have->: A = B.
+   rewrite /A /B.
+   rewrite !mxE !castmxE !eqE /= !H1.
+   rewrite !(nth_map 0) ?size_iota ?esymK.
+   rewrite nth_iota // ?add0n.
+   rewrite !mxE !cast_ord_comp (nth_map 0).
+   rewrite nth_iota ?add0n.
+   by rewrite -!iterS /= !H1.
+   case: r H1 B => //.
+   case: r H1 B => //= r ?.
+   by rewrite size_iota -dimvm.
+   case: a H1 A => //= a.
+   by rewrite -dimvm -sizem.
+   case: a H1 A => //= a.
+   by rewrite -dimvm -sizem.
+  congr cons => {A B H1}.
+  elim: l r0 H2.
+   move=> r0 /= r0m.
+   apply/esym/size0nil.
+   move/(f_equal size): r0m.
+   by rewrite !size_map.
+  move=> b l IH [] //= b0 r0 [] H1 /IH ->.
+  congr cons.
+  rewrite !mxE !castmxE !eqE /= !H1.
+  rewrite !(nth_map 0) ?size_iota ?esymK.
+  rewrite nth_iota // ?add0n.
+  rewrite !mxE !cast_ord_comp (nth_map 0).
+  rewrite nth_iota ?add0n.
+  by rewrite -!iterS /= !H1.
+  case: b0 H1 => //.
+  case: b0 H1 => //= ? ?.
+  by rewrite size_iota -dimvm.
+  case: b H1 => //= ?.
+  by rewrite -dimvm -sizem.
+  case: b H1 => //= ?.
+  by rewrite -dimvm -sizem.
+Qed.
 End irreducibility.
