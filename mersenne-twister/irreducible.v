@@ -97,22 +97,13 @@ Proof.
 Qed.
 
 Lemma phi_gt1 : 1 < size phi.
-Proof.
-  move: m_is_prime.
-  by case: (size phi) => []//[].
-Qed.
+Proof. by case: (size phi) m_is_prime => []//[]. Qed.
 
 Lemma phi_gt2 : 2 < size phi.
-Proof.
-  move: m_is_prime.
-  by case: (size phi) => []//[]//[].
-Qed.
+Proof. by case: (size phi) m_is_prime => []//[]//[]. Qed.
 
 Lemma phi_gt0 : 0 < size phi.
-Proof.
-  move: m_is_prime.
-  by case: (size phi).
-Qed.
+Proof. by case: (size phi) m_is_prime. Qed.
 
 Lemma predpower_gt_succpower : (2 ^ m).-1 < (2 ^ m).+1.
 Proof. by case: (2 ^ m) pm. Qed.
@@ -127,21 +118,13 @@ Lemma predpower_neq0 : 0 != 2 ^ m - 1.
 Proof. by case: (2 ^ m - 1) pm. Qed.
 
 Lemma phi_gtb (b : bool) : b < size phi.
-Proof.
-  by case: b; rewrite ?phi_gt1 ?phi_gt0.
-Qed.
+Proof. by case: b; rewrite ?phi_gt1 ?phi_gt0. Qed.
 
-Lemma predphi_neq0 : (size phi).-1 != 0.
-Proof.
-  move: m_is_prime.
-  by case: (size phi).-1.
-Qed.
+Lemma predphi_neq0 : m != 0.
+Proof. by case: m m_is_prime. Qed.
 
-Lemma predphi_gt1 : 1 < (size phi).-1.
-Proof.
-  move: m_is_prime.
-  by case: (size phi).-1 => []//[].
-Qed.
+Lemma predphi_gt1 : 1 < m.
+Proof. by case: m m_is_prime => []//[]. Qed.
 
 Lemma predpredpower_power : (2 ^ m - 1).-1 < 2 ^ m - 1.
 Proof. by case: (2 ^ m - 1) pm. Qed.
@@ -152,14 +135,8 @@ Proof. by case: (2 ^ m - 1) pm => []//[]. Qed.
 Lemma p_ord_prf : (2 ^ m - 1 < (2 ^ m).+1)%N.
 Proof. by rewrite subn1 predpower_gt_succpower. Qed.
 
-Lemma predphi_geq1 : 1 <= (size phi).-1.
-Proof.
-  move: m_is_prime.
-  by case: (size phi).-1 => []//[].
-Qed.
-
-Lemma predphi_neq0 : (size phi).-1 != 0.
-Proof. by case: m (m_is_prime pm). Qed.
+Lemma predphi_geq1 : 1 <= m.
+Proof. by case: m m_is_prime => []//[]. Qed.
 
 Canonical qpoly_ringType_phi :=
   Eval hnf in qpoly_ringType phi_gt1.
@@ -465,7 +442,7 @@ Proof.
  move: (Xn_phi_neq0 a H).
  by rewrite -!GRing.rmorphX -!GRing.rmorphM -!exprnP andbT !eqE.
 Qed.
-  
+
 Lemma map_piP q :
 (forall l k : nat, (pi 'X ^+ l * pi 'X)%R = (pi 'X ^+ k * pi 'X)%R
               -> k = l %[mod 2 ^ m - 1])
