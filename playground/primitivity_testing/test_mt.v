@@ -135,8 +135,6 @@ Definition process a (state : state_vector) : state_vector :=
   let pn1 := minus p (minus n 1%nat) in
   state_vector_of_word_seq (process_aux a decimatedWords pn1).
 
-Compute process a initial_state.
-
 Fixpoint recursive_process a state times {struct times} :=
   match times with
   | 0%nat => state

@@ -94,7 +94,7 @@ void init(list_N l) {
   }
 }
 
-N g_state[n0_p2n()];
+N g_state[n0_len()];
 
 list_N n0_start_state() {
   init(g_state);
@@ -163,18 +163,6 @@ prod_N_random_state n2_pair_N_random_state(N n, random_state r) {
 #define field0_pair_prod_N_random_state(p) (p).n
 #define field1_pair_prod_N_random_state(p) (p).r
 
-int timer = 0;
-
-void print_state() {
-  ++timer;
-  if (timer == 2) {
-    for (int i = 0; i < n0_n(); i++) {
-      printf("%u ", g_state[i]);
-    }
-    puts("");
-    exit(0);
-  }
-}
 #include "test_mt_generated.c"
 
 int main(void) {
