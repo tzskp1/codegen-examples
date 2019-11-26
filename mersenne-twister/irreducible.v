@@ -58,10 +58,10 @@ End ext.
 
 Section irreducibility.
 Variable phi : {poly [finFieldType of 'F_2]}.
-Local Definition m := (size phi).-1.
+Local Notation m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
 
-Local Lemma exp2_dvd a b :
+Lemma exp2_dvd a b :
   2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
 Proof.
 elim: b => [|b IHb]; first by rewrite muln0 expn0 subn1 big_ord0 muln0.
@@ -92,27 +92,18 @@ Qed.
 Lemma phi_neq0 : (phi != 0)%R.
 Proof.
   move: m_is_prime.
-  rewrite -size_poly_eq0 /m.
+  rewrite -size_poly_eq0.
   by case: (size phi).
 Qed.
 
 Lemma phi_gt1 : 1 < size phi.
-Proof.
-  move: m_is_prime; rewrite /m.
-  by case: (size phi) => []//[].
-Qed.
+Proof. by case: (size phi) m_is_prime => []//[]. Qed.
 
 Lemma phi_gt2 : 2 < size phi.
-Proof.
-  move: m_is_prime; rewrite /m.
-  by case: (size phi) => []//[]//[].
-Qed.
+Proof. by case: (size phi) m_is_prime => []//[]//[]. Qed.
 
 Lemma phi_gt0 : 0 < size phi.
-Proof.
-  move: m_is_prime; rewrite /m.
-  by case: (size phi).
-Qed.
+Proof. by case: (size phi) m_is_prime. Qed.
 
 Lemma predpower_gt_succpower : (2 ^ m).-1 < (2 ^ m).+1.
 Proof. by case: (2 ^ m) pm. Qed.
@@ -127,16 +118,13 @@ Lemma predpower_neq0 : 0 != 2 ^ m - 1.
 Proof. by case: (2 ^ m - 1) pm. Qed.
 
 Lemma phi_gtb (b : bool) : b < size phi.
-Proof.
-  by case: b; rewrite ?phi_gt1 ?phi_gt0.
-Qed.
+Proof. by case: b; rewrite ?phi_gt1 ?phi_gt0. Qed.
 
-Lemma predphi_neq0 : (size phi).-1 != 0.
-Proof.
-  move: m_is_prime.
-  rewrite /m.
-  by case: (size phi).-1.
-Qed.
+Lemma predphi_neq0 : m != 0.
+Proof. by case: m m_is_prime. Qed.
+
+Lemma predphi_gt1 : 1 < m.
+Proof. by case: m m_is_prime => []//[]. Qed.
 
 Lemma predpredpower_power : (2 ^ m - 1).-1 < 2 ^ m - 1.
 Proof. by case: (2 ^ m - 1) pm. Qed.
@@ -147,14 +135,17 @@ Proof. by case: (2 ^ m - 1) pm => []//[]. Qed.
 Lemma p_ord_prf : (2 ^ m - 1 < (2 ^ m).+1)%N.
 Proof. by rewrite subn1 predpower_gt_succpower. Qed.
 
-Local Canonical qpoly_ringType_phi :=
-  Eval hnf in qpoly_ringType phi_gt1.
-Local Canonical qpoly_comRingType_phi :=
-  Eval hnf in qpoly_comRingType phi_gt1.
-Local Definition pi := canon_surj phi_gt1.
+Lemma predphi_geq1 : 1 <= m.
+Proof. by case: m m_is_prime => []//[]. Qed.
 
-Hint Resolve phi_gt0 phi_gt1 phi_gt2 phi_gtb
-     predpredpower_power predpredpower_gt0
+Canonical qpoly_ringType_phi :=
+  Eval hnf in qpoly_ringType phi_gt1.
+Canonical qpoly_comRingType_phi :=
+  Eval hnf in qpoly_comRingType phi_gt1.
+Definition pi := canon_surj phi_gt1.
+
+Hint Resolve phi_gt0 phi_gt1 phi_gt2 phi_gtb predphi_neq0
+     predpredpower_power predpredpower_gt0 predphi_gt1 predphi_geq1
      predphi_neq0 predpower_neq0 predpower_gt0
      p_ord_prf predpower_gt_succpower power_gt0 phi_neq0 polyX_neq0 : core.
 
@@ -451,7 +442,7 @@ Proof.
  move: (Xn_phi_neq0 a H).
  by rewrite -!GRing.rmorphX -!GRing.rmorphM -!exprnP andbT !eqE.
 Qed.
-  
+
 Lemma map_piP q :
 (forall l k : nat, (pi 'X ^+ l * pi 'X)%R = (pi 'X ^+ k * pi 'X)%R
               -> k = l %[mod 2 ^ m - 1])
@@ -578,7 +569,7 @@ apply/(iffP idP).
    move: dL => + f1.
    rewrite -f1 dimv1 => p1.
    move: m_is_prime.
-   by rewrite /m -p1.
+   by rewrite -p1.
   have piX_neq0 : pi 'X%R != 0%R.
    apply/negP => /eqP /(f_equal e).
    rewrite GRing.rmorph0.
@@ -630,5 +621,319 @@ apply/(iffP idP).
   move: piX2X; subst piX; move: piX1.
   rewrite GRing.rmorphX !eqE /= !eqE /= => /eqP ->.
   by rewrite !modp_small ?GRing.mulr1 ?size_polyC ?eqxx.
+Qed.
+
+Hypothesis (ip : irreducible_poly phi).
+
+Lemma irreducible_distinct :
+(forall l k : nat, pi 'X ^+ l * pi 'X = pi 'X ^+ k * pi 'X -> k = l %[mod 2 ^ m - 1])%R.
+Proof.
+move/irreducibleP: ip; case/andP => H1 H2.  
+have H: (p_ord \in stab (pi 'X) (pi 'X))%R by rewrite -X2m_eqXE.
+case/min_stab_dvd: (H) pm => + /primeP [] o pm' => /pm' {pm'}.
+have: (one_ord \notin stab (pi 'X) (pi 'X))%R by rewrite -X2_neqXE.
+move/(@min_stab_neq1 _ _ _ _ H) => -> //= x2m1.
+apply/(min_stab_attain H x2m1).
+Qed.
+
+Definition qpoly_fieldType_phi := Eval hnf in qpoly_fieldType ip.
+Lemma char2_V : 2 \in [char {qpoly phi}]%R.
+Proof.
+by apply/(GRing.rmorph_char pi)/(GRing.rmorph_char (polyC_rmorphism _)).
+Qed.
+Definition H0 : {qpoly phi} -> {qpoly phi} := Frobenius_aut char2_V.
+Definition rmH : rmorphism (H0 : qpoly_fieldType_phi -> _).
+  repeat constructor.
+  * move=> x y.
+    rewrite /H0 /= !GRing.Frobenius_autD_comm ?GRing.Frobenius_autN //.
+    by apply/eqP; rewrite eqE /= GRing.mulrC.
+  * move => x y.
+    rewrite /H0 -GRing.Frobenius_autM_comm //.
+    by apply/eqP; rewrite eqE /= GRing.mulrC.
+  * apply/eqP.
+    by rewrite eqE /= modp_mul GRing.mulr1 modp_mod.
+Qed.
+Definition H := RMorphism rmH.
+
+Lemma dimvm : m = \dim (fullv : {vspace {qpoly phi}}).
+ by rewrite dim_polyn.
+Defined.
+
+Lemma expHpE : iter m H (pi 'X)%R = pi ('X ^ (2 ^ m)%N)%R.
+Proof.
+  elim: m => // p' IHp.
+  rewrite -[X in (2 ^ X)%N]addn1 iterS IHp /H /H0 /= GRing.Frobenius_autE.
+  set T := (qpolify phi_gt1 _).
+  have ->: T = pi ('X ^ (2 ^ p')%N)%R by [].
+  by rewrite -GRing.rmorphX expnD expn1 muln2 -addnn exprzD_nat GRing.expr2.
+Qed.
+
+Lemma H1E : H (pi 'X)%R = pi ('X ^ 2)%R.
+Proof.
+  rewrite /H /H0 /= GRing.Frobenius_autE.
+  set T := (qpolify phi_gt1 _).
+  have ->: T = pi 'X%R by [].
+  by rewrite -GRing.rmorphX.
+Qed.
+
+Definition e0 :=
+  map_tuple (fun j => (iter j H) (pi 'X))%R
+            (iota_tuple (\dim (fullv:{vspace {qpoly phi}})) 0).
+
+Lemma basis_e0 : basis_of fullv e0.
+Proof.
+  rewrite basisEfree size_tuple leqnn subvf !andbT.
+  apply/freeP.
+Admitted.
+
+Definition canon_mat' f :=
+  let m := \dim (fullv : {vspace {qpoly phi}}) in
+  (\matrix_(i < m , j < m) coord e0 i (f e0`_j))%R.
+
+Definition mat_inj :
+  'M['F_2]_(\dim (fullv : {vspace {qpoly phi}})) -> 'M['F_2]_m.
+move=> x; apply (castmx (esym dimvm, esym dimvm) x).
+Defined.
+
+Definition canon_mat := mat_inj \o canon_mat'.
+
+Lemma step y (x : ordinal y) : ordinal y.
+  apply/(@Ordinal _ (x.+1 %% y)).
+  case: x => x /= xy.
+  case xy': (x.+1 == y).
+   move/eqP: xy' => <-.
+   by rewrite modnn.
+  by rewrite modn_small ltn_neqAle xy' xy.
+Defined.
+
+Lemma sum_col_delta (R : ringType) n (f : nat -> R) j :
+  (\sum_(i < n) f i * (i == j)%:R)%R = f j.
+Proof.
+  elim: n j => [[]//|n IHn [] j].
+  case jn: (j == n).
+   move/eqP: jn => -> /= ?.
+   rewrite big_ord_recr /= eqE /= eqxx GRing.mulr1.
+   apply/eqP.
+   rewrite -GRing.subr_eq0 GRing.addrK.
+   apply/eqP/etrans.
+   apply: (_ : _ = \sum_(i < n) 0)%R.
+   apply/eq_big => [//|[] i ni _].
+   set T := _ == _.
+   have->: T = false.
+    subst T.
+    rewrite /= eqE /=.
+    apply/negP => /eqP ni'.
+    move: ni' ni => ->.
+    by rewrite ltnn.
+   by rewrite GRing.mulr0.
+   rewrite big_const card_ord.
+   elim n => // n'.
+   by rewrite iterS GRing.add0r.
+  move=> i. 
+  rewrite big_ord_recr /=.
+  set T := _ == _.
+  have->: T = false.
+   subst T.
+   by rewrite eqE /= eq_sym jn.
+  rewrite GRing.mulr0 GRing.addr0 /=.
+  have jn': j < n.
+   move: i T.
+   by rewrite ltnS leq_eqVlt jn /=.
+  by move: (IHn (Ordinal jn')) => /= <-.
+Qed.
+
+Lemma canon_matK M j :
+  (canon_mat M *m delta_mx j (@Ordinal 1 0 erefl) =
+   castmx (esym dimvm, erefl) (\col_(i < \dim fullv) coord e0 i (M e0`_j)))%R.
+Proof.
+  apply/matrixP => k [][]//= i.
+  rewrite /canon_mat /canon_mat' /mat_inj !castmxE !mxE /=.
+  apply/etrans.
+  apply eq_big => [//| s /= _].
+  rewrite !castmxE !mxE andbT (nth_map 0).
+  apply/erefl.
+  rewrite /= size_tuple -dimvm.
+  by case: s.
+  rewrite /= (nth_map 0).
+  by rewrite (sum_col_delta (fun i0 => coord e0 (cast_ord (esym (esym dimvm)) k)
+             (M (iter (nth 0 (iota 0 (\dim fullv)) i0) H0 (qpolify phi_gt1 'X))))).
+  rewrite /= size_tuple -dimvm.
+  by case: j.
+Qed.
+
+Lemma X2m_eqX : iter m H (pi 'X)%R = (pi 'X)%R.
+Proof.
+  rewrite expHpE.
+  case/irreducibleP/andP: ip => _ /eqP H.
+  by apply/val_inj.
+Qed.
+
+Lemma mulHE j : 
+  (canon_mat H *m delta_mx j (@Ordinal 1 0 erefl)
+= delta_mx (step j) (@Ordinal 1 0 erefl))%R.
+Proof.
+  rewrite canon_matK.
+  apply/matrixP => i [][]// ?.
+  rewrite !castmxE !mxE andbT /= esymK (nth_map 0) ?size_iota ?(esym dimvm) //.
+  move: (coord_free (cast_ord dimvm i) (step (cast_ord dimvm j))
+                    (basis_free basis_e0)).
+  have ->: (cast_ord dimvm i == step (cast_ord dimvm j)) = (i == step j).
+   by rewrite !eqE /= -dimvm.
+  move=> <-.
+  rewrite coord_free ?(basis_free basis_e0) // eqE /=
+          nth_iota ?(esym dimvm) //= add0n -iterS.
+  case: j => // j.
+  case jm: (j.+1 == m).
+   move/eqP: jm => ->.
+   rewrite X2m_eqX -[in RHS]dimvm modnn.
+   have O: 0 < m by case: m m_is_prime.
+   have->: (pi 'X = e0`_(cast_ord dimvm (Ordinal O)))%R.
+    rewrite /e0 /=.
+    by case: (\dim fullv) dimvm m_is_prime => // ->.
+    by rewrite coord_free ?(basis_free basis_e0) // eqE /= eq_sym.
+  move=> jm'.
+  have mj : j.+1 < m
+   by rewrite ltn_neqAle jm jm'.
+  rewrite /= -iterS.
+  set T := iter _ _ _.
+  have->: (T = e0`_(cast_ord dimvm (Ordinal mj)))%R.
+   subst T => /=.
+   case: (\dim fullv) dimvm m_is_prime => [-> //|] d md.
+   rewrite /= (nth_map 0) ?size_iota ?nth_iota; try by rewrite -ltnS -md.
+   by rewrite add1n -iterS // -ltnS -md.
+  by rewrite coord_free ?(basis_free basis_e0) // eqE /=
+             -[in RHS]dimvm modn_small // eq_sym.
+Qed.
+
+Lemma mulCE j : 
+((companionmx ('X ^ m + 1: {poly 'F_2}))^T *m delta_mx j (@Ordinal 1 0 erefl)
+ = delta_mx (step j) (@Ordinal 1 0 erefl))%R.
+Proof.
+  apply/matrixP => i [][]// ?.
+  rewrite /companionmx /= !mxE andbT /=.
+  apply/etrans.
+  apply eq_big => [//|i0 _].
+  rewrite !mxE !eqE /= !eqxx andbT /=.
+  apply/erefl. rewrite /= (sum_col_delta
+   (fun i1 => (if eqn i1 (size ('X ^ (size phi).-1 + 1)).-2
+             then - ('X ^ (size phi).-1 + 1)`_i else (eqn i1.+1 i)%:R)))%R.
+  case: i => i /= i0.
+  case: j => j /= j0.
+  rewrite !eqE /=.
+  rewrite size_addl ?size_polyX ?size_polyXn
+          ?ltnS ?size_polyC ?GRing.oner_neq0 // in i0, j0.
+  case: ifP => jm; last first.
+  rewrite size_addl ?size_polyX ?size_polyXn
+          ?ltnS ?size_polyC ?GRing.oner_neq0 // in jm.
+   have ?: j.+1 < (size phi).-1.
+    rewrite ltn_neqAle j0 andbT.
+    move: m_is_prime.
+    case: (size phi).-1 j0 jm => //= ?? /eqP jn _.
+    rewrite eqSS; apply/negP => jn'.
+    by move/eqP: jn' jn => ->.
+   by rewrite modn_small ?size_addl ?size_polyX ?size_polyXn ?ltnS
+           ?size_polyC // eq_sym eqE.
+  rewrite size_addl ?size_polyX ?size_polyXn
+          ?ltnS ?size_polyC ?GRing.oner_neq0 // in jm.
+  rewrite size_addl ?size_polyX ?size_polyXn
+          ?ltnS ?size_polyC ?GRing.oner_neq0 //.
+  have->: j.+1 = (size phi).-1.
+   rewrite (eqP jm) prednK //.
+  rewrite modnn GRing.oppr_char2 // coefD coef1 coefXn.
+  case si: (i == (size phi).-1).
+   move/eqP: si i0 => ->.
+   by rewrite /= ltnn.
+  by rewrite GRing.add0r.
+Qed.
+
+Lemma sizem : m = (size ('X ^ m + 1: {poly 'F_2})%R).-1.
+  by rewrite size_addl ?size_polyX ?size_polyXn
+          ?ltnS ?size_polyC ?GRing.oner_neq0 //.
+Defined.
+
+Lemma test_delta (O := @Ordinal 1 0 erefl) n (R : finFieldType) (A B : 'M[R]_n) :
+(forall j, A *m delta_mx j O = B *m delta_mx j O)%R <-> A = B.
+Proof.
+  split => [|-> //] H.
+  apply/trmx_inj/row_matrixP => i; rewrite !rowE.
+  apply/trmx_inj; rewrite !trmx_mul !trmxK !trmx_delta.
+  move: (H i).
+  set T := delta_mx i _.
+  set T' := delta_mx i _.
+  suff <-: T = T' by [].
+  congr delta_mx.
+  by apply/val_inj.
+Qed.
+
+Lemma enum_ord_enum_mem n :
+  enum 'I_n = @enum_mem _ (@mem _ (predPredType _) (fun _ : ordinal n => true)).
+Proof. by []. Qed.
+
+Lemma compHE :
+  (castmx (sizem, sizem) (canon_mat H) =
+  (companionmx ('X ^ m + 1: {poly 'F_2}))^T)%R.
+Proof.
+  apply/test_delta => j.
+  rewrite mulCE.
+  apply/matrixP => i k.
+  case: i => i Hi; case: j => j Hj.
+  rewrite mxE /=.
+  apply/etrans.
+   apply/eq_big => [//|s _].
+   rewrite !castmxE /= !esymK !cast_ord_comp.
+   apply/erefl.
+  move/matrixP: (mulHE (cast_ord (esym sizem) (Ordinal Hj)))
+   => /(_ (cast_ord (esym sizem) (Ordinal Hi)) k).
+  rewrite !mxE !eqE /= [in RHS]sizem => <-.
+  rewrite -big_image_id -[RHS]big_image_id /=.
+  apply congr_big => [|//|//].
+  rewrite /image_mem -!enum_ord_enum_mem.
+  have: map val (enum 'I_(size phi).-1)
+      = map val (enum 'I_(size ('X ^ (size phi).-1 + 1 : {poly 'F_2})%R).-1).
+   by rewrite -!sizem.
+  case: (enum 'I_(size phi).-1) => [/(f_equal size)|].
+   rewrite /= size_map size_enum_ord => H0.
+   suff: false by [].
+   move: H0 m_is_prime.
+   by rewrite size_addl ?size_polyXn ?size_polyC //= => <-.
+  case: (enum 'I_(size ('X ^ (size phi).-1 + 1)%R).-1) => //= a l r r0 [] H1 H2.
+  set A := (canon_mat' _ _ _ * _)%R.
+  set B := (canon_mat _ _ _ * _)%R.
+  have->: A = B.
+   rewrite /A /B.
+   rewrite !mxE !castmxE !eqE /= !H1.
+   rewrite !(nth_map 0) ?size_iota ?esymK.
+   rewrite nth_iota // ?add0n.
+   rewrite !mxE !cast_ord_comp (nth_map 0).
+   rewrite nth_iota ?add0n.
+   by rewrite -!iterS /= !H1.
+   case: r H1 B => //.
+   case: r H1 B => //= r ?.
+   by rewrite size_iota -dimvm.
+   case: a H1 A => //= a.
+   by rewrite -dimvm -sizem.
+   case: a H1 A => //= a.
+   by rewrite -dimvm -sizem.
+  congr cons => {A B H1}.
+  elim: l r0 H2.
+   move=> r0 /= r0m.
+   apply/esym/size0nil.
+   move/(f_equal size): r0m.
+   by rewrite !size_map.
+  move=> b l IH [] //= b0 r0 [] H1 /IH ->.
+  congr cons.
+  rewrite !mxE !castmxE !eqE /= !H1.
+  rewrite !(nth_map 0) ?size_iota ?esymK.
+  rewrite nth_iota // ?add0n.
+  rewrite !mxE !cast_ord_comp (nth_map 0).
+  rewrite nth_iota ?add0n.
+  by rewrite -!iterS /= !H1.
+  case: b0 H1 => //.
+  case: b0 H1 => //= ? ?.
+  by rewrite size_iota -dimvm.
+  case: b H1 => //= ?.
+  by rewrite -dimvm -sizem.
+  case: b H1 => //= ?.
+  by rewrite -dimvm -sizem.
 Qed.
 End irreducibility.
