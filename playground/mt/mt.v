@@ -1,80 +1,108 @@
 From mathcomp Require Import all_ssreflect.
 
-Require Import BinNat.
+From seplog Require Import machine_int.
+
+(* Require Import BinNat.*)
 
 Require Import codegen.codegen.
 
-Open Scope N_scope.
+Set Implicit Arguments.
+Unset Strict Implicit.
+
+Import MachineInt.
+
+Open Scope machine_int_scope.
+
+Definition int32 := int 32.
+
+Definition z2u32 z := `( z )_ 32.
+Definition nat2u32 n := z2u32 (Z.of_nat n).
 
 Definition len : nat := 624.
 Definition m : nat := 397.
-Definition r := 31.
-Definition u := 11.
-Definition s := 7.
-Definition t := 15.
-Definition l := 18.
-Definition a := 2567483615.
-Definition b := 2636928640.
-Definition c := 4022730752.
+Definition r : nat := 31.
+Definition u : nat:= 11.
+Definition s : nat  := 7.
+Definition t : nat := 15.
+Definition l : nat := 18.
+Definition a : int32 := z2u32 2567483615.
+Definition b : int32 := z2u32 2636928640.
+Definition c : int32 := z2u32 4022730752.
 
-Definition upper_mask := 2147483648.
-Definition whole_mask := upper_mask * 2 - 1.
-Definition lower_mask := upper_mask - 1.
+Definition upper_mask_z := 2147483648.
+Definition upper_mask : int32 := z2u32 upper_mask_z.
+Definition whole_mask : int32 := z2u32 (upper_mask_z * 2 - 1).
+Definition lower_mask : int32 := z2u32 (upper_mask_z - 1).
 
-Record random_state := {index : nat; state_vector : seq N}.
+Record random_state := {index : nat; state_vector : seq int32}.
 
-Fixpoint generate_state_vector (rest : nat) (acc : seq N) : seq N :=
+Definition zero : int32 := z2u32 0.
+Definition one : int32 := z2u32 1.
+
+Fixpoint generate_state_vector (acc : seq int32) (rest : nat) : seq int32 :=
   match rest with
   | 0%nat => acc
-  | 1%nat => acc
-  | S m => generate_state_vector m ((N.land (1812433253 * (N.lxor (head 0 acc) (N.shiftr (head 0 acc) 30)) + N.of_nat(len - rest) + 1) whole_mask) :: acc)
+  | S m =>
+    let i := minus len rest in (* 次の生成ははi番目 *)
+    let head_element := (head zero acc) in (* 先頭はi-1番目に生成された元 *)
+    let tmp1 := head_element `(+) (head_element `>> 30) in
+    let tmp2 := mul (z2u32 1812433253) tmp1 in
+    let tmp3 := tmp2 `+ nat2u32 i `+ one in 
+    let new_element := tmp3 `& whole_mask in
+    generate_state_vector (new_element :: acc) m 
   end.
 
-Definition initialize_random_state (seed : N) : random_state :=
+Definition initialize_state_vector (seed : int32)  : seq int32 :=
+  rev (generate_state_vector (seed `& whole_mask :: nil)  (minus len 1%nat)).
+
+Definition initialize_random_state (seed : int32) : random_state :=
   {|
     index := 0;
-    state_vector := rev (generate_state_vector len  (N.land seed whole_mask :: nil));
+    state_vector := initialize_state_vector seed;
   |}.
 
-Definition next_random_state (rand : random_state) : (N * random_state) :=
+Definition nth_word state_vector index := nth zero state_vector index.
+Definition set_nth_word state_vector index word := set_nth zero state_vector index word.
+
+
+Definition next_random_state (rand : random_state) : (int32 * random_state) :=
   let state_vec := state_vector rand in
   let ind := index rand in
-  let current := nth 0 state_vec ind in
-  let next_ind := Nat.modulo (ind +  1%nat) len in
-  let next := nth 0 state_vec next_ind in
+  let current := nth_word state_vec ind in
+  let next_ind := Nat.modulo (ind + 1%nat) len in
+  let next := nth_word state_vec next_ind in
   let far_ind := Nat.modulo (ind + m) len in
-  let far := nth 0 state_vec far_ind in
-  let z := N.lor (N.land current upper_mask)
-                 (N.land next lower_mask) in
-  let xi := N.lxor (N.lxor far
-                           (N.shiftr z 1))
-                   (if N.eqb (N.land z 1) 0 then 0 else a) in
-  let y1 := N.lxor xi (N.shiftr xi u) in
-  let y2 := N.lxor y1 (N.land (N.shiftl y1 s) b) in
-  let y3 := N.lxor y2 (N.land (N.shiftl y2 t) c) in
-  let y4 := N.lxor y3 (N.shiftr y3 l) in
+  let far := nth_word state_vec far_ind in
+  let z := (current `& upper_mask) `|` (next `& lower_mask) in
+  let xi := far `(+) (z `>> 1) `(+) (if (z `& one) == zero then zero else a) in
+  let y1 := xi `(+) (xi `>> u) in
+  let y2 := y1 `(+) ((y1 `<< s) `& b) in
+  let y3 := y2 `(+) ((y2 `<< t) `& c) in
+  let y4 := y3 `(+) (y3 `>> l) in
   let next_rand := {|
         index := next_ind;
-        state_vector := set_nth 0 state_vec ind xi;
+        state_vector := set_nth_word state_vec ind xi;
       |} in
   (y4, next_rand).
 
-Fixpoint nth_rand (n : nat) (rand : random_state) : N :=
+Fixpoint nth_rand (n : nat) (rand : random_state) : int32 :=
   let (r, next_state) := next_random_state rand in
   match n with
   | 0%nat => r
   | S m => nth_rand m next_state
   end.
 
-Definition nth_rand_with_seed (n : nat) (seed : N) : N :=
+Definition nth_rand_with_seed (n : nat) (seed : int32) : int32 :=
   let rand := initialize_random_state seed in
   nth_rand n rand.
 
-Compute initialize_random_state 20150919.
+Definition seed := z2u32 20150919.
 
-Compute nth_rand_with_seed 0 20150919.
-Compute nth_rand_with_seed 1 20150919.
-Compute nth_rand_with_seed 2 20150919.
+Compute initialize_random_state seed.
+
+Compute nth_rand_with_seed 0 seed.
+Compute nth_rand_with_seed 1 seed.
+Compute nth_rand_with_seed 2 seed.
 
 CodeGen Terminate Monomorphization N.land.
 CodeGen Terminate Monomorphization N.lor.
