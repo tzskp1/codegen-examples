@@ -800,8 +800,67 @@ Proof.
   by apply/val_inj.
 Qed.
 
+Lemma piX_neq0 : pi 'X%R != 0%R.
+  apply/negP => /eqP /(f_equal val).
+  rewrite /= modp_small ?size_polyX // => /eqP.
+  by rewrite -size_poly_eq0 size_polyX.
+Qed.
+
+Lemma Xu: ((pi 'X : qpoly_fieldType_phi) \is a GRing.unit)%R.
+  by rewrite GRing.unitfE piX_neq0.
+Qed.
+
+Lemma piX2X: (pi ('X ^ 2) != pi 'X)%R.
+Proof.
+  case/irreducibleP/andP: ip => piX2X _.
+  by rewrite eqE /= piX2X.
+Qed.
+
+Lemma X2mp_eq1 : (pi ('X ^+ (2 ^ m - 1)) = 1)%R.
+Proof.
+  set piX := (FinRing.unit [finFieldType of qpoly_fieldType_phi] Xu). 
+  suff: (piX ^+ (2 ^ m - 1))%g = 1%g.
+   subst piX => /(f_equal val).
+   rewrite !FinRing.val_unit1 !FinRing.val_unitX.
+   set O := 1%R; set O' := 1%R.
+   have->: O' = O by apply/val_inj.
+   move=> <-.
+   elim: (2 ^ m - 1) => [|m IHm].
+    rewrite !GRing.expr0.
+    by apply/val_inj.
+   apply/val_inj.
+   by rewrite !GRing.exprSr GRing.rmorphM IHm.
+  suff<-: #[piX]%g = 2 ^ m - 1 by rewrite expg_order.
+  have/cyclic.order_dvdG: piX \in
+      [group of [set: {unit [finFieldType of qpoly_fieldType_phi]}]]
+    by rewrite inE.
+  rewrite /= card_finField_unit card_npoly card_ord.
+  case/primeP: pm => _.
+  rewrite !subn1 => H /H /orP [|/eqP //].
+  rewrite order_eq1 => piX1.
+  move: piX2X; subst piX; move: piX1.
+  rewrite GRing.rmorphX !eqE /= !eqE /= => /eqP ->.
+  by rewrite !modp_small ?GRing.mulr1 ?size_polyC ?eqxx.
+Qed.
+
+Definition mulV (V : [ringType of {qpoly phi}]) v := (v * V)%R.
+
+Lemma linear_mulV V : linear (mulV V).
+Proof.
+  move=> a x y.
+  case: a => [][|[]//] i; set T := Ordinal i.
+   have->: T = 0%R by apply/val_inj.
+   by rewrite !GRing.scale0r !GRing.add0r.
+  have->: T = 1%R by apply/val_inj.
+  by rewrite !GRing.scale1r /mulV GRing.mulrDl.
+Qed.
+
+Canonical linearType_mulV V := Eval hnf in Linear (linear_mulV V).
+
+Definition mulX := mulV (pi 'X)%R.
+
 Lemma mulHE j : 
-  (canon_mat H *m delta_mx j (@Ordinal 1 0 erefl)
+ (canon_mat H *m delta_mx j (@Ordinal 1 0 erefl)
 = delta_mx (step j) (@Ordinal 1 0 erefl))%R.
 Proof.
   rewrite canon_matK.
@@ -954,8 +1013,8 @@ Proof.
    by rewrite !size_map.
   move=> b l IH [] //= b0 r0 [] H1 /IH ->.
   congr cons.
-  rewrite !mxE !castmxE !eqE /= !H1.
-  rewrite !(nth_map 0) ?size_iota ?esymK.
+  rewrite !mxE !castmxE !eqE /= !H1
+          !(nth_map 0) ?size_iota ?esymK.
   rewrite nth_iota // ?add0n.
   rewrite !mxE !cast_ord_comp (nth_map 0).
   rewrite nth_iota ?add0n.
@@ -969,7 +1028,43 @@ Proof.
   by rewrite -dimvm -sizem.
 Qed.
 
-Lemma cycle : iter m H =1 id.
+Lemma mulXHC:
+  mulX \o mulX \o H =1 H \o mulX.
+Proof.
+  move=> x.
+  rewrite (coord_basis basis_e0 (memvf x)).
+  have->: (\sum_i coord e0 i x *: e0`_i)%R
+   = (\sum_(i <- ord_enum (\dim fullv)) coord e0 i x *: e0`_i)%R.
+   rewrite -big_image_id big_image.
+   apply congr_big => [|//|//].
+   by rewrite /index_enum unlock.
+  rewrite (GRing.linear_sum (GRing.comp_linear (Linear linH) (linearType_mulV _)))
+          (GRing.linear_sum (GRing.comp_linear (linearType_mulV _)
+                         (GRing.comp_linear (linearType_mulV _) (Linear linH)))).
+  apply/eq_big => [//|i _].
+  case: (coord e0 i x) => [][|[]//] i0; set T := Ordinal i0.
+   have->: T = 0%R by apply/val_inj.
+   by rewrite !GRing.scale0r !GRing.linear0.
+  have->: T = 1%R by apply/val_inj.
+  rewrite !GRing.scale1r !(nth_map 0) ?size_iota // !nth_iota // !add0n
+          !expHpE /= /mulX /mulV /H0 /= !GRing.Frobenius_autE
+          -!(GRing.rmorphM pi) -!(GRing.rmorphX pi)
+          !GRing.exprS !GRing.expr0 !GRing.mulr1.
+  have<-: ('X = pi 'X)%R
+   by rewrite /= modp_small // size_polyX.
+  apply/eqP; rewrite eqE /=; apply/eqP.
+  have->: ('X ^ (2 ^ i)%N * 'X * ('X ^ (2 ^ i)%N * 'X) = 
+           'X ^ (2 ^ i)%N * 'X ^ (2 ^ i)%N * 'X * 'X)%R.
+   move=> ?.
+   by rewrite GRing.mulrCA !GRing.mulrA.
+  have<-: ('X * 'X * ('X ^ (2 ^ i)%N * 'X ^ (2 ^ i)%N)
+        = 'X ^ (2 ^ i)%N * 'X ^ (2 ^ i)%N * 'X * 'X)%R.
+   move=> ?.
+   by rewrite GRing.mulrC GRing.mulrA.
+  by rewrite -[in RHS]modp_mul -GRing.mulrA GRing.mulrC.
+Qed.
+
+Lemma cycleH : iter m H =1 id.
 Proof.
   move=> x.
   rewrite (coord_basis basis_e0 (memvf x)).
@@ -987,9 +1082,32 @@ Proof.
   congr (_ *: _)%R.
   rewrite -iter_add !add0n !expHpE expnD
           -exprnP GRing.exprM GRing.rmorphX exprnP.
-  have->: (pi ('X ^ (2 ^ (size phi).-1)%N) = pi 'X)%R.
-   case/irreducibleP/andP: ip => _ /eqP H0; apply/eqP.
-   by rewrite eqE /= H0.
-  by rewrite GRing.rmorphX.
+  by rewrite -expHpE X2m_eqX GRing.rmorphX.
+Qed.
+
+Lemma expXpE p : iter p mulX =1 mulV (pi 'X ^+ p)%R.
+Proof.
+  elim: p => [x|p IHp x].
+   by rewrite /= GRing.expr0 /mulV GRing.mulr1.
+  by rewrite iterS IHp GRing.exprS /mulX /mulV
+  -GRing.mulrA -GRing.rmorphX -GRing.rmorphM GRing.mulrC GRing.rmorphM.
+Qed.
+  
+Lemma cycleX : iter (2 ^ m - 1) mulX =1 id.
+Proof.
+  move=> x.
+  rewrite (coord_basis basis_e0 (memvf x)).
+  have->: (\sum_i coord e0 i x *: e0`_i)%R
+   = (\sum_(i <- ord_enum (\dim fullv)) coord e0 i x *: e0`_i)%R.
+   rewrite -big_image_id big_image.
+   apply congr_big => [|//|//].
+   by rewrite /index_enum unlock.
+  move: ((GRing.linear_sum (Linear (iter_linear (linearType_mulV (pi 'X)%R) (2 ^ m - 1))))
+           _ (ord_enum (\dim fullv)) xpredT
+          (fun i => coord e0 i x *: e0`_i)%R) => /= ->.
+  apply/eq_big => [//|i _].
+  rewrite !(nth_map 0) ?size_iota // !nth_iota //.
+  move: (GRing.linearZ_LR (Linear (iter_linear (linearType_mulV (pi 'X)%R) (2 ^ m - 1)))) => /= ->.
+  by rewrite expXpE -GRing.rmorphX X2mp_eq1 /mulV GRing.mulr1.
 Qed.
 End irreducibility.
