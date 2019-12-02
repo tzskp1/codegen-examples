@@ -659,9 +659,9 @@ Lemma dimvm : m = \dim (fullv : {vspace {qpoly phi}}).
  by rewrite dim_polyn.
 Defined.
 
-Lemma expHpE : iter m H (pi 'X)%R = pi ('X ^ (2 ^ m)%N)%R.
+Lemma expHpE p : iter p H (pi 'X)%R = pi ('X ^ (2 ^ p)%N)%R.
 Proof.
-  elim: m => // p' IHp.
+  elim: p => // p' IHp.
   rewrite -[X in (2 ^ X)%N]addn1 iterS IHp /H /H0 /= GRing.Frobenius_autE.
   set T := (qpolify phi_gt1 _).
   have ->: T = pi ('X ^ (2 ^ p')%N)%R by [].
@@ -685,6 +685,38 @@ Proof.
   rewrite basisEfree size_tuple leqnn subvf !andbT.
   apply/freeP.
 Admitted.
+
+Section iter_lin.
+  Variable K : fieldType.
+  Variable R : vectType K.
+  Variable f : {linear R -> R}%R.
+  Lemma iter_linear m : linear (iter m f).
+  Proof.
+    elim: m => // m IHm a x y.
+    by rewrite !iterSr !GRing.linearP IHm.
+  Qed.
+  Canonical iter_linearType m := Linear (iter_linear m).
+End iter_lin.
+
+Lemma linH : linear H.
+ move=> a x y.
+ rewrite /H /= /H0.
+ rewrite GRing.Frobenius_autD_comm /GRing.comm; last first.
+  case: a => [][|[]//] i; set T := Ordinal i.
+   have->: T = 0%R by apply/val_inj.
+   by rewrite !GRing.scale0r GRing.mulr0 GRing.mul0r.
+  have->: T = 1%R by apply/val_inj.
+  by rewrite !GRing.scale1r
+     (GRing.mulrC (x : [comRingType of [ringType of {qpoly phi}]])).
+ rewrite !GRing.Frobenius_autE.
+ case: a => [][|[]//] i; set T := Ordinal i.
+  have->: T = 0%R by apply/val_inj.
+  by rewrite !GRing.scale0r GRing.expr0n !GRing.add0r.
+ have->: T = 1%R by apply/val_inj.
+ by rewrite !GRing.scale1r.
+Qed.
+
+Canonical linHType := Linear linH.
 
 Definition canon_mat' f :=
   let m := \dim (fullv : {vspace {qpoly phi}}) in
@@ -935,5 +967,29 @@ Proof.
   by rewrite -dimvm -sizem.
   case: b H1 => //= ?.
   by rewrite -dimvm -sizem.
+Qed.
+
+Lemma cycle : iter m H =1 id.
+Proof.
+  move=> x.
+  rewrite (coord_basis basis_e0 (memvf x)).
+  have->: (\sum_i coord e0 i x *: e0`_i)%R
+   = (\sum_(i <- ord_enum (\dim fullv)) coord e0 i x *: e0`_i)%R.
+   rewrite -big_image_id big_image.
+   apply congr_big => [|//|//].
+   by rewrite /index_enum unlock.
+  move: ((GRing.linear_sum (Linear (iter_linear (Linear linH) m)))
+           _ (ord_enum (\dim fullv)) xpredT
+          (fun i => coord e0 i x *: e0`_i)%R) => /= ->.
+  apply/eq_big => [//|i _].
+  rewrite !(nth_map 0) ?size_iota // !nth_iota //.
+  move: (GRing.linearZ_LR (Linear (iter_linear (Linear linH) m))) => /= ->.
+  congr (_ *: _)%R.
+  rewrite -iter_add !add0n !expHpE expnD
+          -exprnP GRing.exprM GRing.rmorphX exprnP.
+  have->: (pi ('X ^ (2 ^ (size phi).-1)%N) = pi 'X)%R.
+   case/irreducibleP/andP: ip => _ /eqP H0; apply/eqP.
+   by rewrite eqE /= H0.
+  by rewrite GRing.rmorphX.
 Qed.
 End irreducibility.
