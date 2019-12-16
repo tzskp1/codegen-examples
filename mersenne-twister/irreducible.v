@@ -349,9 +349,8 @@ have base1:
     by rewrite lt0n subn_eq0 -ltnNge.
    by apply/(leq_ltn_trans (leq_subr _ _)).
   move/base => + lk.
-  rewrite addnC GRing.exprD -GRing.mulrA lk GRing.mulrA -GRing.exprD .
-  rewrite subnK //.
-  by rewrite subn1 -GRing.exprSr prednK // H2.
+  rewrite addnC GRing.exprD -GRing.mulrA lk GRing.mulrA -GRing.exprD subnK.
+   by rewrite ?subn1 -GRing.exprSr prednK // H2.
   by case/andP: Hk2 => ??; rewrite ltnW.
  move/negP/negP: kl'; rewrite -ltnNge ltnS leq_eqVlt => /orP [/eqP ->|] // kl'.
  have: (0 < k + (2 ^ m - 1 - l) < 2 ^ m - 1)%N.
@@ -365,18 +364,17 @@ have base1:
    by rewrite lt0n subn_eq0 -ltnNge.
   by apply/(leq_ltn_trans (leq_subr _ _)).
  move/base => + lk.
- rewrite addnC GRing.exprD -GRing.mulrA -lk GRing.mulrA -GRing.exprD .
-  rewrite subnK //.
+ rewrite addnC GRing.exprD -GRing.mulrA -lk GRing.mulrA -GRing.exprD subnK //.
   by rewrite subn1 -GRing.exprSr prednK // H2.
  by rewrite ltnW.
 have base2: 
   forall l k : nat, (0 < k < 2 ^ m - 1)%N ->
   t ^+ l * t = t ^+ k * t -> (k = l %% (2 ^ m - 1))%N.
   move=> l k /base1 b.
-  rewrite [X in (_ ^+ X * _)%R](divn_eq l (2 ^ m - 1)).
-  rewrite addnC GRing.exprD -GRing.mulrA.
-  move: (min_stab_cond (l %/ (2 ^ m - 1)) H1 predpower_neq0).
-  move/eqP: H3 => -> /eqP -> /b; apply.
+  rewrite [X in (_ ^+ X * _)%R](divn_eq l (2 ^ m - 1)) addnC GRing.exprD
+          -GRing.mulrA.
+  move/eqP: H3 (min_stab_cond (l %/ (2 ^ m - 1)) H1 predpower_neq0) =>
+            -> /eqP -> /b; apply.
   by rewrite ltn_mod.
 move=> l k.
 rewrite (divn_eq k (2 ^ m - 1)) addnC GRing.exprD -GRing.mulrA.
