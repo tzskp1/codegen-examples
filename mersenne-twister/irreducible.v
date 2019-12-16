@@ -11,6 +11,16 @@ based on:
  P. 27
 *)
 
+Lemma f2p_monic (p : {poly [finFieldType of 'F_2]}) :
+  (p != 0)%R -> p \is monic.
+Proof.
+  move=> /negPf p0; apply/eqP.
+  case lp0: (lead_coef p == 0)%R.
+   by rewrite lead_coef_eq0 p0 in lp0.
+  case: (lead_coef p) lp0 => [][]//[]// *.
+  by apply/val_inj.
+Qed.
+
 Section iter_lin.
   Variable K : fieldType.
   Variable R : vectType K.
@@ -473,16 +483,6 @@ apply/(iffP idP).
   apply/inj.
 Qed.
 
-Lemma f2p_monic (p : {poly [finFieldType of 'F_2]}) :
-  (p != 0)%R -> p \is monic.
-Proof.
-  move=> /negPf p0; apply/eqP.
-  case lp0: (lead_coef p == 0)%R.
-   by rewrite lead_coef_eq0 p0 in lp0.
-  case: (lead_coef p) lp0 => [][]//[]// *.
-  by apply/val_inj.
-Qed.
-
 Lemma X2m_eqXE : 
 (('X ^ (2 ^ m)%N %% phi == 'X %% phi) = (p_ord \in stab (pi 'X) (pi 'X)))%R.
 by rewrite inE -!GRing.rmorphX -!GRing.rmorphM -!exprnP !eqE /=
@@ -625,7 +625,7 @@ Qed.
 
 Local Hint Resolve Xu : core.
 
-Lemma piX2X: (pi ('X ^ 2) != pi 'X)%R.
+Lemma piX2X : (pi ('X ^ 2) != pi 'X)%R.
 Proof.
    set fT := qpoly_fieldType_phi.
    apply/negP => /eqP /(f_equal (fun x => (pi 'X : fT)^-1 * x))%R.
@@ -639,19 +639,10 @@ Proof.
    by rewrite addvv => /a1f.
 Qed.
 
-Lemma X2mp_eq1 : (pi ('X ^+ (2 ^ m - 1)) = 1)%R.
+Definition piX := FinRing.unit [finFieldType of qpoly_fieldType_phi] Xu.
+
+Lemma piX_order : #[piX]%g = 2 ^ m - 1.
 Proof.
-  (* TODO : fix canonical structure *)
-  set piX := (FinRing.unit [finFieldType of qpoly_fieldType_phi] Xu). 
-  suff: (piX ^+ (2 ^ m - 1))%g = 1%g.
-   subst piX => /(f_equal val).
-   rewrite !FinRing.val_unit1 !FinRing.val_unitX.
-   set O := 1%R; set O' := 1%R.
-   have->: O' = O by apply/val_inj.
-   move=> <-.
-   elim: (2 ^ m - 1) => [|m IHm]; apply/val_inj => //.
-   by rewrite !GRing.exprSr GRing.rmorphM IHm.
-  suff<-: #[piX]%g = 2 ^ m - 1 by rewrite expg_order.
   have/cyclic.order_dvdG: piX \in
       [group of [set: {unit [finFieldType of qpoly_fieldType_phi]}]]
     by rewrite inE.
@@ -659,9 +650,27 @@ Proof.
   case/primeP: pm => _.
   rewrite !subn1 => H /H {H} /orP [|/eqP] //.
   rewrite order_eq1 => piX1.
-  move: piX1 piX2X; subst piX.
-  rewrite GRing.rmorphX !eqE /= !eqE /= => /eqP ->.
+  move: piX1 piX2X;
+  rewrite /piX GRing.rmorphX !eqE /= !eqE /= => /eqP ->.
+  (* TODO : fix canonical structure *)
   by rewrite !modp_small ?GRing.mulr1 ?size_polyC ?eqxx.
+Qed.
+
+Lemma val_piX_expE p : val (piX ^+ p)%g = pi ('X ^+ p)%R.
+Proof.
+  elim: p => [|p IHp].
+   by apply/val_inj.
+  rewrite !GRing.exprS GRing.rmorphM expgS /= IHp.
+  by apply/val_inj.
+Qed.
+
+Lemma X2mp_eq1 : (pi ('X ^+ (2 ^ m - 1)) = 1)%R.
+Proof.
+  suff/(f_equal val): (piX ^+ (2 ^ m - 1))%g = 1%g.
+   rewrite val_piX_expE /= => ->.
+   by apply/val_inj.
+  suff<-: #[piX]%g = 2 ^ m - 1 by rewrite expg_order.
+  by rewrite piX_order.
 Qed.
 
 Lemma irreducibleP_inverse :
@@ -697,21 +706,31 @@ Proof.
   by rewrite iterS IHp GRing.exprS /mulX /mulV
   -GRing.mulrA -GRing.rmorphX -GRing.rmorphM GRing.mulrC GRing.rmorphM.
 Qed.
-  
+
+Lemma cycleX_dvdP p : reflect (iter p mulX =1 id) (2 ^ m - 1 %| p).
+Proof.
+  apply/(iffP idP).
+  * case/dvdnP => q -> x.
+    rewrite (coord_basis (npolyX_full _ _) (memvf x)).
+    set e0 := npolyX _ _.
+    have->: (\sum_i coord e0 i x *: e0`_i)%R
+          = (\sum_(i <- ord_enum (size phi).-1) coord e0 i x *: e0`_i)%R.
+    rewrite -big_image_id big_image.
+    apply congr_big => //.
+    by rewrite /index_enum unlock.
+    rewrite GRing.linear_sum.
+    apply/eq_big => // i _.
+    by rewrite GRing.linearZ_LR /= expXpE mulnC GRing.exprM -GRing.rmorphX
+               X2mp_eq1 /mulV GRing.expr1n GRing.mulr1.
+  * move/(fun x => x 1%R).
+    rewrite expXpE /mulV GRing.mul1r -X2mp_eq1
+            -GRing.rmorphX -!val_piX_expE => /val_inj/eqP.
+    by rewrite cyclic.eq_expg_mod_order piX_order modnn.
+Qed.
+
 Lemma cycleX : iter (2 ^ m - 1) mulX =1 id.
 Proof.
-  move=> x.
-  rewrite (coord_basis (npolyX_full _ _) (memvf x)).
-  set e0 := npolyX _ _.
-  have->: (\sum_i coord e0 i x *: e0`_i)%R
-        = (\sum_(i <- ord_enum (size phi).-1) coord e0 i x *: e0`_i)%R.
-   rewrite -big_image_id big_image.
-   apply congr_big => //.
-   by rewrite /index_enum unlock.
-  rewrite GRing.linear_sum.
-  apply/eq_big => // i _.
-  by rewrite GRing.linearZ_LR /= expXpE
-             -GRing.rmorphX X2mp_eq1 /mulV GRing.mulr1.
+  by apply/cycleX_dvdP.
 Qed.
 (* TODO : prove mulX and matrix B are similar. *)
 End inverse.
