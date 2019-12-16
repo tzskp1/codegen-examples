@@ -11,6 +11,18 @@ based on:
  P. 27
 *)
 
+Section iter_lin.
+  Variable K : fieldType.
+  Variable R : vectType K.
+  Variable f : {linear R -> R}%R.
+  Lemma iter_linear m : linear (iter m f).
+  Proof.
+    elim: m => // m IHm a x y.
+    by rewrite !iterSr !GRing.linearP IHm.
+  Qed.
+  Canonical iter_linearType m := Linear (iter_linear m).
+End iter_lin.
+
 Lemma ltn_subr a b : 0 < b < a -> a - b < a.
 Proof.
   case/andP.
@@ -493,38 +505,37 @@ Proof.
   have H: (p_ord \in stab (pi 'X) (pi 'X))%R by rewrite -X2m_eqXE.
   case/min_stab_dvd: (H) pm => + /primeP [] o pm' => /pm' {pm'}.
   have: (one_ord \notin stab (pi 'X) (pi 'X))%R by rewrite -X2_neqXE.
-  move/(@min_stab_neq1 _ _ _ _ H) => -> //= x2m1.
-  apply/irreducibleP/andP; constructor => //.
+  move/(@min_stab_neq1 _ _ _ _ H) => -> // x2m1.
+  apply/irreducibleP/andP; split => //.
   apply/forallP => q; apply/implyP.
   case q0: (size q == 0); first by move/eqP: q0 => ->.
+  move: (min_stab_attain H x2m1) => H0.
   have: q \in (finset {qpoly phi} :\ (0 : {qpoly phi})%R).
    rewrite !inE andbT.
-   apply/negP => /eqP q0'.
-   move: q0' q0 => ->.
+   apply/negP => /eqP T; move: T q0 => ->.
    by rewrite size_polyC eqxx.
-  rewrite -!(map_piE H x2m1).
-  move: (min_stab_attain H x2m1) => H0.
+  rewrite -!map_piE //.
   case/(map_piP _ H0) => q1 <-.
   have pq0: forall q1 : nat, pi ('X ^ q1 * 'X)%R != 0%R
-   by move=> q1'; rewrite !GRing.rmorphM !GRing.rmorphX Xn_phi_neq0.
+   by move=> *; rewrite !GRing.rmorphM !GRing.rmorphX Xn_phi_neq0.
   case/Pdiv.RingMonic.rdvdpP => [|x pxp]; first by apply/f2p_monic/pq0.
   case x0: (x == 0)%R.
    move/eqP: x0 pxp phi_neq0 => ->.
    rewrite GRing.mul0r => <-.
    by rewrite eqxx.
   have/dvdp_leq: (x %| phi)%R by rewrite pxp dvdp_mulr.
-  rewrite phi_neq0 => /implyP /=.
+  rewrite phi_neq0 => /implyP.
   rewrite leq_eqVlt => /orP [/eqP|] xp.
-   have: size phi = size (x * pi ('X ^ q1 * 'X))%R by rewrite /= -pxp.
-   rewrite size_mul ?x0 ?pq0 //= xp => /eqP.
+   have: size phi = size (x * pi ('X ^ q1 * 'X))%R by rewrite -pxp.
+   rewrite size_mul ?x0 ?pq0 // xp => /eqP.
    by rewrite -subn1 -[X in X == _]addn0 -addnBA ?lt0n ?size_poly_eq0
               ?pq0 // eqn_add2l eq_sym subn_eq0.
   have xx: x = pi x by rewrite /= modp_small.
   have: pi phi == pi (x * pi ('X ^ q1 * 'X))%R by rewrite -pxp.
   have: (pi x)%R \in (finset {qpoly phi} :\ (0 : {qpoly phi})%R)
    by rewrite !inE andbT eqE /= -size_poly_eq0 modp_small //
-           ?ltn_size_polyC_X ?size_polyC // size_poly_eq0 x0.
-  rewrite GRing.rmorphM -!(map_piE H x2m1).
+           ?ltn_size_polyC_X ?size_polyC size_poly_eq0 x0.
+  rewrite GRing.rmorphM -!map_piE //.
   case/(map_piP _ H0) => x1 <-.
   rewrite -GRing.rmorphM eqE /= modpp modp_mul
           GRing.mulrCA !GRing.mulrA -GRing.exprD GRing.mulrC
@@ -595,48 +606,44 @@ Defined.
 
 Definition e := RMorphism rme.
 
-Lemma inje: injective e. by apply GRing.fmorph_inj. Qed.
+Lemma inje: injective e. Proof. by apply GRing.fmorph_inj. Qed.
 
 Lemma a1f: agenv ([aspace of 1%AS] : {subfield L}) = fullv -> False.
 Proof.
-   have K1: ((\sum_(i < (size phi).-1)
-         ([aspace of 1%AS] : {subfield L}) ^+ i)%VS = 1%VS).
-    have: (size phi).-1 != 0 by [].
-    elim: (size phi).-1 => // n IHn _.
-    rewrite big_ord_recr expv1n /=.
-    case n0: (n == 0).
-     move/eqP: n0 => ->.
-     by rewrite big_ord0 add0v.
-    by rewrite IHn ?n0 // addvv.
-   rewrite -dL in K1.
-   rewrite /agenv K1.
-   move: dL => + f1.
-   rewrite -f1 dimv1 => p1.
-   move: m_is_prime.
-   by rewrite -p1.
+ have K1: ((\sum_(i < (size phi).-1)
+       ([aspace of 1%AS] : {subfield L}) ^+ i)%VS = 1%VS).
+  have: (size phi).-1 != 0 by [].
+  elim: (size phi).-1 => // n IHn _.
+  rewrite big_ord_recr expv1n /=.
+  case n0: (n == 0).
+   move/eqP: n0 => ->.
+   by rewrite big_ord0 add0v.
+  by rewrite IHn ?n0 // addvv.
+ rewrite /agenv dL K1.
+ move: dL => + f1.
+ rewrite -f1 dimv1 => p1.
+ by move: p1 m_is_prime => <-.
 Qed.
 
 Local Hint Resolve Xu : core.
 
 Lemma piX2X: (pi ('X ^ 2) != pi 'X)%R.
 Proof.
-   apply/negP => /eqP.
    set fT := qpoly_fieldType_phi.
-   move/(f_equal (fun x => (pi 'X : fT)^-1 * x))%R.
+   apply/negP => /eqP /(f_equal (fun x => (pi 'X : fT)^-1 * x))%R.
    rewrite GRing.mulVr //.
-   have ->: (pi ('X ^ 2) = (pi 'X: fT) * (pi 'X : fT))%R.
+   have ->: (pi ('X ^ 2) = (pi 'X : fT) * (pi 'X : fT))%R.
     rewrite -exprnP GRing.exprS GRing.expr1 GRing.rmorphM.
    by apply/val_inj.
-   rewrite GRing.mulKr // => /(f_equal e)/eqP.
+   rewrite GRing.mulKr // => /(f_equal e) z1; move: z1 sL.
    rewrite /e /e0 /= !modp_small ?size_polyC ?size_polyX //
-           map_polyC hornerC map_polyX hornerX  /= => /eqP z1.
-   rewrite GRing.scale1r in z1.
-   move: z1 sL => ->.
-   by rewrite /= addvv => /a1f.
+           map_polyC hornerC map_polyX hornerX /= GRing.scale1r => ->.
+   by rewrite addvv => /a1f.
 Qed.
 
 Lemma X2mp_eq1 : (pi ('X ^+ (2 ^ m - 1)) = 1)%R.
 Proof.
+  (* TODO : fix canonical structure *)
   set piX := (FinRing.unit [finFieldType of qpoly_fieldType_phi] Xu). 
   suff: (piX ^+ (2 ^ m - 1))%g = 1%g.
    subst piX => /(f_equal val).
@@ -644,20 +651,17 @@ Proof.
    set O := 1%R; set O' := 1%R.
    have->: O' = O by apply/val_inj.
    move=> <-.
-   elim: (2 ^ m - 1) => [|m IHm].
-    rewrite !GRing.expr0.
-    by apply/val_inj.
-   apply/val_inj.
+   elim: (2 ^ m - 1) => [|m IHm]; apply/val_inj => //.
    by rewrite !GRing.exprSr GRing.rmorphM IHm.
   suff<-: #[piX]%g = 2 ^ m - 1 by rewrite expg_order.
   have/cyclic.order_dvdG: piX \in
       [group of [set: {unit [finFieldType of qpoly_fieldType_phi]}]]
     by rewrite inE.
-  rewrite /= card_finField_unit card_npoly card_ord.
+  rewrite card_finField_unit card_npoly card_ord.
   case/primeP: pm => _.
-  rewrite !subn1 => H /H /orP [|/eqP //].
+  rewrite !subn1 => H /H {H} /orP [|/eqP] //.
   rewrite order_eq1 => piX1.
-  move: piX2X; subst piX; move: piX1.
+  move: piX1 piX2X; subst piX.
   rewrite GRing.rmorphX !eqE /= !eqE /= => /eqP ->.
   by rewrite !modp_small ?GRing.mulr1 ?size_polyC ?eqxx.
 Qed.
@@ -666,24 +670,11 @@ Lemma irreducibleP_inverse :
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
 Proof.
   apply/andP; split; first by move: piX2X; rewrite eqE.
-  suff: (pi ('X ^ (2 ^ m)%N) = (pi 'X))%R by move/(f_equal val) => /= ->.
-  suff H: (pi 'X ^+ (2 ^ m - 1) = 1)%R.
-   have->: (2 ^ m) = (2 ^ m - 1).+1 by rewrite subn1 prednK.
-   by rewrite GRing.rmorphX GRing.exprS H GRing.mulr1.
-  by move: X2mp_eq1; rewrite GRing.rmorphX.
+  suff/(f_equal val) /= ->: (pi ('X ^ (2 ^ m)%N) = (pi 'X))%R by [].
+  move: X2mp_eq1; rewrite GRing.rmorphX => H.
+  have->: 2 ^ m = (2 ^ m - 1).+1 by rewrite subn1 prednK.
+  by rewrite GRing.rmorphX GRing.exprS H GRing.mulr1.
 Qed.
-
-Section iter_lin.
-  Variable K : fieldType.
-  Variable R : vectType K.
-  Variable f : {linear R -> R}%R.
-  Lemma iter_linear m : linear (iter m f).
-  Proof.
-    elim: m => // m IHm a x y.
-    by rewrite !iterSr !GRing.linearP IHm.
-  Qed.
-  Canonical iter_linearType m := Linear (iter_linear m).
-End iter_lin.
 
 Definition mulV (V : [ringType of {qpoly phi}]) v := (v * V)%R.
 
@@ -717,17 +708,14 @@ Proof.
   have->: (\sum_i coord e0 i x *: e0`_i)%R
         = (\sum_(i <- ord_enum (size phi).-1) coord e0 i x *: e0`_i)%R.
    rewrite -big_image_id big_image.
-   apply congr_big => [|//|//].
+   apply congr_big => //.
    by rewrite /index_enum unlock.
-  move: ((GRing.linear_sum
-            (Linear (iter_linear (linearType_mulV (pi 'X)%R) (2 ^ m - 1))))
-           _ (ord_enum (size phi).-1) xpredT
-          (fun i => coord e0 i x *: e0`_i)%R) => /= ->.
-  apply/eq_big => [//|i _].
-  move: (GRing.linearZ_LR
-        (Linear (iter_linear (linearType_mulV (pi 'X)%R) (2 ^ m - 1)))) => /= ->.
-  by rewrite expXpE -GRing.rmorphX X2mp_eq1 /mulV GRing.mulr1.
+  rewrite GRing.linear_sum.
+  apply/eq_big => // i _.
+  by rewrite GRing.linearZ_LR /= expXpE
+             -GRing.rmorphX X2mp_eq1 /mulV GRing.mulr1.
 Qed.
+(* TODO : prove mulX and matrix B are similar. *)
 End inverse.
 
 Lemma irreducibleP :
