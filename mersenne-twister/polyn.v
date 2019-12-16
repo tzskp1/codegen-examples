@@ -6,6 +6,12 @@ Require Import bigop binomial finset finfun ssralg countalg finalg poly polydiv.
 From mathcomp
 Require Import perm fingroup matrix mxalgebra mxpoly vector countalg.
 
+
+(*
+cited from:
+https://github.com/math-comp/math-comp/pull/210/files
+*)
+
 (*****************************************************************************)
 (* This file defines polynomials of bounded size, gives it a structure       *)
 (* of choice, finite and countable ring, ..., and lmodule, when possible.    *)
