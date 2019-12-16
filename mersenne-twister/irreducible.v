@@ -56,11 +56,6 @@ Lemma polyXn_eq0 (R : fieldType) n :
   (('X^n : [ringType of {poly R}]) == 0)%R = false.
 Proof. by rewrite -size_poly_eq0 size_polyXn. Qed.
 
-Section irreducibility.
-Variable phi : {poly [finFieldType of 'F_2]}.
-Local Notation m := (size phi).-1.
-Hypothesis pm : prime (2 ^ m - 1).
-
 Lemma exp2_dvd a b :
   2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
 Proof.
@@ -69,6 +64,11 @@ rewrite big_ord_recl mulnDr -IHb mulnBl !subn1 -mulnBl mulnS expnD.
 have H: forall a, 2 ^ a = 2 ^ a - 1 + 1 by move=> *; rewrite subnK // expn_gt0.
 by rewrite [in LHS]H mulnDl mul1n [X in _ + X]H addn1 !addnS !subn1.
 Qed.
+
+Section irreducibility.
+Variable phi : {poly [finFieldType of 'F_2]}.
+Local Notation m := (size phi).-1.
+Hypothesis pm : prime (2 ^ m - 1).
 
 Lemma m_is_prime : prime m.
 Proof.
@@ -269,6 +269,7 @@ Proof.
 Qed.
 
 Lemma min_stab_dvd a x : x \in stab a -> (min_stab a %| x)%N.
+Proof.
   case x0: (0 == x); first by move/eqP: x0 => <-.
   move/negP/negP: x0 => x0 H; move: (H).
   rewrite inE (divn_eq x (min_stab a)) addnC GRing.exprD
@@ -298,6 +299,7 @@ Qed.
 Lemma min_stab_attain :
   p_ord \in stab t -> min_stab t == (2 ^ m - 1)%N ->
 forall l k : nat, t ^+ l * t = t ^+ k * t -> k = l %[mod 2 ^ m - 1].
+Proof.
 move=> H1 H3.
 have H2: t ^+ (2 ^ m) == t
  by move: H1; rewrite inE /= -GRing.exprSr subn1 prednK.
@@ -539,6 +541,7 @@ Section inverse.
 Variable ip : irreducible_poly phi.
 
 Lemma piX_neq0 : pi 'X%R != 0%R.
+Proof.
   apply/negP => /eqP /(f_equal val).
   rewrite /= modp_small ?size_polyX // => /eqP.
   by rewrite -size_poly_eq0 size_polyX.
@@ -546,9 +549,9 @@ Qed.
 
 Definition qpoly_fieldType_phi := Eval hnf in qpoly_fieldType ip.
 
-Lemma Xu: ((pi 'X : qpoly_fieldType_phi) \is a GRing.unit)%R.
+Definition Xu: ((pi 'X : qpoly_fieldType_phi) \is a GRing.unit)%R.
   by rewrite GRing.unitfE piX_neq0.
-Qed.
+Defined.
 
 Definition L : fieldExtType [finFieldType of 'F_2].
   by case/irredp_FAdjoin: ip.
@@ -577,7 +580,7 @@ Defined.
 Definition e0 : {qpoly phi} -> L
   := (fun g => (map_poly (GRing.in_alg L) g).[z])%R.
 
-Definition rme: rmorphism (e0 : qpoly_fieldType_phi -> _).
+Definition rme : rmorphism (e0 : qpoly_fieldType_phi -> _).
   rewrite /e0; repeat constructor.
    * move=> x y.
      by rewrite /= !GRing.rmorphB hornerD hornerN.
@@ -595,6 +598,7 @@ Definition e := RMorphism rme.
 Lemma inje: injective e. by apply GRing.fmorph_inj. Qed.
 
 Lemma a1f: agenv ([aspace of 1%AS] : {subfield L}) = fullv -> False.
+Proof.
    have K1: ((\sum_(i < (size phi).-1)
          ([aspace of 1%AS] : {subfield L}) ^+ i)%VS = 1%VS).
     have: (size phi).-1 != 0 by [].
@@ -660,6 +664,7 @@ Qed.
 
 Lemma irreducibleP_inverse :
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
+Proof.
   apply/andP; split; first by move: piX2X; rewrite eqE.
   suff: (pi ('X ^ (2 ^ m)%N) = (pi 'X))%R by move/(f_equal val) => /= ->.
   suff H: (pi 'X ^+ (2 ^ m - 1) = 1)%R.
