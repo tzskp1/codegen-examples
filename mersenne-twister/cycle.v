@@ -99,6 +99,19 @@ Qed.
 Lemma pm : prime (2 ^ (size phi).-1 - 1).
 Proof. by rewrite size_phi pm'. Qed.
 
+Check @irreducible.mulX _ pm.
+Require Import BinNat mt.
+Definition init := initialize_random_state 20190820%N.
+Definition zero := next_random_state init.
+Definition one := next_random_state zero.2.
+Compute length (state_vector one.2).
+Check eigenvalue _ _.
+Compute one.
+Compute zero.
+(* 0:324445478 *)
+(* 1:774197212 *)
+
+
 From infotheo Require Import f2 ssralg_ext.
 Require Import BinNat.
 

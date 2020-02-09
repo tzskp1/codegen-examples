@@ -715,11 +715,9 @@ Proof.
     set e0 := npolyX _ _.
     have->: (\sum_i coord e0 i x *: e0`_i)%R
           = (\sum_(i <- ord_enum (size phi).-1) coord e0 i x *: e0`_i)%R.
-    rewrite -big_image_id big_image.
-    apply congr_big => //.
-    by rewrite /index_enum unlock.
-    rewrite GRing.linear_sum.
-    apply/eq_big => // i _.
+     rewrite -big_image_id big_image.
+     apply congr_big => //. by rewrite /index_enum unlock.
+    rewrite GRing.linear_sum. apply/eq_big => // i _.
     by rewrite GRing.linearZ_LR /= expXpE mulnC GRing.exprM -GRing.rmorphX
                X2mp_eq1 /mulV GRing.expr1n GRing.mulr1.
   * move/(fun x => x 1%R).
@@ -729,9 +727,321 @@ Proof.
 Qed.
 
 Lemma cycleX : iter (2 ^ m - 1) mulX =1 id.
-Proof.
-  by apply/cycleX_dvdP.
+Proof. by apply/cycleX_dvdP. Qed.
+
+(* Variable B : @matrix [fieldType of 'F_2] (size phi).-1 (size phi).-1. *)
+(* Variable HB : char_poly B = phi. *)
+
+Definition mulX' :
+  @matrix [fieldType of 'F_2] (size phi).-1 (size phi).-1.
+apply: (castmx (mul1n _, mul1n _)).
+(* rewrite prednK //. *)
+by apply (lin_mx (fun x => npoly_rV (mulX (rVnpoly x)))).
+Defined.
+
+(*               \matrix_(i < (size phi).-1, j < (size phi).-1) ((i : nat) == j.+1 : [fieldType of 'F_2]))%R. *)
+(* Check lin_mx. *)
+(* Check lin_mx (fun x : 'rV_(size phi).-1 => npoly_rV ((rVnpoly x : {qpoly phi}) * pi 'X)%R). *)
+(* Check (\matrix_(i < (size phi).-1, j < (size phi).-1) ((if (i : nat) == j.+1 then 1 else 0) : [fieldType of 'F_2]))%R. *)
+(* Check castmx (mul1n _, mul1n _). *)
+
+Lemma polyXnE (R : ringType) n m : n < m -> ('X^n = \poly_(k < m) ((k == n)%:R : R))%R.
+  move=> nm.
+  apply/polyP => s.
+  rewrite coefXn coef_poly.
+  case sm: (s == m).
+   move/eqP: sm => ->.
+   by rewrite ltnn gtn_eqF.
+  case: ifP => //.
+  by move/negP/negP; rewrite -leqNgt; move/(leq_trans nm) => /gtn_eqF ->.
 Qed.
+  (* rewrite ltnNge. *)
+  (* move/leq *)
+  (*   by rewrite ltnS leqnn. *)
+  (* elim: m n => // m IHm n. *)
+  (* rewrite ltnS leq_eqVlt => /orP[/eqP ->|]. *)
+  (*  apply/polyP => s. *)
+  (*  rewrite coefXn coef_poly. *)
+  (*  case sm: (s == m). *)
+  (*   move/eqP: sm => ->. *)
+  (*   by rewrite ltnS leqnn. *)
+  (*  by case: ifP. *)
+  (* elim: {IHm} m => //. *)
+  (*  rewrite  *)
+  (* move=> nm. *)
+  (* set T := ('X^_)%R. *)
+  
+  (*       match insub k with *)
+  (*                                | Some i0 => (\matrix[vec_mx_key]_(i1, j0) (\matrix[delta_mx_key]_(i2, j1) ((i2 == 0) && (j1 == cast_ord (esym (mul1n (size phi).-1)) (Ordinal Hi)))%:R) 0 (mxvec_index i1 j0)) 0 i0 *)
+  (*                                | None => 0 *)
+  (*                                end)%R *)
+Lemma test : (mulX' = \matrix_(i < (size phi).-1, j < (size phi).-1) (((i : nat) == j.+1)%:R : [fieldType of 'F_2]))%R.
+(* Lemma test : (castmx (mul1n _, mul1n _) (lin_mx (fun x => npoly_rV ((rVnpoly x : {qpoly phi}) * pi 'X)%R)) = \matrix_(i < (size phi).-1, j < (size phi).-1) (((i : nat) == j.+1)%:R : [fieldType of 'F_2]))%R. *)
+Proof.
+  rewrite /mulX'.
+  apply/matrixP => i j.
+  rewrite !castmxE /lin_mx /lin1_mx !mxE /mxvec !castmxE !mxE /=.
+  set T := rVnpoly _.
+  have <-: ('X ^+ i)%R = T.
+   subst T.
+   case: i => i Hi. case: j => j Hj.
+   rewrite /delta_mx /vec_mx /rVnpoly /rVpoly /=.
+   apply/val_inj.
+   rewrite val_insubd.
+   case: ifP => H.
+   rewrite (@polyXnE _ _ (size phi).-1 _) //.
+   Admitted.
+   
+  (*  rewrite /=. *)
+  (*  apply polyP. *)
+  (*  polyP. *)
+  (*  apply congr_big. *)
+  (*  congr (val (\poly_(k < (size phi).-1) _)%R). *)
+  (*  move=> t. *)
+  (*  apply/polyP. *)
+  (*  rewrite polyP. *)
+  (*  rewrite /=. *)
+  (*  set T := (\poly_(k < (size phi).-1) match insub k with *)
+  (*                                | Some i0 => (\matrix[vec_mx_key]_(i1, j0) (\matrix[delta_mx_key]_(i2, j1) ((i2 == 0) && (j1 == cast_ord (esym (mul1n (size phi).-1)) (Ordinal Hi)))%:R) 0 (mxvec_index i1 j0)) 0 i0 *)
+  (*                                | None => 0 *)
+  (*                                end)%R. *)
+  (*  have->: (T = val T) by []. *)
+  (*  rewrite npoly_is_a_poly_of_size. *)
+  (*  rewrite isE. *)
+  (*  rewrite memE. *)
+  (*  rewrite /=. *)
+  (*  rewrite /insubd /odflt /oapp. *)
+   
+  (*  apply/val_inj. *)
+  (*  rewrite /=. *)
+  (* Check @ord0 (size phi).-1. *)
+  (* suff H: forall i0, ((\matrix[vec_mx_key]_(i1, j) (\matrix[delta_mx_key]_(i2, j0) ((i2 == 0) && (j0 == cast_ord (esym (mul1n (size phi).-1)) (Ordinal Hi)))%:R) 0 (mxvec_index i1 j)) (@ord0 0) i0 = ((if (i0 : nat) == i then 1 else 0) : [fieldType of 'F_2]))%R. *)
+  (* rewrite H. *)
+  (* move=> ->. *)
+  (*  move=> n i0. *)
+  (*  rewrite !mxE eqxx eqE /=. *)
+  (*  have: (val (enum_rank (ord0, i0)) = i0). *)
+  (*   case: i0 => i0 Hi0 n0. *)
+  (*   rewrite /enum_rank /enum_rank_in val_insubd /=. *)
+  (*   case: ifP => H. *)
+  (*   rewrite predX_prod_enum. *)
+  (*    rewrite /index. *)
+  (*   set T := (fun => true). *)
+  (*   have: #|T| > 0 by have/enum_rank_subproof: (ord0, Ordinal Hi0) \in T by []. *)
+    
+  (*    rewrite cardE. *)
+  (*    rewrite size_enum_ord. *)
+  (*    Search (size (enum _)). *)
+  (*    rewrite  *)
+  (*    rewrite enum. *)
+  (*   rewrite /=. *)
+  (*   rewrite enumX. *)
+  (*   rewrite -cardX. *)
+  (*   rewrite /=. *)
+  (*   rewrite /=. *)
+  (*   rewrite card1. *)
+  (*   rewrite size_ord. *)
+  (*   rewrite  *)
+  (*   rewrite  *)
+  (*   rewrite enum. *)
+  (*   rewrite sizeenumE. *)
+  (*  rewrite /ord0 /=. *)
+  (*  rewrite /=. *)
+  (*  Check (index _ (enum _)). *)
+  (*  Check Ordinal. *)
+  (*  rewrite enum_rank_subproof. *)
+  (*  case ii: (i == i0). *)
+  (*   rewrite [in RHS]eq_sym ii. *)
+  (*   apply/eqP. *)
+  (*   rewrite eqE /= /modn /=. *)
+  (*   Check enum_val Hi. *)
+  (*   rewrite enum_rankK. *)
+  (*    move=> n0. *)
+  (*    rewrite /enum_rank /enum_rank_in. *)
+  (*    rewrite /= /index. *)
+  (*    rewrite /find. *)
+  (*    rewrite /=. *)
+  (*    rewrite eqE. *)
+  (*    rewrite /=. *)
+  (*    apply/eqP. *)
+  (*    apply enum_val_inj. *)
+  (*    rewrite /=. *)
+  (*   set T' :=  *)
+  (*   set T := i. *)
+  (*   rewrite eq_sym. *)
+  (*   have: ((enum_rank (ord0, i0) == (i : ordinal_subType _))%:R)%R. *)
+  (*    :  *)
+  (*   apply (sameP ((enum_rank (ord0, i0) == i)%:R)%R). *)
+  (*   apply/idP. *)
+  (*   rewrite eqE. *)
+  (*   apply is_true. *)
+  (*   rewrite /=. *)
+  (*   apply/eqP. *)
+  (*   apply/implyP. *)
+  (*   apply/eqP. *)
+  (*   apply/boolP. *)
+  (*   rewrite eqE /=. *)
+  (*   rewrite modn1. *)
+  (*   GRing.mul1r *)
+  (*   rewrite  *)
+  (*   apply/boolP. *)
+  (*   rewrite eq_sym ii. *)
+  (*   rewrite /enum_rank /enum_rank_in. *)
+  (*   rewrite /=. *)
+  (*   rewrite /=. *)
+  
+  (* Check forall i0, ((\matrix[vec_mx_key]_(i1, j) (\matrix[delta_mx_key]_(i2, j0) ((i2 == 0) && (j0 == cast_ord (esym (mul1n (size phi).-1)) (Ordinal Hi)))%:R) 0 (mxvec_index i1 j)) (@ord0 0) i0 = ((if (i : nat) == j then 1 else 0) : [fieldType of 'F_2]))%R. *)
+  (* case ij: ((i : nat) == j.+1). *)
+  (*  set T := insub _. *)
+  (*  have: T != None. *)
+  (*   subst T. *)
+  (*   apply/eqP => H. *)
+  (*   move: (H) => /insubP. *)
+  (*   apply/eqP. *)
+  (*   move=> S. *)
+  (*   => /val_inj. *)
+  (*   move/eqP: ij. *)
+  (*   apply/val_inj. *)
+  (*   rewrite /insub. *)
+   
+  (* rewrite nth_default. *)
+  (* rewrite mxE. *)
+  
+  (* Check coef_poly. *)
+  (* Check nth *)
+  (* rewrite nth_poly. *)
+  (* have<-: (Ordinal Hj) = (enum_val (cast_ord (esym (mxvec_cast 1 (size phi).-1)) (cast_ord (esym (mul1n (size phi).-1)) (Ordinal Hj)))).2. *)
+  (*  apply val_inj. *)
+  (*  rewrite /mxvec_cast. *)
+  (*  rewrite cast_ordK. *)
+  (*  rewrite /cast_ord /enum_val. *)
+  (*  rewrite cast_ord_proof. *)
+  (*  rewrite /enum_default. *)
+  (*  rewrite castmxE. *)
+  (*  rewrite mxcastK. *)
+   
+  (*  rewrite /=. *)
+  (*  rewrite /=. *)
+  (*  rewrite enum_val. *)
+   
+  (* rewrite mxE. *)
+  (* rewrite cast_ordK. *)
+  (* Check cast_ord. *)
+  (* rewrite /rVnpoly /rVpoly /insubd /odflt /oapp /= . *)
+  (* rewrite /snd /= /enum_val. *)
+  (* rewrite /enum_val /=. *)
+
+Lemma char_phi : char_poly mulX' = phi.
+Proof.
+  rewrite test.
+  rewrite /mulX' /ssr_have /mulX /mulV /GRing.mul
+          /GRing.Ring.mul /mul_qpoly /rVnpoly /npoly_rV.
+  rewrite /poly_rV /rVpoly /insubd /insub /odflt /oapp /=.
+  destruct idP.
+  
+  rewrite GRing.mulrC.
+  rewrite -modp_mod.
+  move sp: (size phi) => spe.
+  rewrite /mulX'.
+  rewrite /char_poly /char_poly_mx /map_mx /lin_mx.
+  
+  destruct phi.
+  case: phi .
+  rewrite /mulX' /char_poly /char_poly_mx /map_mx /lin_mx /lin1_mx.
+  rewrite /vec_mx /mxvec /ssr_have /=.
+  case: phi pm ip.
+  rewrite castmxE.
+  set T := (\matrix[_]_(_, _) _ _ _)%R.
+  have: T = T.
+   rewrite /T.
+   apply/matrixP => i j.
+   rewrite mxE /delta_mx /vec_mx /rVnpoly /poly_nil.
+   set S := (\matrix[_]_(_, _) _ _ _)%R.
+   have: S = S.
+    rewrite /S.
+    apply/matrixP => ? ?.
+    rewrite !mxE /=.
+    rewrite !castmxE .
+    Check lin_mulmx.
+    rewrite rowE.
+    rewrite /=.
+     apply/matrixP.
+    set R := (\matrix[_]_(_, _) _ _ _)%R.
+    have: R = R.
+     rewrite /R.
+     apply/matrixP => [][]??[]??.
+     rewrite mxE /= /npoly_rV /=.
+     rewrite /poly_rV /=.
+     rewrite /enum_val.
+     rewrite /=.
+     rewrite rowE.
+     rewrite /nth.
+     rewrite /=.
+     apply/rowP.
+     apply/matrixP.
+     rewrite rowE.
+     apply/rowP => [][] /= ??.
+     apply/rowP => [][] /= ??.
+     rewrite /=.
+     rewrite rowK.
+    rewrite /=.
+    rewrite rowE.
+    rewrite /mxvec /=.
+   set S := \
+   rewrite /=.
+   rewrite /=.
+   rewrite /insubd /odflt /oapp.
+   rewrite /insub.
+   rewrite /=.
+   apply/matrixP => i j.
+   apply: eq_big.
+   congr : \matrix[_](_, _).
+  rewrite /=.
+  rewrite /= /rVpoly /=.
+  apply GRing.subr0_eq.
+  rewrite /char_poly /char_poly_mx /map_mx /lin_mx /lin1_mx.
+  rewrite /= mxE.
+  rewrite -GRing.subrr.
+  rewrite GRing.oner_eq0.
+  rewrite /mulX /mulV.
+  rewrite /npoly_rV /rVnpoly.
+  set T := (fun _ : 'rV__ => _).
+  have: T =1 T.
+   rewrite /T => x.
+   rewrite /= modp_mul.
+   rewrite GRing.rmorphM.
+   rewrite /rVpoly.
+  apply/etrans.
+    (fun x => char_poly (lin_mx x)).
+  
+  (* set T' := (fun x => insubd _ (rVpoly x)). *)
+  (* rewrite /=. *)
+  set Z := 0%R.
+  (* (fun x => poly_rV (((insubd Z (rVpoly x) : npoly_subType (size phi).-1) * 'X) %% phi))%R. *)
+  
+  (* pose T' := (fun x => insubd Z (rVpoly x) : npoly_subType (size phi).-1). *)
+   set T' := insubd _ _.
+   set T' := 0%R.
+   Set Printing All.
+   done.
+   rewrite 
+   rewrite /=.
+   done.
+  rewrite /npoly_rV.
+  rewrite GRing.rmorphM.
+  rewrite /=.
+Lemma char_phi : char_poly mulX' = phi.
+
+Lemma char_phi B : char_poly B = phi -> similar mulX' B.
+Proof.
+  
+Check mx_inv_horner.
+Check lin_mx (fun x => npoly_rV (mulX (rVnpoly x))).
+
+(* Check poly_rV _. *)
+(* Check rVpoly . *)
+(* Check (fun x => npoly_rV (mulX (rVnpoly x))). *)
+(* Check char_poly. *)
 (* TODO : prove mulX and matrix B are similar. *)
 End inverse.
 
