@@ -732,12 +732,11 @@ Proof. by apply/cycleX_dvdP. Qed.
 (* Variable B : @matrix [fieldType of 'F_2] (size phi).-1 (size phi).-1. *)
 (* Variable HB : char_poly B = phi. *)
 
-Definition mulX' :
-  @matrix [fieldType of 'F_2] (size phi).-1 (size phi).-1.
-apply: (castmx (mul1n _, mul1n _)).
-(* rewrite prednK //. *)
-by apply (lin_mx (fun x => npoly_rV (mulX (rVnpoly x)))).
-Defined.
+Definition mulX' :=
+  castmx (mul1n _, mul1n _) (lin_mx (fun x => npoly_rV (mulX (rVnpoly x)))).
+
+  (* : @matrix [fieldType of 'F_2] (size phi).-1 (size phi).-1 *)
+           (* rewrite prednK //. *)
 
 (*               \matrix_(i < (size phi).-1, j < (size phi).-1) ((i : nat) == j.+1 : [fieldType of 'F_2]))%R. *)
 (* Check lin_mx. *)
@@ -745,16 +744,146 @@ Defined.
 (* Check (\matrix_(i < (size phi).-1, j < (size phi).-1) ((if (i : nat) == j.+1 then 1 else 0) : [fieldType of 'F_2]))%R. *)
 (* Check castmx (mul1n _, mul1n _). *)
 
-Lemma polyXnE (R : ringType) n m : n < m -> ('X^n = \poly_(k < m) ((k == n)%:R : R))%R.
-  move=> nm.
-  apply/polyP => s.
-  rewrite coefXn coef_poly.
+Lemma polyXnE (R : ringType) n m :
+  n < m -> ('X^n = \poly_(k < m) ((k == n)%:R : R))%R.
+Proof.
+  move=> nm. apply/polyP => s. rewrite coefXn coef_poly.
   case sm: (s == m).
    move/eqP: sm => ->.
    by rewrite ltnn gtn_eqF.
-  case: ifP => //.
-  by move/negP/negP; rewrite -leqNgt; move/(leq_trans nm) => /gtn_eqF ->.
+  by case: ifP => // /negP/negP; rewrite -leqNgt =>/(leq_trans nm)=>/gtn_eqF ->.
 Qed.
+
+(* Check insub. *)
+(* Lemma test' (R : ringType) (P : nat -> R) s: *)
+(* (\poly_(k < s) match insub k with *)
+(*                | Some i => P (val i) *)
+(*                | None => 0 *)
+(*                end = \poly_(k < s) (P k))%R. *)
+
+Lemma test : companionmx phi = mulX'.
+  apply/matrixP => i j.
+  rewrite /mulX' !castmxE /lin_mx /lin1_mx !mxE /mxvec !castmxE !mxE /=.
+  set T := rVnpoly _.
+  have <-: ('X ^+ i)%R = T.
+   subst T. case: i => i Hi. case: j => j Hj.
+   apply/val_inj. rewrite val_insubd.
+   rewrite /delta_mx /vec_mx /rVnpoly /rVpoly.
+   set T := (\poly_(k < (size phi).-1) _)%R.
+   rewrite /poly_of_size /in_mem /mem /= /T size_poly {T}.
+   rewrite (@polyXnE _ _ (size phi).-1 _) // /delta_mx /vec_mx /rVnpoly /rVpoly.
+   set T := (fun _ => (_ == _)%:R)%R.
+   set T' := (fun _ => match _ with _ => _ end)%R.
+   rewrite (@eq_poly _ _ T T') //.
+   subst T T' => x.
+   case xi: (x == i).
+    rewrite insubT => *.
+    by move/eqP: xi => ->.
+    rewrite !mxE eqxx eqE /=.
+    rewrite /enum_rank /enum_rank_in /insubd insubT => *.
+     by rewrite cardE index_mem mem_enum.
+    rewrite /= /index /pred_of_simpl.
+    rewrite /=.
+    rewrite /pred1.
+    rewrite /=.
+    
+    compute.
+    rewrite -/enum_rank_in.
+    
+    tt
+    rewrite -/insubd.
+    rewrite /= /index.
+    
+    rewrite enum_rank_ord.
+    move=> ?.
+     done.
+     rewrite /=.
+     rewrite /pred_of_simpl.
+     apply prod_enumP.
+     apply enum_prod.
+     rewrite /=.
+     elim: (size phi).-1 Hx => // n IHn.
+     case xn: (x == n).
+      rewrite /=.
+     case.
+     rewrite ltnS. leq_eqVlt.
+     
+     rewrite /=.
+     
+    rewrite enum.
+    rewrite /=.
+    done.
+    rewrite inE.
+    rewrite memE.
+    rewrite cardE ltn_neqAle index_size.
+    rewrite /= /index.
+    rewrite /=.
+    rewrite -cardE.
+    rewrite enum_ord.
+    apply (l_trans _ (index_size _ _)).
+    rewrite /=.
+    rewrite /=.
+    rewrite /=.
+    rewrite /=.
+    rewrite /=.
+    Search enum_rank .
+    rewrite /=.
+    rewrite /=.
+   
+   rewrite m
+    rewrite /=.
+    
+    Compute insub 1.
+   
+   
+    move: H.
+    rewrite /delta_mx /vec_mx /rVnpoly /rVpoly.
+    set T := (\poly_(k < (size phi).-1) _)%R.
+    rewrite /poly_of_size.
+    rewrite /in_mem /mem /= /T size_poly.
+    Set Printing All.
+    Check _ \is a _.
+    rewrite inE.
+    rewrite isE.
+    Check val T.
+    have: (val T \is a poly_of_size (size phi).-1).
+    have<-: val T = T.
+    move/npoly_is_a_poly_of_size .
+    t
+    rewrite npoly_is_a_poly_of_size .
+    rewrite 
+    rewrite /=.
+    rewrite /=.
+   
+   rewrite !eqE /=.
+   
+   Check insub.
+   Check insub x.
+   rewrite /=.
+   
+   set n := (@size 'F_2 phi).-1.
+   done.
+   rewrite /=.
+   apply.
+   rewrite /=.
+   apply/etrans; last apply eq_poly.
+   apply eq_bigr .
+   rewrite !poly_def /=.
+   apply eq_poly.
+   set T' := (fun _ => _ == _).
+   rewrite /=.
+   apply eq_bigr.
+   apply/polyP.
+   rewrite -polyP.
+   
+   rewrite /=.
+   apply/polyP.
+   Check rVpoly.
+  
+  rewrite /delta_mx /vec_mx.
+  
+  rewrite /companionmx.
+  
   (* rewrite ltnNge. *)
   (* move/leq *)
   (*   by rewrite ltnS leqnn. *)
