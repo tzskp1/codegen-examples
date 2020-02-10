@@ -37,7 +37,7 @@ Fixpoint generate_state_vector (rest : nat) (acc : seq N) : seq N :=
 Definition initialize_random_state (seed : N) : random_state :=
   {|
     index := 0;
-    state_vector := rev (generate_state_vector len  (N.land seed whole_mask :: nil));
+    state_vector := rev (generate_state_vector len (N.land seed whole_mask :: nil));
   |}.
 
 Definition next_random_state (rand : random_state) : (N * random_state) :=

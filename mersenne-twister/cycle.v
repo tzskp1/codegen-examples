@@ -99,15 +99,78 @@ Qed.
 Lemma pm : prime (2 ^ (size phi).-1 - 1).
 Proof. by rewrite size_phi pm'. Qed.
 
-Check @irreducible.mulX _ pm.
-Require Import BinNat mt.
-Definition init := initialize_random_state 20190820%N.
-Definition zero := next_random_state init.
-Definition one := next_random_state zero.2.
-Compute length (state_vector one.2).
-Check eigenvalue _ _.
-Compute one.
-Compute zero.
+Fixpoint spliti_iter T i (xs ys : seq T) :=
+  match i with
+  | 0 => (rev xs, ys)
+  | S j =>
+    match ys with
+    | [::] => (rev xs, ys)
+    | y :: ys' => spliti_iter j (y :: xs) ys'
+    end
+  end.
+
+Definition spliti T i (xs : seq T) := spliti_iter i [::] xs.
+
+Require Import BinNat mt Recdef.
+
+(* Check @irreducible.mulX _ pm. *)
+(* Definition init := initialize_random_state 20190820%N. *)
+(* Definition zero := next_random_state init. *)
+(* Definition one := next_random_state zero.2. *)
+(* Compute (state_vector one.2). *)
+(* Compute (state_vector zero.2). *)
+(* Compute spliti (index one.2).-1 (state_vector one.2). *)
+(* Print init. *)
+(* Print initialize_random_state . *)
+(* Check row. *)
+(* Check 'rV__. *)
+(* Check head _. *)
+(* Compute length  *)
+(* Compute 3 / 2. *)
+(* Check 3 :: [::]. *)
+(* Check N.lt. *)
+(* Compute N.eqb 3 2. *)
+
+Definition head_bin (n : N) : 'F_2.
+ apply: (@Ordinal _ (n %% 2)).
+ by apply/ltn_pmod.
+Defined.
+
+Function binary_of_nat_iter acc (n : N) {measure nat_of_bin n} : list 'F_2 :=
+  if N.eqb n 0 then rev acc else binary_of_nat_iter (head_bin n :: acc) (N.div2 n).
+Proof.
+  move=> _ []// p _.
+  apply/ltP.
+  case: p => //= p.
+   rewrite !natTrecE ltnS.
+   elim: (nat_of_pos p) => // n IHn.
+   rewrite /= doubleS ltnS ltnW //.
+  rewrite !natTrecE -addnn -[X in (X < _ + _)%nat]addn0 ltn_add2l.
+  elim: p => //= p IHp.
+  by rewrite natTrecE -addnn ltn_addr.
+Qed.
+  
+Definition binary_of_nat (n : N) := binary_of_nat_iter [::] n.
+
+Definition read_as_vector (x : random_state) :=
+  let (h, t) := spliti (index x).-1 (map binary_of_nat (state_vector x)) in
+  let h' := flatten h in
+  let t' := flatten t in
+  let h'' := take (length h' - 31) h' in
+  t' ++ h''.
+
+(* Check read_as_vector. *)
+(* Compute spliti 2 (iota 0 3). *)
+
+(* Compute length (state_vector one). *)
+(* (624 * 32) - 31 *)
+  
+(* 624 * 32 *)
+(* Set Printing All. *)
+  
+(* Check eigenvalue _ _. *)
+(* Compute one. *)
+(* Compute zero. *)
 (* 0:324445478 *)
 (* 1:774197212 *)
 
