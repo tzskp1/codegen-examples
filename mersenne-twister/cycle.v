@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect all_algebra all_field all_fingroup.
 From codegen Require Import codegen.
-Require irreducible BinNat.
+Require irreducible.
 Require Import polyn.
 
 Set Implicit Arguments.
@@ -118,26 +118,23 @@ Require Import BinNat mt Recdef.
 (* Definition zero := next_random_state init. *)
 (* Definition one := next_random_state zero.2. *)
 (* Compute (state_vector one.2). *)
-(* Compute (state_vector zero.2). *)
+(* Compute (index zero.2). *)
 (* Compute spliti (index one.2).-1 (state_vector one.2). *)
 (* Print init. *)
 (* Print initialize_random_state . *)
 (* Check row. *)
 (* Check 'rV__. *)
 (* Check head _. *)
-(* Compute length  *)
+(* Compute length *)
 (* Compute 3 / 2. *)
 (* Check 3 :: [::]. *)
 (* Check N.lt. *)
 (* Compute N.eqb 3 2. *)
 
-Definition head_bin (n : N) : 'F_2.
- apply: (@Ordinal _ (n %% 2)).
- by apply/ltn_pmod.
-Defined.
+Definition head_bin (n : N):'F_2 := Ordinal ([eta ltn_pmod n (d:=2)] (leqnSn 1)).
 
 Function binary_of_nat_iter acc (n : N) {measure nat_of_bin n} : list 'F_2 :=
-  if N.eqb n 0 then rev acc else binary_of_nat_iter (head_bin n :: acc) (N.div2 n).
+ if N.eqb n 0 then rev acc else binary_of_nat_iter (head_bin n :: acc) (N.div2 n).
 Proof.
   move=> _ []// p _.
   apply/ltP.
@@ -151,13 +148,16 @@ Proof.
 Qed.
   
 Definition binary_of_nat (n : N) := binary_of_nat_iter [::] n.
-
 Definition read_as_vector (x : random_state) :=
-  let (h, t) := spliti (index x).-1 (map binary_of_nat (state_vector x)) in
+  let (h, t) := spliti ((index x + len.-1) %% len) (map binary_of_nat (state_vector x)) in
   let h' := flatten h in
   let t' := flatten t in
-  let h'' := take (length h' - 31) h' in
-  t' ++ h''.
+  t' ++ take (length h' - 31) h'.
+
+(* Definition f x := (next_random_state x).2. *)
+(* Check irreducible.cycleX_dvdP. *)
+(* Check reflect. *)
+(* Check irreducible. *)
 
 (* Check read_as_vector. *)
 (* Compute spliti 2 (iota 0 3). *)
