@@ -11,7 +11,7 @@ based on:
  P. 27
 *)
 
-Lemma f2p_monic (p : {poly [finFieldType of 'F_2]}) :
+Lemma f2p_monic (p : {poly [fieldType of 'F_2]}) :
   (p != 0)%R -> p \is monic.
 Proof.
   move=> /negPf p0; apply/eqP.
@@ -88,7 +88,7 @@ by rewrite [in LHS]H mulnDl mul1n [X in _ + X]H addn1 !addnS !subn1.
 Qed.
 
 Section irreducibility.
-Variable phi : {poly [finFieldType of 'F_2]}.
+Variable phi : {poly 'F_2}.
 Local Notation m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
 
@@ -337,7 +337,7 @@ have base: forall l, (0 < l < 2 ^ m - 1)%N -> t ^+ l * t != t.
   rewrite mem_enum.
   move/min_stab_min.
  by rewrite /= Hl0 H leqNgt Hl2 => /implyP.
-have base1: 
+have base1:
   forall l k, (l < 2 ^ m - 1 -> 0 < k < 2 ^ m - 1 ->
   (t ^+ l * t = t ^+ k * t)%R -> k = l)%N.
  move=> l k.
@@ -377,7 +377,7 @@ have base1:
  rewrite addnC GRing.exprD -GRing.mulrA -lk GRing.mulrA -GRing.exprD subnK //.
   by rewrite subn1 -GRing.exprSr prednK // H2.
  by rewrite ltnW.
-have base2: 
+have base2:
   forall l k : nat, (0 < k < 2 ^ m - 1)%N ->
   t ^+ l * t = t ^+ k * t -> (k = l %% (2 ^ m - 1))%N.
   move=> l k /base1 b.
@@ -483,13 +483,13 @@ apply/(iffP idP).
   apply/inj.
 Qed.
 
-Lemma X2m_eqXE : 
+Lemma X2m_eqXE :
 (('X ^ (2 ^ m)%N %% phi == 'X %% phi) = (p_ord \in stab (pi 'X) (pi 'X)))%R.
 by rewrite inE -!GRing.rmorphX -!GRing.rmorphM -!exprnP !eqE /=
            -GRing.exprSr subn1 prednK.
 Qed.
 
-Lemma X2_neqXE : 
+Lemma X2_neqXE :
 (('X ^ 2 %% phi != 'X %% phi) = (one_ord \notin stab (pi 'X) (pi 'X)))%R.
 by rewrite inE -!GRing.rmorphX -!GRing.rmorphM -!exprnP !eqE /=
            -GRing.exprSr.
@@ -541,7 +541,7 @@ Proof.
   by rewrite pq0.
 Qed.
 End direct.
-  
+
 Section inverse.
 (*
    This direction is trivial.
@@ -562,7 +562,7 @@ Definition Xu: ((pi 'X : qpoly_fieldType_phi) \is a GRing.unit)%R.
   by rewrite GRing.unitfE piX_neq0.
 Defined.
 
-Definition L : fieldExtType [finFieldType of 'F_2].
+Definition L : fieldExtType [fieldType of 'F_2].
   by case/irredp_FAdjoin: ip.
 Defined.
 
@@ -713,11 +713,11 @@ Proof.
   * case/dvdnP => q -> x.
     rewrite (coord_basis (npolyX_full _ _) (memvf x)).
     set e0 := npolyX _ _.
-    have->: (\sum_i coord e0 i x *: e0`_i)%R
-          = (\sum_(i <- ord_enum (size phi).-1) coord e0 i x *: e0`_i)%R.
-     rewrite -big_image_id big_image.
-     apply congr_big => //. by rewrite /index_enum unlock.
-    rewrite GRing.linear_sum. apply/eq_big => // i _.
+    (* have->: (\sum_i coord e0 i x *: e0`_i)%R *)
+    (*       = (\sum_(i <- ord_enum (size phi).-1) coord e0 i x *: e0`_i)%R. *)
+    (*  rewrite -big_image_id big_image. *)
+    (*  apply congr_big => //. by rewrite /index_enum unlock. *)
+    rewrite GRing.linear_sum; apply/eq_big => // i _.
     by rewrite GRing.linearZ_LR /= expXpE mulnC GRing.exprM -GRing.rmorphX
                X2mp_eq1 /mulV GRing.expr1n GRing.mulr1.
   * move/(fun x => x 1%R).
