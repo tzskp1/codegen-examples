@@ -713,10 +713,6 @@ Proof.
   * case/dvdnP => q -> x.
     rewrite (coord_basis (npolyX_full _ _) (memvf x)).
     set e0 := npolyX _ _.
-    (* have->: (\sum_i coord e0 i x *: e0`_i)%R *)
-    (*       = (\sum_(i <- ord_enum (size phi).-1) coord e0 i x *: e0`_i)%R. *)
-    (*  rewrite -big_image_id big_image. *)
-    (*  apply congr_big => //. by rewrite /index_enum unlock. *)
     rewrite GRing.linear_sum; apply/eq_big => // i _.
     by rewrite GRing.linearZ_LR /= expXpE mulnC GRing.exprM -GRing.rmorphX
                X2mp_eq1 /mulV GRing.expr1n GRing.mulr1.
