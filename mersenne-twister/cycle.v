@@ -241,18 +241,31 @@ Qed.
 Lemma pm' : (prime (2 ^ (size phi).-1 - 1)).
 Proof. by rewrite size_phi. Qed.
 
-Definition f :=
-   (@npoly_rV _ (size phi).-1)
- \o @irreducible.mulX _ pm'
- \o (@rVnpoly _ (size phi).-1).
+(* Definition f := *)
+(*    (@npoly_rV _ (size phi).-1) *)
+(*  \o @irreducible.mulX _ pm' *)
+(*  \o (@rVnpoly _ (size phi).-1). *)
 
-Record random_state := {index : nat; state_vector :> n.-tuple (w.-tuple 'F_2)}.
+Definition xor l (V : zmodType) (x y : l.-tuple V) : l.-tuple V.
+  apply/Tuple/(_ : size (map (fun xy => xy.1 + xy.2) (zip x y)) == l).
+  case: x y => /= ? /eqP x [] /= ? /eqP y.
+  by rewrite size_map size_zip x y minnn.
+Defined.
+Definition and (x y : w.-tuple 'F_2) : w.-tuple 'F_2.
+  apply/Tuple/(_ : size (map (fun xy => xy.1 * xy.2) (zip x y)) == w).
+  case: x y => /= ? /eqP x [] /= ? /eqP y.
+  by rewrite size_map size_zip x y minnn.
+Defined.
 
 Fixpoint rep T s (t : T) := if s is q.+1 then t :: rep q t else [::].
 Lemma size_rep T s (t : T) : size (rep s t) == s.
 Proof. by elim: s => //= s ->. Qed.
+Lemma size_mask X Y : size (rep (w - r) (X : 'F_2) ++ rep r (Y : 'F_2)) == w.
+Proof. by rewrite size_cat !(eqP (size_rep _ _)) subnK. Qed.
+Definition u := Tuple (size_mask 1 0).
+Definition ll := Tuple (size_mask 0 1).
 
-Definition dw := Tuple (size_rep w (0 : 'F_2)).
+Definition zero := Tuple (size_rep w (0 : 'F_2)).
 
 Lemma size_foldr_tuple T l (xs : seq (l.-tuple T)) :
 size (foldr (fun (y : l.-tuple T) (x : seq T) => y ++ x) [::] xs) = (size xs * l)%nat.
@@ -261,37 +274,12 @@ Proof.
   by rewrite /= size_cat IH size_tuple mulSn.
 Qed.
 
-Definition tuple_of_random_state_prf (rnd : random_state) :
-  let vec := drop (index rnd %% n) rnd ++ take (index rnd %% n) rnd in
-  let vec' := foldr (fun (y : w.-tuple 'F_2) (x : seq 'F_2) => y ++ x) [::]
-                    (take n.-1 vec) ++ take (w - r) (last dw vec) in
-  size vec' == p.
-Proof.
-  rewrite /= size_cat size_foldr_tuple ?size_take size_cat
-          ?size_drop ?size_take ?size_tuple ltn_mod.
-  case: n mn => //= n' ?.
-  rewrite subnK; last by rewrite ltnW // ltn_mod.
-  by rewrite ltnS leqnn /leq -subSn // subnAC subSn // subnn subn_eq0 r0
-             mulSn addnBA // addnC.
-Qed.
-
-Definition tuple_of_random_state (rnd : random_state) :=
-  Tuple (tuple_of_random_state_prf rnd).
-
 Section Canonicals.
-Definition zero := Tuple (size_rep p (0 : 'F_2)).
-
-Definition xor l (V : zmodType) (x y : l.-tuple V) : l.-tuple V.
-  apply/Tuple/(_ : size (map (fun xy => xy.1 + xy.2) (zip x y)) == l).
-  case: x y => /= ? /eqP x [] /= ? /eqP y.
-  by rewrite size_map size_zip x y minnn.
-Defined.
-
-Lemma xor0w : left_id zero (@xor _ _).
+Lemma xor0w : left_id zero (@xor w _).
 Proof.
   case=> x xi.
   apply/val_inj => /=.
-  case: p p3 xi => // + _.
+  case: w w0 xi => // + _.
   elim: x => // ?? IH sx xi /=.
   congr (_ :: _).
    by rewrite GRing.add0r.
@@ -304,7 +292,7 @@ Lemma xorww x : xor x x = zero.
 Proof.
   case: x => x xi.
   apply/val_inj => /=.
-  case: p p3 xi => // + _.
+  case: w w0 xi => // + _.
   elim: x => // ?? IH sx xi /=.
   congr (_ :: _).
    by rewrite GRing.addrr_char2.
@@ -313,12 +301,11 @@ Proof.
   by apply/size0nil.
 Qed.
 
-Lemma xorA : associative (@xor p [zmodType of 'F_2]).
+Lemma xorA : associative (@xor w [zmodType of 'F_2]).
 Proof.
   move=> x y z.
   apply/val_inj => /=.
-  have p0: (0 < p)%nat by case: p p3.
-  elim: p p0 x y z => // s IH _.
+  elim: w w0 x y z => // s IH _.
   case=> [][]//= ??; rewrite eqSS => x.
   case=> [][]//= ??; rewrite eqSS => y.
   case=> [][]//= ??; rewrite eqSS => z.
@@ -331,12 +318,11 @@ Proof.
   by move: (IH erefl (Tuple x) (Tuple y) (Tuple z)) => /= ->.
 Qed.
 
-Lemma xorC : commutative (@xor p [zmodType of 'F_2]).
+Lemma xorC : commutative (@xor w [zmodType of 'F_2]).
 Proof.
   move=> x y.
   apply/val_inj => /=.
-  have p0: (0 < p)%nat by case: p p3.
-  elim: p p0 x y => // s IH _.
+  elim: w w0 x y => // s IH _.
   case=> [][]//= ??; rewrite eqSS => x.
   case=> [][]//= ??; rewrite eqSS => y.
   rewrite GRing.addrC.
@@ -347,98 +333,370 @@ Proof.
   by move: (IH erefl (Tuple x) (Tuple y)) => /= ->.
 Qed.
 
-Lemma xorIw : left_inverse zero id (@xor p [zmodType of 'F_2]).
+Lemma xorIw : left_inverse zero id (@xor w [zmodType of 'F_2]).
 Proof. by move=> ?; rewrite xorww. Qed.
 
 Definition w_zmixin := Eval hnf in ZmodMixin xorA xorC xor0w xorIw.
-Canonical w_zmodtype := Eval hnf in ZmodType (p.-tuple 'F_2) w_zmixin.
+Canonical w_zmodtype := Eval hnf in ZmodType (w.-tuple 'F_2) w_zmixin.
 
--Definition scale (x : [ringType of 'F_2]) (y : w.-tuple 'F_2) : w.-tuple 'F_2 :=
--  if x == 0
--  then Tuple (size_rep _ 0)
--  else y.
--
--Lemma scalerv : forall a b v, scale a (scale b v) = scale (a * b) v.
--Proof. case=> [][? [][] ?|[]// ? [][|[]]] //. Qed.
--
--Lemma scale1v : left_id 1 scale.
--Proof. by []. Qed.
--
--Lemma scale0E y : scale 0 y = Tuple (size_rep _ 0).
--Proof. by []. Qed.
--
--Lemma scalerD : right_distributive scale (@xor w [zmodType of 'F_2]).
--Proof.
--  case=> [][|[]//] i *.
--  by rewrite /scale xor0w.
--Qed.
--
--Lemma zeroE : Tuple (size_rep w 0) = zero.
--Proof. by []. Qed.
--
--Lemma temp v : v = zero + v.
--Proof.
--  rewrite /GRing.add.
--  by rewrite /= xor0w.
--Qed.
--
--Lemma scale_morph :
--  forall v : w_zmodtype, {morph scale^~ v : a b / a + b >-> a + b}.
--Proof.
--  move=> v [][|[]//] x [][|[]//] y;
--   rewrite /scale /= ?zeroE.
--   by rewrite -temp.
--   by rewrite -temp.
--   rewrite GRing.addrC.
--   by rewrite -temp.
--   by rewrite /GRing.add /= xorww.
--Qed.
--
--Definition w_lmixin := LmodMixin scalerv scale1v scalerD scale_morph.
--Canonical w_lmodType := LmodType _ _ w_lmixin.
--
--Definition wrV (p : w.-tuple 'F_2) : 'rV['F_2]_w := \row_(i < w) p`_i.
--Definition rVw (v : 'rV['F_2]_w) : w.-tuple 'F_2 := mktuple (v 0).
--
--Lemma w_rV_K : cancel wrV rVw.
--Proof.
--move=> p /=; apply/val_inj.
--rewrite /wrV /rVw.
--have->: mktuple ((\row_i p`_i) 0) = mktuple (fun (i : 'I_w) => tnth p i).
-- apply/eq_mktuple => ?.
-- by rewrite mxE -tnth_nth.
--by rewrite /= map_tnth_enum.
--Qed.
--
--Lemma rV_w_K : cancel rVw wrV.
--Proof.
--move=> p /=.
--rewrite /wrV /rVw.
--apply/rowP => ?.
--by rewrite !mxE nth_mktuple.
--Qed.
--
--Lemma w_vect_axiom : Vector.axiom w (w.-tuple 'F_2).
--Proof.
--  exists wrV.
--   case=> [][|[]//] i x y.
--    have->: (Ordinal i = 0) by apply/val_inj.
--    by rewrite !GRing.scale0r !GRing.add0r.
--   have->: (Ordinal i = 1) by apply/val_inj.
--   rewrite !GRing.scale1r.
--   apply/rowP => X.
--   have xy: size x = size y.
--    by case: x y => ? /= /eqP -> [] ? /= /eqP ->.
--   rewrite !mxE /GRing.add (nth_map 0 0) ?nth_zip //
--           size_zip xy minnn.
--   by case: X x xy => ? ? [] ? /= /eqP -> <-.
--  exists rVw.
--   apply w_rV_K.
--   apply rV_w_K.
--Qed.
--
--Definition w_vmixin := VectMixin w_vect_axiom.
--Canonical w_vectType := VectType _ _ w_vmixin.
+Definition scale (x : [ringType of 'F_2]) (y : w.-tuple 'F_2) : w.-tuple 'F_2 :=
+  if x == 0
+  then Tuple (size_rep _ 0)
+  else y.
+
+Lemma scalerv : forall a b v, scale a (scale b v) = scale (a * b) v.
+Proof. case=> [][? [][] ?|[]// ? [][|[]]] //. Qed.
+
+Lemma scale1v : left_id 1 scale.
+Proof. by []. Qed.
+
+Lemma scale0E y : scale 0 y = Tuple (size_rep _ 0).
+Proof. by []. Qed.
+
+Lemma scalerD : right_distributive scale (@xor w [zmodType of 'F_2]).
+Proof.
+  case=> [][|[]//] i *.
+  by rewrite /scale xor0w.
+Qed.
+
+Lemma zeroE : Tuple (size_rep w 0) = zero.
+Proof. by []. Qed.
+
+Lemma temp v : v = zero + v.
+Proof.
+  rewrite /GRing.add.
+  by rewrite /= xor0w.
+Qed.
+
+Lemma scale_morph :
+  forall v : w_zmodtype, {morph scale^~ v : a b / a + b >-> a + b}.
+Proof.
+  move=> v [][|[]//] x [][|[]//] y;
+   rewrite /scale /= ?zeroE.
+   by rewrite -temp.
+   by rewrite -temp.
+   rewrite GRing.addrC.
+   by rewrite -temp.
+   by rewrite /GRing.add /= xorww.
+Qed.
+
+Definition w_lmixin := LmodMixin scalerv scale1v scalerD scale_morph.
+Canonical w_lmodType := LmodType _ _ w_lmixin.
+
+Definition wrV (p : w.-tuple 'F_2) : 'rV['F_2]_w := \row_(i < w) p`_i.
+Definition rVw (v : 'rV['F_2]_w) : w.-tuple 'F_2 := mktuple (v 0).
+
+Lemma w_rV_K : cancel wrV rVw.
+Proof.
+move=> p /=; apply/val_inj.
+rewrite /wrV /rVw.
+have->: mktuple ((\row_i p`_i) 0) = mktuple (fun (i : 'I_w) => tnth p i).
+ apply/eq_mktuple => ?.
+ by rewrite mxE -tnth_nth.
+by rewrite /= map_tnth_enum.
+Qed.
+
+Lemma rV_w_K : cancel rVw wrV.
+Proof.
+move=> p /=.
+rewrite /wrV /rVw.
+apply/rowP => ?.
+by rewrite !mxE nth_mktuple.
+Qed.
+
+Lemma w_vect_axiom : Vector.axiom w (w.-tuple 'F_2).
+Proof.
+  exists wrV.
+   case=> [][|[]//] i x y.
+    have->: (Ordinal i = 0) by apply/val_inj.
+    by rewrite !GRing.scale0r !GRing.add0r.
+   have->: (Ordinal i = 1) by apply/val_inj.
+   rewrite !GRing.scale1r.
+   apply/rowP => X.
+   have xy: size x = size y.
+    by case: x y => ? /= /eqP -> [] ? /= /eqP ->.
+   rewrite !mxE /GRing.add (nth_map 0 0) ?nth_zip //
+           size_zip xy minnn.
+   by case: X x xy => ? ? [] ? /= /eqP -> <-.
+  exists rVw.
+   apply w_rV_K.
+   apply rV_w_K.
+Qed.
+
+Definition w_vmixin := VectMixin w_vect_axiom.
+Canonical w_vectType := VectType _ _ w_vmixin.
+
+Variable l : nat.
+
+Definition lzero := Tuple (size_rep l (0 : w.-tuple 'F_2)).
+
+Lemma lxor0w : left_id lzero (@xor _ _).
+Proof.
+  case=> x xi.
+  apply/val_inj => /=.
+  case: l xi.
+   by move/eqP/size0nil => ->.
+   elim: x => // ?? IH sx /= xi.
+   congr (_ :: _).
+    by rewrite GRing.add0r.
+  rewrite eqSS in xi.
+  case: sx xi => // /eqP/size0nil ->.
+  by apply/size0nil.
+Qed.
+
+Lemma lxorA : associative (@xor l [zmodType of w.-tuple 'F_2]).
+Proof.
+  move=> x y z.
+  apply/val_inj => /=.
+  elim: l x y z => [|? IH];
+  case=> [][|??]//=; rewrite ?eqSS => x;
+  case=> [][|??]//=; rewrite ?eqSS => y;
+  case=> [][|??]//=; rewrite ?eqSS => z.
+  move: (IH (Tuple x) (Tuple y) (Tuple z)) => /= ->.
+  by rewrite GRing.addrA.
+Qed.
+
+Lemma lxorC : commutative (@xor l [zmodType of w.-tuple 'F_2]).
+Proof.
+  move=> x y.
+  apply/val_inj => /=.
+  elim: l x y => [|? IH];
+  case=> [][|??]//=; rewrite ?eqSS => x;
+  case=> [][|??]//=; rewrite ?eqSS => y.
+  move: (IH (Tuple x) (Tuple y)) => /= ->.
+  by rewrite GRing.addrC.
+Qed.
+
+Lemma lxorww x : xor x x = lzero.
+Proof.
+  case: x => x xi.
+  apply/val_inj => /=.
+  elim: l x xi => [? /eqP/size0nil -> //|? IH []// ??].
+  rewrite eqSS => ?.
+  by rewrite /= IH // /GRing.add /= xorww.
+Qed.
+
+Lemma lxorIw : left_inverse lzero id (@xor l [zmodType of w.-tuple 'F_2]).
+Proof. move=> ?; by rewrite lxorww. Qed.
+
+Definition lw_zmixin := Eval hnf in ZmodMixin lxorA lxorC lxor0w lxorIw.
+Canonical lw_zmodtype :=
+  Eval hnf in ZmodType (l.-tuple (w.-tuple 'F_2)) lw_zmixin.
+
+Definition lscale (x : [ringType of 'F_2])
+           (y : lw_zmodtype) : lw_zmodtype :=
+  if x == 0
+  then Tuple (size_rep _ 0)
+  else y.
+
+Lemma lscalerv : forall a b v, lscale a (lscale b v) = lscale (a * b) v.
+Proof. case=> [][? [][] ?|[]// ? [][|[]]] //. Qed.
+
+Lemma lscale1v : left_id 1 lscale.
+Proof. by []. Qed.
+
+Lemma lscale0E y : lscale 0 y = Tuple (size_rep _ 0).
+Proof. by []. Qed.
+
+Lemma lscalerD : right_distributive lscale (@xor _ _).
+Proof.
+  case=> [][|[]//] i *.
+  by rewrite /scale lxor0w.
+Qed.
+
+Lemma lzeroE : Tuple (size_rep l 0) = lzero.
+Proof. by []. Qed.
+
+Lemma lscale_morph :
+  forall v : lw_zmodtype, {morph lscale^~ v : a b / a + b >-> a + b}.
+Proof.
+  move=> v [][|[]//] x [][|[]//] y;
+  rewrite /lscale /= ?lzeroE; try by rewrite /GRing.add /= ?lxor0w.
+  by rewrite GRing.addrC /GRing.add /= ?lxor0w.
+  by rewrite /GRing.add /= ?lxorww.
+Qed.
+
+Definition lw_lmixin := LmodMixin lscalerv lscale1v lscalerD lscale_morph.
+Canonical lw_lmodType := LmodType _ lw_zmodtype lw_lmixin.
+
+Definition lwrV (p : lw_lmodType) : 'rV['F_2]_(l * w) := \row_(i < l * w) p`_(divn i w)`_(modn i w).
+
+Definition mul_ord X Y : 'I_X -> 'I_Y -> 'I_(X * Y).
+Proof.
+  move=> x y.
+  apply (@Ordinal (X * Y) (x * Y + y)).
+  apply: leq_trans.
+  apply: (_ : x * Y + y < x * Y + Y)%nat.
+  rewrite ltn_add2l.
+  case: y => //.
+  have->: (x * Y + Y = x.+1 * Y)%nat.
+   by rewrite mulSn addnC.
+  rewrite leq_mul2r orbC.
+  by case: x => //= + ->.
+Defined.
+
+Definition rVlw (v : 'rV['F_2]_(l * w)) : lw_lmodType :=
+  mktuple (fun (X : 'I_l) => mktuple (fun (Y : 'I_w) => v 0 (mul_ord X Y))).
+
+Lemma lw_rV_K : cancel lwrV rVlw.
+Proof.
+move=> p; rewrite /lwrV /rVlw; apply: eq_from_tnth => X.
+rewrite tnth_mktuple; apply: eq_from_tnth => Y.
+rewrite tnth_mktuple mxE.
+have->: (mul_ord X Y %/ w)%nat = X.
+ by rewrite divnMDl // divn_small // addn0.
+have->: (mul_ord X Y %% w)%nat = Y.
+ by rewrite modnMDl modn_small.
+by rewrite -!tnth_nth.
+Qed.
+
+Lemma xwl (X : 'I_(l * w)) : (X %/ w < l)%N.
+Proof.
+ apply: leq_trans.
+ apply: (_ : _ <= l * w %/ w)%nat.
+ rewrite ltn_neqAle leq_div2r /= ?andbT ?mulnK //.
+ apply/negPn => /eqP xwl.
+ case: X xwl => x /= + xwl.
+ rewrite -xwl => H.
+ move: (leq_trans H (leq_trunc_div _ _)).
+ by rewrite ltnn.
+ rewrite ltnW //.
+ rewrite mulnK //.
+Qed.
+
+Hint Resolve xwl : core.
+
+Lemma rV_lw_K : cancel rVlw lwrV.
+Proof.
+move=> p /=.
+rewrite /lwrV /rVlw.
+apply/rowP => x.
+case l0: (l == 0)%nat.
+ case: x => // ? x.
+ move: (x) => x0.
+ by rewrite (eqP l0) mul0n ltn0 in x.
+have d: 'I_l.
+ case: l l0 => // *.
+ apply: ord0.
+have d0: 'I_w.
+ case: w w0 => // *.
+ apply: ord0.
+have? : (x %/ w < l)%N.
+ by apply xwl.
+have? : (x %% w < w)%N.
+ by rewrite ltn_mod.
+rewrite !mxE (@nth_map _ d) ?size_enum_ord // (@nth_map _ d0) ?size_enum_ord //.
+congr (p 0 _).
+apply/val_inj => /=.
+by rewrite !nth_enum_ord // -divn_eq.
+Qed.
+
+Lemma lw_vect_axiom : Vector.axiom (l * w) lw_lmodType.
+Proof.
+  exists lwrV.
+   case=> [][|[]//] i x y.
+    have->: (Ordinal i = 0) by apply/val_inj.
+    by rewrite !GRing.scale0r !GRing.add0r.
+   have->: (Ordinal i = 1) by apply/val_inj.
+   rewrite !GRing.scale1r.
+   apply/rowP => X.
+   have xy: size x = size y.
+    by case: x y => ? /= /eqP -> [] ? /= /eqP ->.
+   rewrite !mxE /GRing.add ?(nth_map 0 0) ?nth_zip //=.
+   rewrite !size_tuple //.
+   rewrite size_zip.
+   rewrite !size_tuple //.
+   rewrite minnn ltn_mod //.
+   rewrite size_zip.
+   rewrite !size_tuple //.
+   rewrite minnn xwl //.
+  exists rVlw.
+   apply lw_rV_K.
+   apply rV_lw_K.
+Qed.
+
+Definition lw_vmixin := VectMixin lw_vect_axiom.
+Canonical lw_vectType := VectType _ _ lw_vmixin.
+
+Lemma last_rep q T (d : T) : last d (rep q d) = d.
+Proof. by elim: q. Qed.
+
+Lemma nth_rep T (x : T) q i : nth x (rep q x) i = x.
+Proof.
+  elim: q i => [*|q IH [] //].
+  by rewrite nth_nil.
+Qed.
+
+Lemma and0w x : and zero x = zero.
+Proof.
+  rewrite /zero /and.
+  apply/eq_from_tnth => i; apply/val_inj.
+  by rewrite !(tnth_nth 0) /= (nth_map 0)
+             ?nth_zip ?size_zip ?size_tuple ?(eqP (size_rep _ _)) ?minnn
+             //= !nth_rep mul0n mod0n.
+Qed.
+
+Definition basis := vbasis (fullv : {vspace lw_vectType}).
+End Canonicals.
+
+Lemma incomplete_basis_prf : size (take p (basis n)) == p.
+Proof.
+  rewrite size_take size_tuple dimvf /= /Vector.dim /=.
+  rewrite /leq -subSn.
+  rewrite subnAC subSnn subn_eq0 r0 //.
+  apply: (leq_trans rw).
+  case: n mn => // *.
+  by rewrite mulSn leq_addr.
+Qed.
+Definition incomplete_basis := Tuple incomplete_basis_prf.
+
+Definition state_vector := span incomplete_basis.
+
+(*   {b : n.-tuple (w.-tuple 'F_2) | and (last zero b) ll = zero}. *)
+
+(* Definition szero : state_vector. *)
+(* apply (@exist _ _ (Tuple (size_rep n zero))). *)
+(* by rewrite last_rep and0w. *)
+(* Defined. *)
+
+(* Definition sxor (X Y : state_vector) : state_vector. *)
+(*   apply (@exist _ _ (xor (proj1_sig X) (proj1_sig Y))). *)
+(*   apply/eq_from_tnth => i. *)
+(*   case iwr: (i < w - r)%nat. *)
+(*    rewrite /and /xor ?(tnth_nth 0); apply/val_inj. *)
+(*    rewrite /= nth_rep (nth_map 0) *)
+(*           ?size_zip ?size_cat ?(eqP (size_rep _ _)) *)
+(*           ?size_tuple ?subnK // ?minnn //. *)
+(*    rewrite nth_zip ?size_tuple ?size_cat ?(eqP (size_rep _ _)) ?subnK //. *)
+(*    by rewrite nth_cat (eqP (size_rep _ _)) iwr nth_rep GRing.mulr0. *)
+(*   case: X Y => []x +[]y +. *)
+(*   rewrite /and /xor ?(tnth_nth 0) => X Y; apply/val_inj. *)
+(*   move/(f_equal val)/(f_equal (fun x => nth 0 x i)) : (X). *)
+(*   move/(f_equal val)/(f_equal (fun x => nth 0 x i)) : (Y). *)
+(*   rewrite /= ?(tnth_nth 0) /=. *)
+(*   rewrite /= ?nth_rep ?(nth_map 0) *)
+(*           ?size_zip ?size_cat ?(eqP (size_rep _ _)) *)
+(*           ?size_tuple ?subnK // ?minnn //. *)
+(*   rewrite ?nth_zip ?size_tuple ?size_cat ?(eqP (size_rep _ _)) ?subnK //. *)
+(*   rewrite ?nth_cat ?(eqP (size_rep _ _)) ?iwr /=. *)
+(*   case: (rep r 1)`_(i - (w - r)) => [][*|[]// I /(f_equal val) + /(f_equal val)]. *)
+(*    by rewrite /= muln0 mod0n. *)
+(*   rewrite /= ?muln1. *)
+(*   have->: (last zero [seq xy.1 + xy.2 | xy <- zip x y])`_i = (last zero x)`_i + (last zero y)`_i. *)
+(*   have H: zero = (fun xy => xy.1 + xy.2) (zero, zero). *)
+(*    by rewrite GRing.addr0. *)
+(*   by rewrite [in LHS]H (last_map (fun xy => xy.1 + xy.2)) *)
+(*             -last_map -/unzip1 unzip1_zip ?size_tuple // *)
+(*             -[X in _ + X]last_map -/unzip2 unzip2_zip ?size_tuple // *)
+(*             (nth_map 0) ?nth_zip ?size_tuple. *)
+(*   move=> H1 H2. *)
+(*   rewrite /GRing.add /=. *)
+(*   rewrite modn_mod. *)
+(*   by rewrite -modnDm H1 H2 addn0 mod0n. *)
+(* Defined. *)
+(* Check [vectType for (subvs_of state_vector)]. *)
+
+(* Definition f : state_vector -> state_vector. *)
 
 (* Check lin1_mx f. *)
 End phi.
