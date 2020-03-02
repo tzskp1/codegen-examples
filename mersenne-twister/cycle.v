@@ -27,7 +27,14 @@ Proof. by case: w rw r0 => //; rewrite leqn0 => /eqP ->. Qed.
 Lemma rw' : r < w.
 Proof. Admitted.
 
-Hint Resolve n2 w0 : core.
+Lemma rnpw : (r <= n.-1 * w)%N.
+Proof.
+  case: n mn m0 => []//=[|*]; first by case m.
+  rewrite mulSn.
+  by apply/leq_trans/leq_addr.
+Qed.
+
+Hint Resolve n2 w0 rw' rnpw : core.
 
 Lemma poly_exp_leq (t : poly_ringType [finFieldType of 'F_2]) p :
   1 < size t -> size (t ^+ p)%R < size (t ^+ p.+1)%R.
@@ -239,8 +246,6 @@ Qed.
 Lemma pm' : prime (2 ^ (size phi).-1 - 1).
 Proof. by rewrite size_phi. Qed.
 
-Variable x : 'M['F_2]_(n, w).
-
 Definition and (x y : 'rV['F_2]_w) :=
   \row_i ((x ord0 i) * (y ord0 i)).
 
@@ -253,28 +258,52 @@ Lemma tecr : r = r.-1.+1.
 Proof. by case: r r0. Qed.
 
 Lemma tecwr : (w - r = (w - r).-1.+1)%nat.
-Proof. by rewrite prednK // /leq subnBA // add1n subn_eq0 rw'. Qed.
+Proof. by rewrite prednK // /leq subnBA // add1n subn_eq0. Qed.
 
 Lemma tecw : ((w - r).-1.+1 + r.-1.+1 = w)%nat.
-Proof. by rewrite !prednK // ?subnK // /leq subnBA // add1n subn_eq0 rw'. Qed.
+Proof. by rewrite !prednK // ?subnK // /leq subnBA // add1n subn_eq0. Qed.
 
-Lemma tecnw : (w + n.-1 * w = n * w)%nat.
+Lemma tecnw : (w + (n.-1 * w - r) = p)%nat.
 Proof.
-  rewrite -mulSn prednK //.
+  rewrite addnBA // -mulSn prednK //.
   by case: n mn.
 Qed.
 
 Definition S := castmx (etrans (addnC _ _) tecw, tecw)
                 (block_mx 0 (castmx (tecr, tecr) 1%:M)
                           (castmx (tecwr, tecwr) 1%:M) 0) *m A.
-Definition B := castmx (etrans (addnC _ _) tecnw, tecnw)
-                       (block_mx (\matrix_(i, j) (1 *+ (i == j - m :> nat)%nat)) 1%:M
-                                 S 0).
-Check row_mx S 0 : 'M_(w, w + n.-1 * w).
-Check etrans (addnC _ _) tecw.
-Check
-Check pid_mx
-      (1 : 'M_r).
+
+Definition B :=
+  castmx (etrans (addnC _ _) tecnw, tecnw)
+  (block_mx (\matrix_(i, j) (1 *+ (i == j - m :> nat)%nat)) 1%:M
+             S 0).
+
+Lemma tecpr : (p + r = n * w)%nat.
+Proof.
+  rewrite subnK //.
+  case: n mn => // ??.
+  rewrite mulSn.
+  by apply/leq_trans/leq_addr.
+Qed.
+
+Definition pull_ord (o : 'I_p) := cast_ord tecpr (lshift r o).
+
+Definition incomplete_array (x : 'M['F_2]_(n, w)) : 'rV_p :=
+  \row_i (mxvec x) ord0 (pull_ord i).
+
+Definition array_incomplete (y : 'rV['F_2]_p) : 'M_(n, w) :=
+  vec_mx (castmx (erefl, tecpr) (row_mx y 0)).
+
+Lemma array_incompleteK : cancel array_incomplete incomplete_array.
+Proof.
+move=> y; rewrite /incomplete_array /array_incomplete; apply/rowP => j.
+by rewrite mxE vec_mxK castmxE /pull_ord /= cast_ordK row_mxEl cast_ord_id.
+Qed.
+
+
+Variable x : 'M['F_2]_(n, w).
+Check array_incomplete (incomplete_array x *m B).
+
 Check block_mx 0 (1 : 'M_(w - r)) 0 1.
 Check row _ x.
 Check map (fun i => row i x) (enum 'I_n).
