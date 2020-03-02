@@ -19,15 +19,10 @@ Hypothesis r0 : 0 < r. (* TODO: move to Lemma *)
 Hypothesis p3 : p >= 3.
 
 Lemma n2 : 2 <= n.
-Proof.
-by case: n mn m0 => //; case: m => []//[]// ?? + _; apply ltn_trans.
-Qed.
+Proof. by case: n mn m0 => //; case: m => []//[]// ?? + _; apply ltn_trans. Qed.
 
 Lemma w0 : 0 < w.
-Proof.
-  case: w rw r0 => //.
-  by rewrite leqn0 => /eqP ->.
-Qed.
+Proof. by case: w rw r0 => //; rewrite leqn0 => /eqP ->. Qed.
 
 Hint Resolve n2 w0 : core.
 
@@ -516,8 +511,14 @@ Proof.
   by rewrite /GRing.add /= ?lxorww.
 Qed.
 
-Definition lw_lmixin := LmodMixin lscalerv lscale1v lscalerD lscale_morph.
-Canonical lw_lmodType := LmodType _ lw_zmodtype lw_lmixin.
+Check linear _.
+
+Definition lw_lmixin :=
+  Eval hnf in LmodMixin lscalerv lscale1v lscalerD lscale_morph.
+Canonical lw_lmodType := Eval hnf in LmodType _ lw_zmodtype lw_lmixin.
+Print lw_lmodType.
+
+Check linear _.
 
 Definition lwrV (p : lw_lmodType) : 'rV['F_2]_(l * w) := \row_(i < l * w) p`_(divn i w)`_(modn i w).
 
@@ -649,56 +650,57 @@ Proof.
   by rewrite mulSn leq_addr.
 Qed.
 Definition incomplete_basis := Tuple incomplete_basis_prf.
-
 Definition state_vector := span incomplete_basis.
 
-(*   {b : n.-tuple (w.-tuple 'F_2) | and (last zero b) ll = zero}. *)
+Definition shift1 (x : w.-tuple 'F_2) : w.-tuple 'F_2.
+  apply/Tuple/(_ : size (0 :: take w.-1 x) == w).
+  rewrite /= size_take size_tuple.
+  case: w w0 => //= *.
+  by rewrite ltnS leqnn.
+Defined.
 
-(* Definition szero : state_vector. *)
-(* apply (@exist _ _ (Tuple (size_rep n zero))). *)
-(* by rewrite last_rep and0w. *)
-(* Defined. *)
+Lemma sizef x :
+  size (map (fun i => let y := and x`_(i %% n) u + and x`_(i.+1 %% n) ll in
+             x`_(i + m %% n) + shift1 y + if y`_0 == 1 then a else 0) (iota 0 n))
+  == n.
+Proof. by rewrite size_map size_iota. Qed.
 
-(* Definition sxor (X Y : state_vector) : state_vector. *)
-(*   apply (@exist _ _ (xor (proj1_sig X) (proj1_sig Y))). *)
-(*   apply/eq_from_tnth => i. *)
-(*   case iwr: (i < w - r)%nat. *)
-(*    rewrite /and /xor ?(tnth_nth 0); apply/val_inj. *)
-(*    rewrite /= nth_rep (nth_map 0) *)
-(*           ?size_zip ?size_cat ?(eqP (size_rep _ _)) *)
-(*           ?size_tuple ?subnK // ?minnn //. *)
-(*    rewrite nth_zip ?size_tuple ?size_cat ?(eqP (size_rep _ _)) ?subnK //. *)
-(*    by rewrite nth_cat (eqP (size_rep _ _)) iwr nth_rep GRing.mulr0. *)
-(*   case: X Y => []x +[]y +. *)
-(*   rewrite /and /xor ?(tnth_nth 0) => X Y; apply/val_inj. *)
-(*   move/(f_equal val)/(f_equal (fun x => nth 0 x i)) : (X). *)
-(*   move/(f_equal val)/(f_equal (fun x => nth 0 x i)) : (Y). *)
-(*   rewrite /= ?(tnth_nth 0) /=. *)
-(*   rewrite /= ?nth_rep ?(nth_map 0) *)
-(*           ?size_zip ?size_cat ?(eqP (size_rep _ _)) *)
-(*           ?size_tuple ?subnK // ?minnn //. *)
-(*   rewrite ?nth_zip ?size_tuple ?size_cat ?(eqP (size_rep _ _)) ?subnK //. *)
-(*   rewrite ?nth_cat ?(eqP (size_rep _ _)) ?iwr /=. *)
-(*   case: (rep r 1)`_(i - (w - r)) => [][*|[]// I /(f_equal val) + /(f_equal val)]. *)
-(*    by rewrite /= muln0 mod0n. *)
-(*   rewrite /= ?muln1. *)
-(*   have->: (last zero [seq xy.1 + xy.2 | xy <- zip x y])`_i = (last zero x)`_i + (last zero y)`_i. *)
-(*   have H: zero = (fun xy => xy.1 + xy.2) (zero, zero). *)
-(*    by rewrite GRing.addr0. *)
-(*   by rewrite [in LHS]H (last_map (fun xy => xy.1 + xy.2)) *)
-(*             -last_map -/unzip1 unzip1_zip ?size_tuple // *)
-(*             -[X in _ + X]last_map -/unzip2 unzip2_zip ?size_tuple // *)
-(*             (nth_map 0) ?nth_zip ?size_tuple. *)
-(*   move=> H1 H2. *)
-(*   rewrite /GRing.add /=. *)
-(*   rewrite modn_mod. *)
-(*   by rewrite -modnDm H1 H2 addn0 mod0n. *)
-(* Defined. *)
-(* Check [vectType for (subvs_of state_vector)]. *)
+Definition f_map (x : lw_vectType n) : lw_vectType n := Tuple (sizef x).
 
-(* Definition f : state_vector -> state_vector. *)
+(* Check f_map. *)
 
-(* Check lin1_mx f. *)
+Definition f : { x | x \in state_vector } -> { x | x \in state_vector }.
+  case => x H.
+  apply: (@exist _ _ (Tuple (sizef x))).
+  apply memv_span.
+  Check span
+  Check in_mem.
+  Set Printing All.
+  rewrite /
+  move=> ?.
+  rewrite inE.
+  rewrite mem_
+  rewrite /=.
+  apply/memP.
+  rewrite memE.
+  apply/val_inj.
+  rewrite /=.
+  Check map (fun i => let y := and x`_(i %% n) u + and x`_(i.+1 %% n) ll in
+             x`_(i + m %% n) + shift1 y + if y`_0 == 1 then a else 0) (iota 0 n).
+
+  set y := map (fun i => and x`_(i %% n) u + and x`_(i.+1 %% n) ll) (iota 0 n).
+  Check map (fun (x : w.-tuple 'F_2) => if x`_0 == 1 then a else 0) y.
+  Check map shift1 y.
+  Check zip (rep n a)
+  Check and.
+  have ys : size (map (fun (x : w.-tuple 'F_2) => x`_0) y) == w.
+   rewrite size_map size_map size_iota.
+  Check
+  Check a.
+  Check x`_(i.+1 %% n).
+
+
+
 End phi.
 (* Definition w := 32. *)
 (* Definition r := 1. *)
