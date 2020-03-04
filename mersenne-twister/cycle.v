@@ -21,6 +21,9 @@ Hypothesis p3 : p >= 3.
 Lemma n2 : 2 <= n.
 Proof. by case: n mn m0 => //; case: m => []//[]// ?? + _; apply ltn_trans. Qed.
 
+Lemma n0 : 0 < n.
+Proof. by case: n n2. Qed.
+
 Lemma w0 : 0 < w.
 Proof. by case: w rw r0 => //; rewrite leqn0 => /eqP ->. Qed.
 
@@ -34,7 +37,7 @@ Proof.
   by apply/leq_trans/leq_addr.
 Qed.
 
-Hint Resolve n2 w0 rw' rnpw : core.
+Hint Resolve n2 n0 w0 rw' rnpw : core.
 
 Lemma poly_exp_leq (t : poly_ringType [finFieldType of 'F_2]) p :
   1 < size t -> size (t ^+ p)%R < size (t ^+ p.+1)%R.
@@ -252,7 +255,7 @@ Definition and (x y : 'rV['F_2]_w) :=
 Definition shiftr : 'M['F_2]_w :=
   \matrix_(i, j) (1 *+ (i == j.+1 :> nat)).
 
-Definition A := \matrix_j (\row_i a`_i *+ (j == w :> nat)) + shiftr.
+Definition A := \matrix_j (\row_i a`_i *+ (j == w.-1 :> nat)) + shiftr.
 
 Lemma tecr : r = r.-1.+1.
 Proof. by case: r r0. Qed.
@@ -265,8 +268,7 @@ Proof. by rewrite !prednK // ?subnK // /leq subnBA // add1n subn_eq0. Qed.
 
 Lemma tecnw : (w + (n.-1 * w - r) = p)%nat.
 Proof.
-  rewrite addnBA // -mulSn prednK //.
-  by case: n mn.
+  by rewrite addnBA // -mulSn prednK.
 Qed.
 
 Definition S := castmx (etrans (addnC _ _) tecw, tecw)
@@ -297,12 +299,38 @@ Definition array_incomplete (y : 'rV['F_2]_p) : 'M_(n, w) :=
 Lemma array_incompleteK : cancel array_incomplete incomplete_array.
 Proof.
 move=> y; rewrite /incomplete_array /array_incomplete; apply/rowP => j.
-by rewrite mxE vec_mxK castmxE /pull_ord /= cast_ordK row_mxEl cast_ord_id.
+by rewrite mxE vec_mxK castmxE /pull_ord cast_ordK row_mxEl cast_ord_id.
 Qed.
 
+Lemma char_poly_phi : char_poly B = phi.
+Proof.
+  rewrite /char_poly /char_poly_mx /B /S /A /phi.
+  apply/polyP => x.
+  rewrite /determinant.
+  rewrite det.
 
-Variable x : 'M['F_2]_(n, w).
-Check array_incomplete (incomplete_array x *m B).
+Check phi.
+
+(*
+Section trajectory.
+Variable init : 'M['F_2]_(n, w).
+Definition x := array_incomplete (incomplete_array init *m B).
+Lemma recurrence k :
+  row k x = row (Ordinal (ltn_pmod (k + m) n0)) x
+          + row k x *m pid_mx (w - r) *m A
+          + row (Ordinal (ltn_pmod (k + 1) n0)) x *m copid_mx r *m A.
+End trajectory.
+*)
+
+Check
+
+Check ltn_pmod (k + m) n0.
+Check copid_mx r.
+Check row k x *m pid_mx (w - r) *m A.
+ : 'M['F_2]_w.
+Check x.
+k
+
 
 Check block_mx 0 (1 : 'M_(w - r)) 0 1.
 Check row _ x.
