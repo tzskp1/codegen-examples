@@ -707,7 +707,7 @@ Proof.
   -GRing.mulrA -GRing.rmorphX -GRing.rmorphM GRing.mulrC GRing.rmorphM.
 Qed.
 
-Lemma cycleX_dvdP p : reflect (iter p mulX =1 id) (2 ^ m - 1 %| p).
+Lemma cycleX_dvdP' p : reflect (iter p mulX =1 id) (2 ^ m - 1 %| p).
 Proof.
   apply/(iffP idP).
   * case/dvdnP => q -> x.
@@ -722,29 +722,26 @@ Proof.
     by rewrite cyclic.eq_expg_mod_order piX_order modnn.
 Qed.
 
-Lemma cycleX : iter (2 ^ m - 1) mulX =1 id.
-Proof. by apply/cycleX_dvdP. Qed.
-
-Definition mulX' :=
-  castmx (mul1n _, mul1n _) (lin_mx (fun x => npoly_rV (mulX (rVnpoly x)))).
-
-Lemma polyXnE (R : ringType) n m :
-  n < m -> ('X^n = \poly_(k < m) ((k == n)%:R : R))%R.
+Lemma mulXP q : reflect (iter q mulX =1 id) ('X ^ q%N %% phi == 1 %% phi)%R.
 Proof.
-  move=> nm. apply/polyP => s. rewrite coefXn coef_poly.
-  case sm: (s == m).
-   move/eqP: sm => ->.
-   by rewrite ltnn gtn_eqF.
-  by case: ifP => // /negP/negP; rewrite -leqNgt =>/(leq_trans nm)=>/gtn_eqF ->.
+  have->: ('X ^ q %% phi = pi ('X ^+ q))%R by [].
+  apply/(iffP idP).
+  * move/eqP => H x.
+    rewrite expXpE -GRing.rmorphX.
+    have->: (pi 'X^q = pi 1)%R.
+     apply/val_inj/polyP => i.
+     by move/(f_equal val): H => ->.
+    by rewrite /mulV GRing.rmorph1 GRing.mulr1.
+  * move=> H; move: (H (pi 1))%R.
+    by rewrite expXpE /mulV GRing.mul1r GRing.rmorphX ?modp_mod => ->.
 Qed.
 
-(* Lemma char_phi : char_poly mulX' = phi. *)
-(* Proof. *)
-(*   rewrite /mulX' /ssr_have /mulX /mulV /GRing.mul *)
-(*           /GRing.Ring.mul /mul_qpoly /rVnpoly /npoly_rV. *)
-(*   rewrite /poly_rV /rVpoly /insubd. *)
-(*   rewrite /=. *)
-(* TODO : prove mulX and matrix B are similar. *)
+Lemma cycleX_dvdP p : reflect ('X ^+ p %N %% phi == 1 %% phi)%R (2 ^ m - 1 %| p).
+Proof.
+  apply/(iffP idP).
+  * by move/cycleX_dvdP'/mulXP.
+  * by move/mulXP/cycleX_dvdP'.
+Qed.
 End inverse.
 
 Lemma irreducibleP :
