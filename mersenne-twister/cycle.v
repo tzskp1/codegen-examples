@@ -57,6 +57,9 @@ Proof.
   by apply/leq_trans/leq_addr.
 Qed.
 
+Lemma tecp : p = p.-1.+1.
+Proof. by case: p p3. Qed.
+
 Hint Resolve n2 n0 w0 rw' rnpw : core.
 Local Open Scope ring_scope.
 
@@ -108,4 +111,63 @@ Qed.
 
 Lemma pm' : prime (2 ^ (size phi).-1 - 1).
 Proof. by rewrite size_phi. Qed.
+
+Hint Resolve pm' : core.
+
+Lemma irreducibleP : reflect (irreducible_poly phi)
+                             ('X ^ (2 ^ (size phi).-1)%N %% phi == 'X %% phi).
+apply/(iffP idP).
+* move=> H1; apply/irreducible.irreducibleP => //.
+  by rewrite X2X /=.
+* by case/irreducible.irreducibleP/andP.
+Qed.
+
+(* Lemma cycleB_dvdP q : reflect (horner_mx (castmx (tecp, tecp) B) ('X ^+ q) == 1) *)
+(*                               (2 ^ p - 1 %| q)%nat. *)
+(* Proof. *)
+
+
+Check B *m B.
+Check powers_mx.
+Variable q : nat.
+
+
 End phi.
+Definition w := 32.
+Definition r := 1.
+Definition n := 4.
+Definition m := 1.
+
+Lemma mn : m < n.
+  done.
+  Qed.
+Lemma rw : r < w.
+  done.
+  Qed.
+
+Compute incomplete_array mn rw 0.
+Lemma sizea : size ([:: 1;0;0;1;1;0;0;1;0;0;0;0;1;0;0;0;1;0;1;1;0;0;0;0;1;1;0;1;1;1;1;1] : seq 'F_2)%R == w.
+  done.
+Qed.
+
+Lemma nm : m < n.
+  by [].
+Defined.
+Lemma pm'': prime (2 ^ (n * w - r) - 1).
+Proof.
+  Admitted.
+Definition B := lin1_mx (@f _ _ _ _ (Tuple sizea) pm'' nm erefl erefl erefl).
+Compute B.
+Variable j : 'I_(size (phi n m r (Tuple sizea))).-1.
+Check lin_mx.
+Check lin1_mx.
+Lemma BE : B (delta_mx 0%R j) = B (delta_mx 0%R j) .
+rewrite /B /f.
+
+rewrite /= /rVnpoly /comp rVpoly_delta.
+rewrite /irreducible.mulX /irreducible.mulV.
+rewrite /insubd.
+      Check row_mx 0.
+Check delta_mx
+
+Compute B 0.
