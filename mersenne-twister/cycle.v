@@ -91,9 +91,12 @@ move=> y; rewrite /incomplete_array /array_incomplete; apply/rowP => j.
 by rewrite mxE vec_mxK castmxE /pull_ord cast_ordK row_mxEl cast_ord_id.
 Qed.
 
-Definition phi := char_poly B.
+Definition phi := char_poly (castmx (tecp, tecp) B).
 Lemma size_phi : (size phi).-1 = p.
-Proof. by rewrite size_char_poly. Qed.
+Proof.
+  rewrite size_char_poly prednK //.
+  by case: p p3.
+Qed.
 
 Lemma X2X : 'X ^ 2 %% phi != 'X %% phi.
 Proof.
