@@ -683,64 +683,92 @@ Proof.
   by rewrite GRing.rmorphX GRing.exprS H GRing.mulr1.
 Qed.
 
-Definition mulV (V : [ringType of {qpoly phi}]) v := (v * V)%R.
+Lemma char2_phi : 2 \in [char {qpoly phi}]%R.
+Proof.
+by apply/(GRing.rmorph_char pi)
+        /(GRing.rmorph_char (polyC_rmorphism [ringType of 'F_2])).
+Qed.
 
-Lemma linear_mulV V : linear (mulV V).
+Definition H := Frobenius_aut char2_phi.
+
+Lemma linear_H : linear H.
 Proof.
   move=> a x y.
   case: a => [][|[]//] i; set T := Ordinal i.
    have->: T = 0%R by apply/val_inj.
    by rewrite !GRing.scale0r !GRing.add0r.
   have->: T = 1%R by apply/val_inj.
-  by rewrite !GRing.scale1r /mulV GRing.mulrDl.
+  rewrite !GRing.scale1r /H GRing.Frobenius_autD_comm //.
+  apply/val_inj.
+  by rewrite /= GRing.mulrC.
 Qed.
 
-Canonical linearType_mulV V := Eval hnf in Linear (linear_mulV V).
+Canonical linearType_H := Eval hnf in Linear linear_H.
 
-Definition mulX := mulV (pi 'X)%R.
-
-Lemma expXpE p : iter p mulX =1 mulV (pi 'X ^+ p)%R.
+Lemma expXpE p x : iter p H x = (x ^+ (2 ^ p))%R.
 Proof.
-  elim: p => [x|p IHp x].
-   by rewrite /= GRing.expr0 /mulV GRing.mulr1.
-  by rewrite iterS IHp GRing.exprS /mulX /mulV
-  -GRing.mulrA -GRing.rmorphX -GRing.rmorphM GRing.mulrC GRing.rmorphM.
+  elim: p x => [x|p IH x].
+   by rewrite /= expn0 GRing.expr1.
+  by rewrite iterS IH /H GRing.Frobenius_autE
+             !GRing.exprS GRing.expr0 GRing.mulr1
+             -GRing.exprD addnn expnS mul2n.
 Qed.
 
-Lemma cycleX_dvdP' p : reflect (iter p mulX =1 id) (2 ^ m - 1 %| p).
+Lemma cycleH_dvdP :
+  (pi ('X ^ (2 ^ m)%N) = pi 'X)%R ->
+  forall p, reflect (iter p H =1 id) (2 ^ m - 1 %| 2 ^ p - 1).
 Proof.
+  move=> H0 p.
   apply/(iffP idP).
-  * case/dvdnP => q -> x.
+  * case/dvdnP => q H1 x.
     rewrite (coord_basis (npolyX_full _ _) (memvf x)).
     set e0 := npolyX _ _.
     rewrite GRing.linear_sum; apply/eq_big => // i _.
-    by rewrite GRing.linearZ_LR /= expXpE mulnC GRing.exprM -GRing.rmorphX
-               X2mp_eq1 /mulV GRing.expr1n GRing.mulr1.
-  * move/(fun x => x 1%R).
-    rewrite expXpE /mulV GRing.mul1r -X2mp_eq1
-            -GRing.rmorphX -!val_piX_expE => /val_inj/eqP.
-    by rewrite cyclic.eq_expg_mod_order piX_order modnn.
-Qed.
-
-Lemma mulXP q : reflect (iter q mulX =1 id) ('X ^ q%N %% phi == 1 %% phi)%R.
-Proof.
-  have->: ('X ^ q %% phi = pi ('X ^+ q))%R by [].
-  apply/(iffP idP).
-  * move/eqP => H x.
-    rewrite expXpE -GRing.rmorphX.
-    have->: (pi 'X^q = pi 1)%R.
-     apply/val_inj/polyP => i.
-     by move/(f_equal val): H => ->.
-    by rewrite /mulV GRing.rmorph1 GRing.mulr1.
-  * move=> H; move: (H (pi 1))%R.
-    by rewrite expXpE /mulV GRing.mul1r GRing.rmorphX ?modp_mod => ->.
-Qed.
-
-Lemma cycleX_dvdP p : reflect ('X ^+ p %N %% phi == 1 %% phi)%R (2 ^ m - 1 %| p).
-Proof.
-  apply/(iffP idP).
-  * by move/cycleX_dvdP'/mulXP.
-  * by move/mulXP/cycleX_dvdP'.
+    rewrite GRing.linearZ_LR /= expXpE.
+    congr (_ *: _)%R.
+    rewrite (nth_map i) // ?size_enum_ord //=
+            nth_enum_ord ?size_polyXn // .
+    set Xi := npolyp _ _.
+    have->: Xi = (pi 'X^i)%R.
+     apply/npolyP => j.
+     subst Xi => /=.
+     rewrite npolypK ?modp_small ?size_polyXn // .
+     case: i => i Hi.
+     by case: (size phi) Hi phi_gt1.
+    case p0: (p > 0); last first.
+     rewrite lt0n in p0.
+     by move/negP/negP/eqP: p0 ->.
+    have->: (2 ^ p) = ((2 ^ p) - 1).+1.
+     rewrite subn1 prednK // {H1}.
+     elim: p p0 => // [][] // p IH _.
+     have->: 0 = 2 * 0 by [].
+     by rewrite expnS ltn_mul2l /= muln0 IH.
+    rewrite H1 {H1}.
+    rewrite GRing.exprS.
+    elim: q => [|q IH].
+     by rewrite mul0n GRing.expr0 GRing.mulr1.
+    by rewrite mulSn addnC GRing.exprD GRing.mulrA IH
+               -GRing.exprS subn1 prednK //
+               GRing.rmorphX -GRing.exprM mulnC GRing.exprM
+               -2!GRing.rmorphX H0 !GRing.rmorphX.
+  * move=> H1.
+    move: (H1 (pi 'X))%R.
+    rewrite expXpE -GRing.rmorphX -val_piX_expE -H0 -val_piX_expE => /val_inj/eqP.
+    rewrite cyclic.eq_expg_mod_order piX_order.
+    have H2: 2 ^ (size phi).-1 = ((2 ^ (size phi).-1) - 1) + 1
+     by rewrite addn1 subn1 prednK.
+    have H3: 1 = 0 + 1 by rewrite add0n.
+    case p0: (p > 0); last first.
+     rewrite lt0n in p0.
+     by move/negP/negP/eqP: p0 ->.
+    have H4: (2 ^ p) = ((2 ^ p) - 1) + 1.
+     rewrite subn1 addn1 prednK // {H1}.
+     elim: p p0 => // [][] // p IH _.
+     have->: 0 = 2 * 0 by [].
+     by rewrite expnS ltn_mul2l /= muln0 IH.
+    rewrite [X in _ == X %[mod _]]H2 modnDl [X in _ == X %[mod _]]H3
+            [X in X == _ %[mod _]]H4 eqn_modDr.
+    by rewrite mod0n.
 Qed.
 End inverse.
 
