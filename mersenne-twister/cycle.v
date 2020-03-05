@@ -75,8 +75,8 @@ Definition S :=
 
 Definition B :=
   castmx (etrans (addnC _ _) tecnw, tecnw)
-  (block_mx (\matrix_(i, j) (1 *+ (i == j - m :> nat)%nat)) 1%:M
-             S                                             0).
+  (block_mx (\matrix_(i, j) (1 *+ ((i == j - m :> nat) && (j >= m))%nat)) 1%:M
+             S                                                          0).
 
 Definition pull_ord (o : 'I_p) := cast_ord tecpr (lshift r o).
 
