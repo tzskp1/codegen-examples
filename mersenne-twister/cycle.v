@@ -155,6 +155,6 @@ Proof.
     rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /= in H1.
     move/(f_equal (mx_inv_horner (castmx (tecp, tecp) B))): H1.
     rewrite !horner_mxK -!phi_mxminpoly // => H1.
-    by apply/(irreducible.cycleH_dvdP pm' H q)/irreducible.expand_H.
+    by apply/(irreducible.cycleH_dvdP pm' H q)/irreducible.expand_H/eqP.
 Qed.
 End phi.
