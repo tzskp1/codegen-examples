@@ -714,11 +714,12 @@ Proof.
              -GRing.exprD addnn expnS mul2n.
 Qed.
 
-Lemma cycleH_dvdP :
-  (pi ('X ^ (2 ^ m)%N) = pi 'X)%R ->
-  forall p, reflect (iter p H =1 id) (2 ^ m - 1 %| 2 ^ p - 1).
+Lemma cycleH_dvdP p :
+  reflect (iter p H =1 id) (2 ^ m - 1 %| 2 ^ p - 1).
 Proof.
-  move=> H0 p.
+  have H0: (pi ('X ^ (2 ^ m)%N) = pi 'X)%R.
+   apply/val_inj.
+   by case/andP: irreducibleP_inverse => _ /eqP.
   apply/(iffP idP).
   * case/dvdnP => q H1 x.
     rewrite (coord_basis (npolyX_full _ _) (memvf x)).
