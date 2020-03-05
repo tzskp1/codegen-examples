@@ -714,6 +714,34 @@ Proof.
              -GRing.exprD addnn expnS mul2n.
 Qed.
 
+Lemma expand_H q :
+  ('X^(2 ^ q) %% phi = 'X %% phi)%R -> iter q H =1 id.
+Proof.
+  move=> H0 x.
+  rewrite (coord_basis (npolyX_full _ _) (memvf x)).
+  set e0 := npolyX _ _.
+  rewrite GRing.linear_sum; apply/eq_big => // i _.
+  rewrite GRing.linearZ_LR /= expXpE.
+  congr (_ *: _)%R.
+  rewrite (nth_map i) // ?size_enum_ord //=
+          nth_enum_ord ?size_polyXn // .
+  set Xi := npolyp _ _.
+  have->: Xi = (pi 'X^i)%R.
+   apply/npolyP => j.
+   subst Xi => /=.
+   rewrite npolypK ?modp_small ?size_polyXn // .
+   case: i => i Hi.
+   by case: (size phi) Hi phi_gt1.
+  case p0: (q > 0); last first.
+   rewrite lt0n in p0.
+   by move/negP/negP/eqP: p0 ->.
+  rewrite GRing.rmorphX GRing.exprAC -[in LHS]GRing.rmorphX.
+  set T := (pi 'X^(2 ^ q))%R.
+  suff->: T = (pi 'X)%R by [].
+  apply/val_inj.
+  by rewrite /= H0.
+Qed.
+
 Lemma cycleH_dvdP p :
   reflect (iter p H =1 id) (2 ^ m - 1 %| 2 ^ p - 1).
 Proof.
@@ -722,20 +750,7 @@ Proof.
    by case/andP: irreducibleP_inverse => _ /eqP.
   apply/(iffP idP).
   * case/dvdnP => q H1 x.
-    rewrite (coord_basis (npolyX_full _ _) (memvf x)).
-    set e0 := npolyX _ _.
-    rewrite GRing.linear_sum; apply/eq_big => // i _.
-    rewrite GRing.linearZ_LR /= expXpE.
-    congr (_ *: _)%R.
-    rewrite (nth_map i) // ?size_enum_ord //=
-            nth_enum_ord ?size_polyXn // .
-    set Xi := npolyp _ _.
-    have->: Xi = (pi 'X^i)%R.
-     apply/npolyP => j.
-     subst Xi => /=.
-     rewrite npolypK ?modp_small ?size_polyXn // .
-     case: i => i Hi.
-     by case: (size phi) Hi phi_gt1.
+    apply expand_H.
     case p0: (p > 0); last first.
      rewrite lt0n in p0.
      by move/negP/negP/eqP: p0 ->.
@@ -744,14 +759,12 @@ Proof.
      elim: p p0 => // [][] // p IH _.
      have->: 0 = 2 * 0 by [].
      by rewrite expnS ltn_mul2l /= muln0 IH.
-    rewrite H1 {H1}.
-    rewrite GRing.exprS.
+    rewrite H1 {H1} GRing.exprS.
     elim: q => [|q IH].
      by rewrite mul0n GRing.expr0 GRing.mulr1.
-    by rewrite mulSn addnC GRing.exprD GRing.mulrA IH
-               -GRing.exprS subn1 prednK //
-               GRing.rmorphX -GRing.exprM mulnC GRing.exprM
-               -2!GRing.rmorphX H0 !GRing.rmorphX.
+    rewrite mulSn addnC GRing.exprD GRing.mulrA GRing.mulrC -modp_mul IH
+            modp_mul -GRing.exprSr subn1 prednK //.
+    by move: (f_equal val H0) => /= ->.
   * move=> H1.
     move: (H1 (pi 'X))%R.
     rewrite expXpE -GRing.rmorphX -val_piX_expE -H0 -val_piX_expE => /val_inj/eqP.
