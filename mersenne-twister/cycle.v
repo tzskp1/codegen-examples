@@ -129,7 +129,7 @@ Lemma cycleB :
   irreducible_poly phi ->
   castmx (tecp, tecp) B ^+ (2 ^ (size phi).-1) == castmx (tecp, tecp) B.
 Proof.
-move=> H0; move/irreducibleP: (H0) => /eqP H1.
+move/irreducibleP/eqP => H1.
 rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /=
          (divp_eq 'X^(2 ^ (size phi).-1) phi)
          GRing.rmorphD GRing.rmorphM /= Cayley_Hamilton
