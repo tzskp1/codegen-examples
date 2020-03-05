@@ -125,14 +125,17 @@ apply/(iffP idP).
 * by case/irreducible.irreducibleP/andP.
 Qed.
 
-Lemma cycleB : irreducible_poly phi ->
-  (horner_mx (castmx (tecp, tecp) B) ('X ^+ (2 ^ (size phi).-1 - 1)) == 1).
+Lemma cycleB :
+  irreducible_poly phi ->
+  castmx (tecp, tecp) B ^+ (2 ^ (size phi).-1) == castmx (tecp, tecp) B.
 Proof.
-move=> H0; move/irreducibleP: (H0) => H1.
-have H2: phi = mxminpoly (castmx (tecp, tecp) B).
- move: (mxminpoly_dvd_char (castmx (tecp, tecp) B)).
- rewrite /phi.
- Check horner_mxK (castmx (tecp, tecp) B) ('X^(2 ^ (size phi).-1 - 1)).
- Check irreducible.X2mp_eq1 pm' H0.
- Admitted.
+move=> H0; move/irreducibleP: (H0) => /eqP H1.
+rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /=
+         (divp_eq 'X^(2 ^ (size phi).-1) phi)
+         GRing.rmorphD GRing.rmorphM /= Cayley_Hamilton
+         GRing.mulr0 GRing.add0r H1.
+rewrite modp_small ?size_polyX //.
+case: (size phi) size_phi p3 => [|p1]<-//= ?.
+by apply leqW.
+Qed.
 End phi.
