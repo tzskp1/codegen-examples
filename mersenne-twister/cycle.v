@@ -68,14 +68,15 @@ Definition shiftr : 'M['F_2]_w :=
 
 Definition A := \matrix_j (\row_i a`_i *+ (j == w.-1 :> nat)) + shiftr.
 
-Definition S := castmx (etrans (addnC _ _) tecw, tecw)
-                (block_mx 0 (castmx (tecr, tecr) 1%:M)
-                          (castmx (tecwr, tecwr) 1%:M) 0) *m A.
+Definition S :=
+  castmx (etrans (addnC _ _) tecw, tecw)
+  (block_mx 0                             (castmx (tecr, tecr) 1%:M)
+            (castmx (tecwr, tecwr) 1%:M)                          0) *m A.
 
 Definition B :=
   castmx (etrans (addnC _ _) tecnw, tecnw)
   (block_mx (\matrix_(i, j) (1 *+ (i == j - m :> nat)%nat)) 1%:M
-             S 0).
+             S                                             0).
 
 Definition pull_ord (o : 'I_p) := cast_ord tecpr (lshift r o).
 
@@ -123,20 +124,6 @@ apply/(iffP idP).
 * move=> H1; apply/irreducible.irreducibleP => //.
   by rewrite X2X /=.
 * by case/irreducible.irreducibleP/andP.
-Qed.
-
-Lemma cycleB_max :
-  irreducible_poly phi ->
-  castmx (tecp, tecp) B ^+ (2 ^ (size phi).-1) == castmx (tecp, tecp) B.
-Proof.
-move/irreducibleP/eqP => H1.
-rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /=
-         (divp_eq 'X^(2 ^ (size phi).-1) phi)
-         GRing.rmorphD GRing.rmorphM /= Cayley_Hamilton
-         GRing.mulr0 GRing.add0r H1.
-rewrite modp_small ?size_polyX //.
-case: (size phi) size_phi p3 => [|p1]<-//= ?.
-by apply leqW.
 Qed.
 
 Lemma phi_mxminpoly :
