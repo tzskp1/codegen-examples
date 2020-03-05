@@ -125,7 +125,7 @@ apply/(iffP idP).
 * by case/irreducible.irreducibleP/andP.
 Qed.
 
-Lemma cycleB :
+Lemma cycleB_max :
   irreducible_poly phi ->
   castmx (tecp, tecp) B ^+ (2 ^ (size phi).-1) == castmx (tecp, tecp) B.
 Proof.
@@ -137,5 +137,35 @@ rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /=
 rewrite modp_small ?size_polyX //.
 case: (size phi) size_phi p3 => [|p1]<-//= ?.
 by apply leqW.
+Qed.
+
+Lemma phi_mxminpoly :
+  irreducible_poly phi ->
+  phi = mxminpoly (castmx (tecp, tecp) B).
+Proof.
+ case => ? H0.
+ move/H0: (mxminpoly_dvd_char (castmx (tecp, tecp) B)).
+ rewrite size_mxminpoly eqSS -lt0n mxminpoly_nonconstant => /implyP /= ?.
+ apply/esym/eqP.
+ by rewrite -eqp_monic ?char_poly_monic ?mxminpoly_monic.
+Qed.
+
+Lemma cycleB_dvdP :
+  irreducible_poly phi ->
+  forall q, (castmx (tecp, tecp) B ^+ (2 ^ q) == castmx (tecp, tecp) B)
+        <-> (2 ^ (size phi).-1 - 1 %| 2 ^ q - 1)%nat.
+Proof.
+  move=> H q.
+  split => H0.
+  * rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /= in H0.
+    move/eqP/(f_equal (mx_inv_horner (castmx (tecp, tecp) B))): H0.
+    rewrite !horner_mxK -!phi_mxminpoly // => H0.
+    by apply/(irreducible.cycleH_dvdP pm' H q)/irreducible.expand_H.
+  * rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX
+            (divp_eq 'X^(2 ^ q) phi) GRing.rmorphD
+            GRing.rmorphM /= Cayley_Hamilton GRing.mulr0 GRing.add0r.
+    move/(irreducible.cycleH_dvdP pm' H q)/(_ (irreducible.pi pm' 'X)) : H0.
+    rewrite irreducible.expXpE -GRing.rmorphX => /(f_equal val) /= ->.
+    by rewrite modp_small // size_polyX size_char_poly prednK ltnW // ltnW.
 Qed.
 End phi.
