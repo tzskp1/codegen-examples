@@ -87,3 +87,10 @@ Proof.
    by rewrite size_tuple card_ord.
   by rewrite array_incompleteK.
 Qed.
+
+Lemma pm : prime (2 ^ (n * w - r) - 1).
+Admitted.
+
+Definition computeB := snd \o next_random_state.
+Check computeB \o state_of_array .
+Check state_of_array \o (fun (b : 'rV_(n * w - r)) => b *m (@B w n m r _ pm erefl erefl erefl erefl erefl))%R.
