@@ -14,8 +14,8 @@ Notation p := (n * w - r).
 Hypothesis pm : prime (2 ^ p - 1).
 Hypothesis mn : m < n.
 Hypothesis m0 : 0 < m.
-Hypothesis rw : r <= w.
-Hypothesis r0 : 0 < r. (* TODO: move to Lemma *)
+Hypothesis r0 : 0 < r.
+Hypothesis rw : r < w.
 Hypothesis p3 : p >= 3.
 
 Lemma n2 : 2 <= n.
@@ -27,24 +27,27 @@ Proof. by case: n n2. Qed.
 Lemma w0 : 0 < w.
 Proof. by case: w rw r0 => //; rewrite leqn0 => /eqP ->. Qed.
 
-Lemma rw' : r < w.
-Proof. Admitted. (* TODO *)
+Lemma rw' : r <= w.
+by apply/ltnW.
+Qed.
 
 Lemma rnpw : r <= n.-1 * w.
 Proof.
   case: n mn m0 => []//=[|*]; first by case m.
   rewrite mulSn.
-  by apply/leq_trans/leq_addr.
+  by apply/leq_trans/leq_addr/rw'.
 Qed.
 
 Lemma tecr : r = r.-1.+1.
 Proof. by case: r r0. Qed.
 
 Lemma tecwr : w - r = (w - r).-1.+1.
-Proof. by rewrite prednK // /leq subnBA // add1n subn_eq0 rw'. Qed.
+Proof. by rewrite prednK // /leq subnBA ?rw' // add1n subn_eq0 rw. Qed.
 
 Lemma tecw : (w - r).-1.+1 + r.-1.+1 = w.
-Proof. by rewrite !prednK // ?subnK // /leq subnBA // add1n subn_eq0 rw'. Qed.
+Proof.
+by rewrite !prednK // ?subnK ?rw' // /leq subnBA ?rw' // add1n subn_eq0 rw.
+Qed.
 
 Lemma tecnw : w + (n.-1 * w - r) = p.
 Proof. by rewrite addnBA ?rnpw // -mulSn prednK ?n0. Qed.
@@ -54,7 +57,7 @@ Proof.
   rewrite subnK //.
   case: n mn => // ??.
   rewrite mulSn.
-  by apply/leq_trans/leq_addr.
+  by apply/leq_trans/leq_addr/ltnW.
 Qed.
 
 Lemma tecp : p = p.-1.+1.

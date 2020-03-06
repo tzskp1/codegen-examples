@@ -87,14 +87,9 @@ have H: forall a, 2 ^ a = 2 ^ a - 1 + 1 by move=> *; rewrite subnK // expn_gt0.
 by rewrite [in LHS]H mulnDl mul1n [X in _ + X]H addn1 !addnS !subn1.
 Qed.
 
-Section irreducibility.
-Variable phi : {poly 'F_2}.
-Local Notation m := (size phi).-1.
-Hypothesis pm : prime (2 ^ m - 1).
-
-Lemma m_is_prime : prime m.
+Lemma m_is_prime m : prime (2 ^ m - 1) -> prime m.
 Proof.
-move: pm; apply: contraLR => /primePn []; first by case: m => []//[].
+apply: contraLR => /primePn []; first by case: m => []//[].
 case => a aH /dvdnP[] b mba; move: mba aH => -> mba.
 rewrite exp2_dvd; apply/primePn; right.
 exists (2 ^ b - 1); rewrite ?dvdn_mulr //.
@@ -110,6 +105,13 @@ case: a mba => []//[]// a mba.
 rewrite !big_ord_recr /= subnn muln0 expn0 -[X in X < _]add0n ltn_add2r.
 by rewrite subSnn muln1 ltn_addl // expn_gt0.
 Qed.
+
+Section irreducibility.
+Variable phi : {poly 'F_2}.
+Local Notation m := (size phi).-1.
+Hypothesis pm : prime (2 ^ m - 1).
+
+Local Notation m_is_prime := (m_is_prime pm).
 
 Lemma phi_neq0 : (phi != 0)%R.
 Proof.
