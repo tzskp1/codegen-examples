@@ -148,23 +148,34 @@ Proof. by []. Qed.
 (*   rewrite /=. *)
 (*   native_compute. *)
 
-Lemma nth_enum_prod p q (a : 'I_q) :
-  val a = seq.index (ord0, a) (Finite.enum (prod_finType (ordinal_finType p.+1) (ordinal_finType q))).
+Lemma nth_enum_prod p q (a : 'I_q) : val a = seq.index (@ord0 p, a) (enum predT).
 Proof.
-  elim: p q a => //.
-   elim => [[]//| q IHq a].
-   case: q IHq a => //.
-    move=> ? a.
+have /(_ _ 'I_q) pair_snd_inj: injective [eta pair ord0] by move => n T i j [].
+have Hfst : (ord0, a) \in [seq (ord0, x2) | x2 <- enum 'I_q].
+  by move=> n; rewrite mem_map /= ?mem_enum.
+rewrite enumT !unlock /= /prod_enum enum_ordS /= index_cat {}Hfst.
+by rewrite index_map /= ?index_enum_ord.
+Qed.
 
-(* Compute (enum_rank (ord0, ord0) : ordinal_subType #| {:'I_1 * 'I_11}|)%nat. *)
+Lemma nth_next_random_state v i :
+  nth 0 (state_vector (next_random_state (state_of_array v)).2) i.+1%N
+= nth 0 (state_vector (state_of_array v)) i.+1.
+Proof.
+  by rewrite nth_set_nth.
+Qed.
+(*   nth 0 (state_vector (next_random_state (state_of_array v)).2) 1%N *)
+(* = let current := nth 0 (state_vector (state_of_array v)) 0 in *)
+(*   let next := nth 0 (state_vector (state_of_array v)) 1 in *)
+(*   let far_ind := Nat.modulo (ind + m) len in *)
+(*   let far := nth 0 state_vec far_ind in *)
+(*   let z := N.lor (N.land current upper_mask) *)
+(*                  (N.land next lower_mask) in *)
+(*   let xi := N.lxor (N.lxor far (N.shiftr z 1)) *)
+(*                    (if N.eqb (N.land z 1) 0 then 0 else a) in *)
 
-(* Check (0 : 'rV['F_2]_w)%R. *)
-(* Check coord_basis _. *)
-(* Check coord . *)
-(* Definition e := vbasis (fullv : { vspace 'rV['F_2]_w }). *)
-(* Compute shiftr w. *)
-(* Check e. *)
-(* Compute (nth _ e 3 *m shiftr w)%R. *)
+(* Lemma nth1_state_of_array v (a : 'I_w) : *)
+(*   (if N.testbit (nth 0 (state_vector (state_of_array v)) 1) [Num of val a] then 1%R else 0%R) = v ord0 a. *)
+(* Proof. *)
 
 Lemma computeBE (v : 'rV_(n * w - r)) : computeB v = (v *m B)%R.
 Proof.
@@ -193,47 +204,20 @@ Proof.
      move/negP: n0 => /=.
      by rewrite cardT index_mem mem_enum.
     apply/ord_inj.
-    rewrite -II Ia /= index_map //.
-
-    rewrite /enum_val.
-    rewrite (nth_map (ord0, a)).
-    rewrite /Finite.enum.
-    Set Printing All.
-    rewrite /prod.
-    rewrite /enum_mem.
-    rewrite
-    rewrite
-    rewrite /seq.index.
-    Check prod_enumP _.
-    rewrite /find.
-    done.
-
-    apply: (can_inj nat_of_ord).
-
-
-
-
-
-     rewrite /=.
-     done.
-     done.
-     move=> H.
-     Check H.
-     rewrite memE.
-     rewrite inE.
-     apply/
-     Set Printing All.
-     done.
-     rewrite card_prod.
-     rewrite !card_ord.
-    rewrite /=.
-    rewrite /=.
-    rewrite /enum_mem.
-    rewrite /Finite.EnumDef.enum.
-    Set Printing All.
-    rewrite /prod_enum.
+    by rewrite -II Ia /= (nth_enum_prod 623 a).
    have->: (enum_val I').1 = ord0 by rewrite H.
    have->: (enum_val I').2 = a by rewrite H.
+   rewrite addn0 subn1.
+   apply/etrans; last first.
+    apply/eq_bigr => j _.
+    by rewrite /S ?mxE.
+   rewrite nth_next_random_state.
+   rewrite /=.
+
+
+
+    by rewrite block_mxEh mxE.
+   rewrite
 
    move/(f_equal val).
    rewrite ?mxE.
