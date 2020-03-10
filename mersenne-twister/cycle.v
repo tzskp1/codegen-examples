@@ -18,11 +18,9 @@ Lemma mulBE_hidden (x : 'rV[R]_(r + w)) :
   x *m B = castmx (erefl, addnC _ _)
                   (row_mx (lsubmx x *m ul + rsubmx x *m dl) (lsubmx x)).
 Proof.
-apply/rowP => i.
-rewrite ?(castmxE, mxE).
+apply/rowP => i; rewrite ?(castmxE, mxE).
 apply/etrans; first by apply/eq_bigr => j _; rewrite castmxE block_mxEh mxE.
-set T := cast_ord _ i.
-case: (splitP T) => j Tj.
+set T := cast_ord _ i; case: (splitP T) => j Tj.
 + rewrite ?(castmxE, mxE) big_split_ord /=.
   congr (_ + _); apply/eq_bigr => k _;
   rewrite ?(castmxE, mxE) !cast_ord_id.
@@ -294,16 +292,14 @@ Qed.
 Lemma mulBE (x : 'rV['F_2]_p) :
 let x' := castmx (erefl, etrans (esym tecnw) (addnC _ _)) x in
 x *m B = castmx (erefl, tecnw)
-        (row_mx (lsubmx x' *m (\matrix_(i, j) (1 *+ ((i == j - m :> nat) && (j >= m))%nat))
-               + rsubmx x' *m S) (lsubmx x')).
+        (row_mx (lsubmx x' *m UL + rsubmx x' *m S) (lsubmx x')).
 Proof.
 move=> x'.
 apply: (can_inj (castmxK (esym erefl) (esym tecnw))).
 apply: (can_inj (castmxK erefl (addnC w (n.-1 * w - r)%N))).
 rewrite !castmxK -mulBE_hidden castmx_comp /=; subst x'.
-apply: (can_inj (castmxK (esym erefl) (esym (etrans (esym tecnw) (addnC w (n.-1 * w - r)%N))))).
-rewrite castmxK.
-apply/rowP => k.
+apply: (can_inj (castmxK (esym erefl) (esym (etrans (esym tecnw) (addnC w _))))).
+rewrite castmxK; apply/rowP => k.
 rewrite ?(mxE, castmxE).
 apply/etrans; last first.
  apply eq_bigr => j _.
@@ -331,28 +327,4 @@ Lemma eq_from_garbage g (y z : 'rV['F_2]_p) :
   {|content:=y; garbage:=g|} = {|content:=z; garbage:=g|} -> y = z.
 Proof. by case. Qed.
 
-(* Lemma mapBE x : *)
-(*    (content \o incomplete_array \o mapB \o array_incomplete) x = x *m B. *)
-(* Proof. *)
-(*   apply (@eq_from_garbage ((garbage \o incomplete_array \o mapB \o array_incomplete) x)). *)
-(*   apply (can_inj array_incompleteK). *)
-(*   rewrite incomplete_arrayK. *)
-(*   apply/matrixP => s t. *)
-(*   rewrite ?(mxE, castmxE). *)
-(*   case sn: (s == cast_ord (esym tecn) (lift ord0 ord_max)). *)
-(*    rewrite -GRing.mulr_natl GRing.mul1r /=. *)
-(*    rewrite -GRing.mulr_natl GRing.mul0r GRing.add0r. *)
-(*    set T := cast_ord _ _. *)
-(*    set S := cast_ord (esym _) _. *)
-(*    case: (splitP S) => j Sj. *)
-(*     rewrite /B /=. *)
-(*     case: (splitP T) => k Tk. *)
-(*      rewrite ?(mxE, castmxE). *)
-(*      apply/etrans; last first. *)
-(*       apply/eq_bigr => l _. *)
-(*       by rewrite ?(castmxE, mxE). *)
-(*      rewrite /=. *)
-(*    have: (nat_of_ord S < p)%nat. *)
-(*     rewrite /S /= (eqP sn). *)
-(*     case: t {S T} => // t. *)
 End phi.
