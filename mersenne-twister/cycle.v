@@ -48,6 +48,119 @@ set T := cast_ord _ i; case: (splitP T) => j Tj.
     by rewrite jrk ltnNge leq_addr.
 Qed.
 End mulBE.
+Section mulAE.
+Local Open Scope ring_scope.
+Variable w r : nat.
+Variable dl : 'F_2.
+Variable dr : 'rV['F_2]_r.
+Local Notation A :=
+  (castmx (addn1 _, etrans (addnC _ _) (addn1 _)) (block_mx 0 1%:M dl%:M dr)).
+
+Lemma Aul (i1 : 'I_r) : A (widen_ord (leqnSn r) i1) ord0 = 0.
+Proof.
+  rewrite ?(castmxE, mxE).
+  set T := cast_ord _ _.
+  case: (splitP T) => k Tk.
+  + set S := cast_ord _ _.
+    by rewrite mxE; case: (splitP S) => l Sl; rewrite mxE.
+  + case: k Tk => [][]//= ?.
+    rewrite addn0 => i1r.
+    suff: (r < r)%nat by rewrite ltnn.
+    by rewrite -[X in (X < _)%nat]i1r.
+Qed.
+
+Lemma Adr (j : 'I_r) : A ord_max (lift ord0 j) = dr ord0 j.
+Proof.
+  rewrite ?(castmxE, mxE).
+  set T := cast_ord _ _.
+  case: (splitP T) => k /= Tk.
+  + suff: (r < r)%nat by rewrite ltnn.
+    by rewrite [X in (X < _)%nat]Tk.
+  + rewrite mxE.
+    set S := cast_ord _ _.
+    case: (splitP S) => l /= Sl.
+     by case: l Sl => [][].
+    congr (dr _ _); apply/ord_inj; first by case: k Tk => [][].
+    by move: Sl; rewrite /bump /= !add1n; case.
+Qed.
+
+Lemma Aur i0 j :
+  A (widen_ord (leqnSn r) i0) (lift ord0 j) = if i0 == j then 1 else 0.
+Proof.
+  rewrite castmxE mxE.
+  set T := cast_ord _ _.
+  case: (splitP T) => k /= Tk; last first.
+   case: k Tk => [][]//= ?; rewrite addn0 => Tk.
+   suff: (r < r)%nat by rewrite ltnn.
+   by rewrite -[X in (X < _)%nat]Tk.
+  rewrite mxE.
+  set S := cast_ord _ _.
+  case: (splitP S) => l /= Sl.
+   by case: l Sl => [][].
+  rewrite /bump /= !add1n in Sl.
+  rewrite mxE !eqE /= -Tk; case: Sl => ->.
+  by case: ifP.
+Qed.
+
+Lemma mulAE_hidden (x : 'rV['F_2]_(r.+1)) :
+  x *m A =
+  if x ord0 ord_max == 1%R
+  then row_mx 0 (\row_i x ord0 (widen_ord (leqnSn r) i)) + (row_mx dl%:M dr)
+  else row_mx 0 (\row_i x ord0 (widen_ord (leqnSn r) i)).
+Proof.
+apply/rowP => i; rewrite ?(castmxE, mxE).
+case: ifP => x00; rewrite !mxE.
+- case: (@splitP 1 r i) => j /= ij.
+  * case: j ij => [][]//= ? i0.
+    rewrite !mxE GRing.add0r eqE /= -GRing.mulr_natr GRing.mulr1.
+    have->: i = ord0 by apply/ord_inj.
+    rewrite big_ord_recr /= (eqP x00) GRing.mul1r castmxE mxE.
+    set T := cast_ord _ _.
+    case: (splitP T) => k Tk.
+     suff: (r < r)%nat by rewrite ltnn.
+     by move: Tk => /= Tk; rewrite [X in (X < _)%nat]Tk.
+    set S := cast_ord _ _.
+    rewrite !mxE; case: (splitP S) => l Sl; last by rewrite /= add1n in Sl.
+    case: k l {Tk Sl} => [][]//?[][]//? /=.
+    rewrite mxE eqE /= -GRing.mulr_natr GRing.mulr1 -[RHS]GRing.add0r.
+    congr (_ + _).
+    apply/etrans; first by apply/eq_bigr => k _; rewrite Aul GRing.mulr0.
+    rewrite /= big_const_ord.
+    by elim: r => // r' IHr; rewrite iterS IHr GRing.addr0.
+  * rewrite mxE big_ord_recr /=.
+    have->: i = lift ord0 j by apply/ord_inj; rewrite ij.
+    rewrite Adr (eqP x00) GRing.mul1r; congr (_ + _).
+    apply/etrans; first by apply/eq_bigr => k _; rewrite Aur.
+    rewrite [in RHS](matrix_sum_delta x) summxE big_ord1 summxE
+            /= [in RHS]big_ord_recr /= !mxE -[LHS]GRing.addr0.
+    congr (_ + _).
+    apply eq_bigr => i0 _;
+     first by rewrite !mxE eqxx /= !eqE /= eq_sym; case: ifP.
+    rewrite !eqE /=; case jr: (j == r :> nat)%nat; last by rewrite GRing.mulr0.
+    move/eqP: jr => jr; suff: (r < r)%nat by rewrite ltnn.
+    by rewrite -[X in (X < _)%nat]jr.
+- have x00': (x ord0 ord_max == 0) by case: (x ord0 ord_max) x00 => [][|[]//].
+  case: (@splitP 1 r i) => j /= ij.
+  * case: j ij => [][]//= ? i0.
+    have->: i = ord0 by apply/ord_inj.
+    rewrite big_ord_recr /= (eqP x00') GRing.mul0r GRing.addr0.
+    apply/etrans; first by apply/eq_bigr => k _; rewrite Aul GRing.mulr0.
+    rewrite /= mxE big_const_ord.
+    by elim: r => // r' IHr; rewrite iterS IHr GRing.addr0.
+  * rewrite mxE big_ord_recr /=.
+    have->: i = lift ord0 j by apply/ord_inj; rewrite ij.
+    rewrite Adr (eqP x00') GRing.mul0r GRing.addr0.
+    apply/etrans; first by apply/eq_bigr => k _; rewrite Aur.
+    rewrite [in RHS](matrix_sum_delta x) summxE big_ord1 summxE
+            /= [in RHS]big_ord_recr /= !mxE -[LHS]GRing.addr0.
+    congr (_ + _).
+    apply eq_bigr => i0 _;
+     first by rewrite !mxE eqxx /= !eqE /= eq_sym; case: ifP.
+    rewrite !eqE /=; case jr: (j == r :> nat)%nat; last by rewrite GRing.mulr0.
+    move/eqP: jr => jr; suff: (r < r)%nat by rewrite ltnn.
+    by rewrite -[X in (X < _)%nat]jr.
+Qed.
+End mulAE.
 
 Section phi.
 Variables w n m r : nat.
@@ -269,24 +382,17 @@ have dq: 'I_q.
  case: p p0 {F1 F12 pq} => // *.
  by apply ord0.
 apply/etrans; last first.
- apply congr_big => [|//|].
+ apply congr_big => [|//|i _]; last by rewrite -F12.
  apply: (_ : map (cast_ord pq) (index_enum (ordinal_finType p)) = _).
   apply/eq_from_nth.
   by rewrite size_map /index_enum !unlock /= -!(size_map val) !val_ord_enum !size_iota.
  rewrite size_map /index_enum !unlock /= size_ord_enum => i Hi.
  apply: (_ : nth dq [seq cast_ord pq i | i <- ord_enum p] i = nth dq (ord_enum q) i).
  apply/val_inj.
- rewrite (nth_map (cast_ord (esym pq) dq)).
- rewrite /= !nth_ord_enum //.
-by rewrite -pq.
-by rewrite size_ord_enum.
-move=> i _.
-by rewrite -F12.
-rewrite big_map.
-apply eq_bigr => i _.
-rewrite -F12.
-congr (F1 _).
-by apply/val_inj.
+ rewrite (nth_map (cast_ord (esym pq) dq)); last by rewrite size_ord_enum.
+ rewrite /= !nth_ord_enum //; last by rewrite -pq.
+rewrite big_map; apply eq_bigr => i _.
+by rewrite -F12; congr (F1 _); apply/val_inj.
 Qed.
 
 Lemma mulBE (x : 'rV['F_2]_p) :
@@ -326,5 +432,4 @@ Definition mapB (x : 'M['F_2]_(n, w)) :=
 Lemma eq_from_garbage g (y z : 'rV['F_2]_p) :
   {|content:=y; garbage:=g|} = {|content:=z; garbage:=g|} -> y = z.
 Proof. by case. Qed.
-
 End phi.
