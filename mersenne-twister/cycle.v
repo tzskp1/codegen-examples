@@ -104,12 +104,10 @@ Qed.
 
 Lemma mulAE_hidden (x : 'rV['F_2]_(r.+1)) :
   x *m A =
-  if x ord0 ord_max == 1%R
-  then row_mx 0 (\row_i x ord0 (widen_ord (leqnSn r) i)) + (row_mx dl%:M dr)
-  else row_mx 0 (\row_i x ord0 (widen_ord (leqnSn r) i)).
+  row_mx 0 (\row_i x ord0 (widen_ord (leqnSn r) i)) + (row_mx dl%:M dr) *+ (x ord0 ord_max == 1%R).
 Proof.
 apply/rowP => i; rewrite ?(castmxE, mxE).
-case: ifP => x00; rewrite !mxE.
+case x00: (x ord0 ord_max == 1); rewrite !mxE.
 - case: (@splitP 1 r i) => j /= ij.
   * case: j ij => [][]//= ? i0.
     rewrite !mxE GRing.add0r eqE /= -GRing.mulr_natr GRing.mulr1.
@@ -145,14 +143,14 @@ case: ifP => x00; rewrite !mxE.
     have->: i = ord0 by apply/ord_inj.
     rewrite big_ord_recr /= (eqP x00') GRing.mul0r GRing.addr0.
     apply/etrans; first by apply/eq_bigr => k _; rewrite Aul GRing.mulr0.
-    rewrite /= mxE big_const_ord.
+    rewrite /= mxE big_const_ord GRing.addr0.
     by elim: r => // r' IHr; rewrite iterS IHr GRing.addr0.
   * rewrite mxE big_ord_recr /=.
     have->: i = lift ord0 j by apply/ord_inj; rewrite ij.
     rewrite Adr (eqP x00') GRing.mul0r GRing.addr0.
     apply/etrans; first by apply/eq_bigr => k _; rewrite Aur.
     rewrite [in RHS](matrix_sum_delta x) summxE big_ord1 summxE
-            /= [in RHS]big_ord_recr /= !mxE -[LHS]GRing.addr0.
+            /= [in RHS]big_ord_recr /= !mxE GRing.addr0 -[LHS]GRing.addr0.
     congr (_ + _).
     apply eq_bigr => i0 _;
      first by rewrite !mxE eqxx /= !eqE /= eq_sym; case: ifP.
@@ -312,6 +310,116 @@ Proof.
     by apply/(irreducible.cycleH_dvdP pm' H q)/irreducible.expand_H/eqP.
 Qed.
 
+Lemma size_ord_enum q : size (ord_enum q) = q.
+Proof. by rewrite -(size_map val) val_ord_enum size_iota. Qed.
+
+Lemma nth_ord_enum i (q : nat) k : (i < q)%nat -> val (nth k (ord_enum q) i) = i.
+Proof.
+move=> iq.
+by rewrite -(nth_map k (val k) val) ?val_ord_enum ?nth_iota // size_ord_enum.
+Qed.
+
+Lemma eq_big_cond (T : ringType) p q (F1 : 'I_p -> T) (F2 : 'I_q -> T) :
+  forall (pq : p = q), (forall i, F1 (cast_ord (esym pq) i) = F2 i) ->
+  \sum_(j < p) F1 j = \sum_(i < q) F2 i.
+Proof.
+move=> pq F12.
+case p0: (p > 0)%nat; last first.
+ case: p p0 pq F1 F2 F12 => //= _.
+ case: q => // *.
+ by rewrite !big_ord0.
+have dq: 'I_q.
+ rewrite -pq.
+ case: p p0 {F1 F12 pq} => // *.
+ by apply ord0.
+apply/etrans; last first.
+ apply congr_big => [|//|i _]; last by rewrite -F12.
+ apply: (_ : map (cast_ord pq) (index_enum (ordinal_finType p)) = _).
+  apply/eq_from_nth.
+  by rewrite size_map /index_enum !unlock /= -!(size_map val) !val_ord_enum !size_iota.
+ rewrite size_map /index_enum !unlock /= size_ord_enum => i Hi.
+ apply: (_ : nth dq [seq cast_ord pq i | i <- ord_enum p] i = nth dq (ord_enum q) i).
+ apply/val_inj.
+ rewrite (nth_map (cast_ord (esym pq) dq)); last by rewrite size_ord_enum.
+ rewrite /= !nth_ord_enum //; last by rewrite -pq.
+rewrite big_map; apply eq_bigr => i _.
+by rewrite -F12; congr (F1 _); apply/val_inj.
+Qed.
+
+Lemma mulBE_hidden' (x : 'rV['F_2]_p) :
+let x' := castmx (erefl, etrans (esym tecnw) (addnC _ _)) x in
+x *m B = castmx (erefl, tecnw)
+        (row_mx (lsubmx x' *m UL + rsubmx x' *m S) (lsubmx x')).
+Proof.
+move=> x'.
+apply: (can_inj (castmxK (esym erefl) (esym tecnw))).
+apply: (can_inj (castmxK erefl (addnC w (n.-1 * w - r)%N))).
+rewrite !castmxK -mulBE_hidden castmx_comp /=; subst x'.
+apply: (can_inj (castmxK (esym erefl) (esym (etrans (esym tecnw) (addnC w _))))).
+rewrite castmxK; apply/rowP => k.
+rewrite ?(mxE, castmxE).
+apply/etrans; last first.
+ apply eq_bigr => j _.
+ by rewrite !castmxE !cast_ord_id !esymK.
+apply: eq_big_cond => [|? i].
+ by rewrite addnC tecnw.
+congr (_ * _); first by congr (x 0 _); apply/val_inj.
+rewrite castmxE //=.
+by congr (block_mx _ _ _ _ _ _); apply/val_inj.
+Qed.
+
+Lemma mulSE (x : 'rV['F_2]_(n.-1 * w - r + w)) :
+  let x' := castmx (erefl, esym tecw')
+            (rsubmx x *m castmx (etrans (addnC _ _) tecw, tecw)
+                         (block_mx 0 (castmx (tecr, tecr) 1%:M)
+                                   (castmx (tecwr, tecwr) 1%:M) 0)) in
+  rsubmx x *m S = castmx (erefl, tecw')
+  (row_mx 0 (\row_i x' ord0 (widen_ord (leqnSn w.-1) i))
+             + row_mx a`_0%:M (\row_i a`_i.+1) *+ (x' ord0 ord_max == 1)).
+Proof.
+  move=> x'; rewrite mulmxA -mulAE_hidden.
+  apply/rowP => k; rewrite ?(mxE, castmxE).
+  apply: eq_big_cond => [|? i]; first by rewrite prednK.
+  rewrite ?(mxE, castmxE).
+  congr (_ * _).
+  apply/eq_bigr => j _.
+  congr (rsubmx x _ _ * _); first by apply/val_inj.
+  by rewrite !castmxE; congr (block_mx _ _ _ _ _ _); apply/val_inj.
+  set I := cast_ord _ _; set I' := cast_ord (esym _) i.
+  by have->: I = I' by apply/val_inj.
+Qed.
+
+Definition z (x : 'rV['F_2]_p) :=
+  rsubmx (castmx (erefl _, etrans (esym tecnw) (addnC w _)) x) *m
+  castmx (etrans (addnC _ _) tecw, tecw)
+ (block_mx 0 (castmx (tecr, tecr) 1%:M) (castmx (tecwr, tecwr) 1%:M) 0).
+
+Definition y (x : 'rV['F_2]_p) :=
+lsubmx (castmx (erefl _, etrans (esym tecnw) (addnC w (n.-1 * w - r)%N)) x).
+
+Lemma mulBE (x : 'rV['F_2]_p) :
+x *m B = castmx (erefl _, tecnw)
+ (row_mx (y x *m UL + castmx (erefl _, tecw')
+ (row_mx 0 (\row_i castmx (erefl _, esym tecw') (z x) ord0 (widen_ord (leqnSn w.-1) i))
++ row_mx a`_0%:M (\row_i a`_i.+1) *+ (castmx (erefl _, esym tecw') (z x) ord0 ord_max == 1)))
+ (y x)).
+Proof. by rewrite mulBE_hidden' mulSE. Qed.
+
+Lemma mulBE0 (x : 'rV['F_2]_p) (k : 'I_(n.-1 * w - r)) :
+  (x *m B) ord0 (cast_ord tecnw (rshift w k)) = y x ord0 k.
+Proof.
+  rewrite mulBE_hidden' mulSE ?(castmxE, mxE) /=.
+  set T := cast_ord _ _.
+  case: (splitP T) => j jT.
+   suff: (j >= w)%nat.
+    case: j {jT} => j H.
+    by rewrite leqNgt /= H.
+   by rewrite -jT /= leq_addr.
+  rewrite  ?(castmxE, mxE).
+  congr (x _ _); apply/val_inj => //=.
+  by move/eqP: jT; rewrite /= eqn_add2l eq_sym => /eqP.
+Qed.
+
 Record array := { content :> 'rV['F_2]_p; garbage : 'rV['F_2]_r; }.
 
 Lemma eq_array_ax :
@@ -360,88 +468,6 @@ case: (splitP T) => j0 /= j0H.
   set S := cast_ord _ _; have->: S = enum_rank (j, k).
     by apply/val_inj; rewrite /= addnC subnK // j0H leq_addr.
   by rewrite !enum_rankK.
-Qed.
-
-Lemma size_ord_enum q : size (ord_enum q) = q.
-Proof. by rewrite -(size_map val) val_ord_enum size_iota. Qed.
-
-Lemma nth_ord_enum i (q : nat) k : (i < q)%nat -> val (nth k (ord_enum q) i) = i.
-Proof.
-move=> iq.
-by rewrite -(nth_map k (val k) val) ?val_ord_enum ?nth_iota // size_ord_enum.
-Qed.
-
-Lemma eq_big_cond (T : ringType) p q (F1 : 'I_p -> T) (F2 : 'I_q -> T) :
-  forall (pq : p = q), (forall i, F1 (cast_ord (esym pq) i) = F2 i) ->
-  \sum_(j < p) F1 j = \sum_(i < q) F2 i.
-Proof.
-move=> pq F12.
-case p0: (p > 0)%nat; last first.
- case: p p0 pq F1 F2 F12 => //= _.
- case: q => // *.
- by rewrite !big_ord0.
-have dq: 'I_q.
- rewrite -pq.
- case: p p0 {F1 F12 pq} => // *.
- by apply ord0.
-apply/etrans; last first.
- apply congr_big => [|//|i _]; last by rewrite -F12.
- apply: (_ : map (cast_ord pq) (index_enum (ordinal_finType p)) = _).
-  apply/eq_from_nth.
-  by rewrite size_map /index_enum !unlock /= -!(size_map val) !val_ord_enum !size_iota.
- rewrite size_map /index_enum !unlock /= size_ord_enum => i Hi.
- apply: (_ : nth dq [seq cast_ord pq i | i <- ord_enum p] i = nth dq (ord_enum q) i).
- apply/val_inj.
- rewrite (nth_map (cast_ord (esym pq) dq)); last by rewrite size_ord_enum.
- rewrite /= !nth_ord_enum //; last by rewrite -pq.
-rewrite big_map; apply eq_bigr => i _.
-by rewrite -F12; congr (F1 _); apply/val_inj.
-Qed.
-
-Lemma mulBE (x : 'rV['F_2]_p) :
-let x' := castmx (erefl, etrans (esym tecnw) (addnC _ _)) x in
-x *m B = castmx (erefl, tecnw)
-        (row_mx (lsubmx x' *m UL + rsubmx x' *m S) (lsubmx x')).
-Proof.
-move=> x'.
-apply: (can_inj (castmxK (esym erefl) (esym tecnw))).
-apply: (can_inj (castmxK erefl (addnC w (n.-1 * w - r)%N))).
-rewrite !castmxK -mulBE_hidden castmx_comp /=; subst x'.
-apply: (can_inj (castmxK (esym erefl) (esym (etrans (esym tecnw) (addnC w _))))).
-rewrite castmxK; apply/rowP => k.
-rewrite ?(mxE, castmxE).
-apply/etrans; last first.
- apply eq_bigr => j _.
- by rewrite !castmxE !cast_ord_id !esymK.
-apply: eq_big_cond => [|? i].
- by rewrite addnC tecnw.
-congr (_ * _); first by congr (x 0 _); apply/val_inj.
-rewrite castmxE //=.
-by congr (block_mx _ _ _ _ _ _); apply/val_inj.
-Qed.
-
-Lemma mulSE (x : 'rV['F_2]_(n.-1 * w - r + w)) :
-  let x' := castmx (erefl, esym tecw')
-                   (rsubmx x *m castmx (etrans (addnC r.-1.+1 (w - r).-1.+1) tecw, tecw)
-                                (block_mx 0 (castmx (tecr, tecr) 1%:M)
-                                          (castmx (tecwr, tecwr) 1%:M) 0)) in
-  rsubmx x *m S =
-  castmx (erefl, tecw')
-  (if x' ord0 ord_max == 1
-   then row_mx 0 (\row_i x' ord0 (widen_ord (leqnSn w.-1) i))
-      + row_mx a`_0%:M (\row_i a`_i.+1)
-   else row_mx 0 (\row_i x' ord0 (widen_ord (leqnSn w.-1) i))).
-Proof.
-  move=> x'; rewrite mulmxA -mulAE_hidden.
-  apply/rowP => k; rewrite ?(mxE, castmxE).
-  apply: eq_big_cond => [|? i]; first by rewrite prednK.
-  rewrite ?(mxE, castmxE).
-  congr (_ * _).
-  apply/eq_bigr => j _.
-  congr (rsubmx x _ _ * _); first by apply/val_inj.
-  by rewrite !castmxE; congr (block_mx _ _ _ _ _ _); apply/val_inj.
-  set I := cast_ord _ _; set I' := cast_ord (esym _) i.
-  by have->: I = I' by apply/val_inj.
 Qed.
 
 Definition significant (x : 'M['F_2]_(n, w)) :=

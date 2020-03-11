@@ -37,7 +37,29 @@ Inductive random_state_aux (y : random_state) :=
         -> random_state_aux y.
 *)
 
-Definition N_of_word (t : w.-tuple 'F_2) :=
+Definition N_of_word (t : 'rV['F_2]_w) :=
+let t := mktuple (fun x => t ord0 x) in
+let f := find (fun x => x == 1%R) t in
+if f == size t then N0
+else Npos (foldl (fun a d => if d == 1%R then xI a else xO a) xH (drop f.+1 t)).
+
+Fixpoint word_of_N_iter (p : positive) : seq 'F_2 :=
+  match p with
+  | xI p0 =>  1%R :: word_of_N_iter p0
+  | xO p0 => 0%R :: word_of_N_iter p0
+  | xH => [:: 1%R]
+  end.
+
+(* Definition word_of_N (n' : N) := *)
+(*   match n' with *)
+(*   | N0 => 0 *)
+(*   | Npos p =>  *)
+(*     word_of_N_iter p *)
+
+
+
+Check N_of_word.
+
   foldr (fun x y => 2*y + x) 0
         (map_tuple (fun x => if (x == 1 :> 'F_2)%R then 1%N else 0) t).
 
@@ -203,23 +225,25 @@ Proof.
   by apply/val_inj.
 Qed.
 
-Require Extraction.
-Definition one := (1%R : 'F_2).
-Definition test := (fun y => y == one).
-Check B.
-Definition T := B.
-Print cycle.B.
-Extraction T.
-Check
+(* Require Extraction. *)
+(* Definition one := (1%R : 'F_2). *)
+(* Definition test := (fun y => y == one). *)
+(* Check B. *)
+(* Definition T := B. *)
+(* Print cycle.B. *)
+(* Extraction T. *)
+(* Check *)
 
-Definition mulB (x : 'rV['F_2]_p) :=
-let x' := castmx (erefl, etrans (esym tecnw) (addnC _ _)) x in
-(row_mx (lsubmx x' *m UL + rsubmx x' *m S) (lsubmx x')).
+(* Definition mulB (x : 'rV['F_2]_p) := *)
+(* let x' := castmx (erefl, etrans (esym tecnw) (addnC _ _)) x in *)
+(* (row_mx (lsubmx x' *m UL + rsubmx x' *m S) (lsubmx x')). *)
+
+  (* Local Notation c := castmx. *)
 
 Lemma computeBE (v : array w n r) : computeB v = (v *m B)%R :> 'rV_(n * w - r).
 Proof.
-  rewrite mulBE.
   rewrite /computeB.
+  rewrite mulBE.
   apply/rowP => i.
   rewrite !mxE ?castmxE ?mxE (nth_map 0); last
    by rewrite size_rev size_rot size_next_random_state.
@@ -230,11 +254,48 @@ Proof.
           ?size_rot ?size_next_random_state ?nth_drop //
           nth_cat size_drop ?size_next_random_state.
   have II: nat_of_ord I = nat_of_ord I' by [].
-  case H: (val (enum_val I').1 == 0)%nat; last first.
+  case: (splitP I) => j Ij; last first.
+   case H: (n - (enum_val I').1.+1 < n - 1%N)%nat.
+   rewrite nth_drop add1n nth_next_random_state -subSn // subSS tns //=.
+    rewrite /leq -subSn; last by apply ltnW.
+    rewrite subnAC subSn // subnn subn_eq0.
+    by case: (enum_val I').1 H => [][]//.
+   move=> H1 H2.
+   rewrite break_if.
+   set T := rev_ord _.
+   have: val T = (enum_val I').1.-1.
+   rewrite /T.
+   apply/val_inj.
+   rewrite /=.
+   rewrite //=.
+   rewrite testbit_N_of_word.
+   rewrite subSS subnAC subnn .
+
+   case H: (val (enum_val I').1 == 0)%nat; last first.
+   move: H.
+   rewrite /enum_val enumT /=.
+   rewrite nth_map.
+   rewrite /prod_enum.
+   rewrite /= unlock.
+   rewrite /=.
+    have H'': (enum_val I') = (ord0, j).
+     apply/enum_rank_inj.
+     rewrite enum_valK /enum_rank /enum_rank_in /insubd /odflt /oapp /insub.
+     destruct idP; last first.
+      apply/val_inj.
+      move/negP: n0 => /=.
+      by rewrite cardT index_mem mem_enum.
+     apply/ord_inj.
+     by rewrite -II Ij /= (nth_enum_prod n.-1).
+    have H''1: (enum_val I').1 = ord0 by rewrite H''.
+    by rewrite H''1 in H.
+  rewrite break_if.
+
    have H': (n - (enum_val I').1.+1 < n - 1%N)%nat.
     case: ((enum_val I').1) H => []/=[]// n0.
     rewrite ltnS subSS subn1 => nn.
     by move: (rev_ord_proof (Ordinal nn)).
+    rewrite /=.
     rewrite H' nth_drop add1n nth_next_random_state tns //.
     by case: (enum_val I') => + [].
    move=> H'''.
