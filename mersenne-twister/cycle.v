@@ -165,14 +165,25 @@ Variables w n m r : nat.
 Variable a : w.-tuple [fieldType of 'F_2].
 Notation p := (n * w - r).
 Hypothesis pm : prime (2 ^ p - 1).
-Hypothesis mn : m < n.
+Hypothesis mn : m.+1 < n.-2.
 Hypothesis m0 : 0 < m.
 Hypothesis r0 : 0 < r.
 Hypothesis rw : r < w.
-Hypothesis p3 : p >= 3.
+Hypothesis p3 : 3 <= p.
 
-Lemma n2 : 2 <= n.
-Proof. by case: n mn m0 => //; case: m => []//[]// ?? + _; apply ltn_trans. Qed.
+Lemma n2 : 2 < n.
+Proof. by case: n mn m0 => []//[]//[]//. Qed.
+
+Lemma n2' : 2 <= n.
+Proof. by apply: ltnW n2. Qed.
+
+Lemma mn' : m < n.
+Proof.
+  case: n mn => []//[]//[]// n'.
+  rewrite /= ltnS => H.
+  apply/(leq_trans H).
+  by rewrite leqW // leqW //.
+Qed.
 
 Lemma n0 : 0 < n.
 Proof. by case: n n2. Qed.
@@ -189,9 +200,28 @@ Qed.
 
 Lemma rnpw : r <= n.-1 * w.
 Proof.
-  case: n mn m0 => []//=[|*]; first by case m.
+  case: n mn' m0 => []//=[|*]; first by case m.
   rewrite mulSn.
   by apply/leq_trans/leq_addr/rw'.
+Qed.
+
+Lemma rnmw : r <= (n - m) * w.
+Proof.
+case: n mn' => // n' ?.
+by rewrite subSn // mulSn; apply/leq_trans/leq_addr/ltnW.
+Qed.
+
+Lemma rnppw : r <= n.-2 * w.
+Proof.
+  case: n n2 => []//[]//[]// n0 _.
+  rewrite mulSn.
+  by apply/leq_trans/leq_addr/rw'.
+Qed.
+
+Lemma wnpwr : w <= n.-1 * w - r.
+Proof.
+  case: n n2 rnppw => []//[]//[]// n0 _ ?.
+  by rewrite mulSn -addnBA // leq_addr.
 Qed.
 
 Lemma tecr : r = r.-1.+1.
@@ -211,10 +241,16 @@ Proof. by case: w w0. Qed.
 Lemma tecnw : w + (n.-1 * w - r) = p.
 Proof. by rewrite addnBA ?rnpw // -mulSn prednK ?n0. Qed.
 
+Lemma choose_m : m.-1 * w + w + ((n - m) * w - r) = p.
+Proof.
+by rewrite addnC addnA addnC addnCA -mulSn addnC addnBA
+           ?rnmw // -mulnDl prednK // addnC subnK // ltnW ?mn'.
+Qed.
+
 Lemma tecpr : p + r = n * w.
 Proof.
   rewrite subnK //.
-  case: n mn => // ??.
+  case: n mn' => // ??.
   rewrite mulSn.
   by apply/leq_trans/leq_addr/ltnW.
 Qed.
@@ -223,9 +259,9 @@ Lemma tecp : p = p.-1.+1.
 Proof. by case: p p3. Qed.
 
 Lemma tecn : n = n.-2.+2.
-Proof. by case: n n2 => []//[]. Qed.
+Proof. by case: n n2' => []//[]. Qed.
 
-Hint Resolve p0 n2 n0 w0 rw' rnpw : core.
+Hint Resolve p0 n2' n0 w0 rw' rnpw rnmw wnpwr mn' : core.
 Local Open Scope ring_scope.
 
 Definition A :=
@@ -239,7 +275,7 @@ Definition S :=
             (castmx (tecwr, tecwr) 1%:M)                          0) *m A.
 
 Definition UL : 'M['F_2]_(n.-1 * w - r, w) :=
-\matrix_(i, j) (1 *+ ((i == j - m :> nat) && (j >= m))%nat).
+\matrix_(i, j) (1 *+ ((j == i - (m.-1 * w) :> nat) && (i >= (m.-1 * w)))%nat).
 
 Definition B :=
   castmx (etrans (addnC _ _) tecnw, tecnw)
@@ -319,11 +355,10 @@ move=> iq.
 by rewrite -(nth_map k (val k) val) ?val_ord_enum ?nth_iota // size_ord_enum.
 Qed.
 
-Lemma eq_big_cond (T : ringType) p q (F1 : 'I_p -> T) (F2 : 'I_q -> T) :
-  forall (pq : p = q), (forall i, F1 (cast_ord (esym pq) i) = F2 i) ->
+Lemma eq_big_cond (T : ringType) p q (pq : p = q) (F1 : 'I_p -> T)
+  (F2 : 'I_q -> T) (F12 : forall i, F1 (cast_ord (esym pq) i) = F2 i) :
   \sum_(j < p) F1 j = \sum_(i < q) F2 i.
 Proof.
-move=> pq F12.
 case p0: (p > 0)%nat; last first.
  case: p p0 pq F1 F2 F12 => //= _.
  case: q => // *.
@@ -397,13 +432,50 @@ Definition z (x : 'rV['F_2]_p) :=
 Definition y (x : 'rV['F_2]_p) :=
 lsubmx (castmx (erefl _, etrans (esym tecnw) (addnC w (n.-1 * w - r)%N)) x).
 
-Lemma mulBE (x : 'rV['F_2]_p) :
-x *m B = castmx (erefl _, tecnw)
- (row_mx (y x *m UL + castmx (erefl _, tecw')
+Lemma ULE (x : 'rV['F_2]_p) :
+  y x *m UL = rsubmx (lsubmx (castmx (erefl, esym choose_m) x)).
+Proof.
+apply/rowP => i.
+rewrite ?(mxE, castmxE).
+apply/etrans; first by apply/eq_bigr => j _; rewrite ?(mxE, castmxE).
+have inwr: (i + m.-1 * w < n.-1 * w - r)%nat.
+ apply: leq_trans.
+  apply: (_ : (_ < w + m.-1 * w)%nat); first by rewrite ltn_add2r.
+ have->: n.-1 = n.-2.+1 by case: n n2 => []//[].
+ rewrite -mulSn [X in (_ <= X - _)%nat]mulSn addnC
+         -[X in (X <= _)%nat]addn0 -addnBA //.
+ apply leq_add.
+  rewrite leq_mul2r; apply/orP; right; apply: (leq_trans _ mn).
+  by case: m => []//= ?; apply ltnW.
+ by rewrite /leq sub0n.
+rewrite (bigD1 (Ordinal inwr)) // -[RHS]GRing.addr0.
+congr (_ + _).
+ rewrite /= addnK leq_addl !eqxx GRing.mulr1; congr (x _ _).
+ by apply/ord_inj; rewrite /= addnC.
+apply/etrans; first apply/eq_bigr => j /= P.
+case mpwj : (m.-1 * w <= j)%nat.
+ have->: (i == (j - m.-1 * w)%N :> nat) = false.
+  apply/negP/negP; move: P; apply contra.
+  rewrite !eqE /= => /eqP ->.
+  by rewrite subnK //.
+ by rewrite GRing.mulr0.
+ by rewrite andbF GRing.mulr0.
+rewrite big_const; set T := #|_|.
+elim: T => // t IHt.
+by rewrite iterS IHt /= GRing.addr0.
+Qed.
+
+Definition computeB (x : 'rV['F_2]_p) :=
+castmx (erefl _, tecnw)
+ (row_mx (rsubmx (lsubmx (castmx (erefl, esym choose_m) x)) + castmx (erefl _, tecw')
  (row_mx 0 (\row_i castmx (erefl _, esym tecw') (z x) ord0 (widen_ord (leqnSn w.-1) i))
 + row_mx a`_0%:M (\row_i a`_i.+1) *+ (castmx (erefl _, esym tecw') (z x) ord0 ord_max == 1)))
  (y x)).
-Proof. by rewrite mulBE_hidden' mulSE. Qed.
+
+Lemma mulBE (x : 'rV['F_2]_p) : x *m B = computeB x.
+Proof. by rewrite mulBE_hidden' mulSE ULE. Qed.
+
+(* Lemma zE (x : 'rV['F_2]_p) := *)
 
 Lemma mulBE0 (x : 'rV['F_2]_p) (k : 'I_(n.-1 * w - r)) :
   (x *m B) ord0 (cast_ord tecnw (rshift w k)) = y x ord0 k.
@@ -420,6 +492,9 @@ Proof.
   by move/eqP: jT; rewrite /= eqn_add2l eq_sym => /eqP.
 Qed.
 
+Compute computeB 0.
+
+(*
 Record array := { content :> 'rV['F_2]_p; garbage : 'rV['F_2]_r; }.
 
 Lemma eq_array_ax :
@@ -485,4 +560,5 @@ Definition mapB (x : 'M['F_2]_(n, w)) :=
 Lemma eq_from_garbage g (y z : 'rV['F_2]_p) :
   {|content:=y; garbage:=g|} = {|content:=z; garbage:=g|} -> y = z.
 Proof. by case. Qed.
+*)
 End phi.
