@@ -207,6 +207,9 @@ Proof.
 by rewrite !prednK // ?subnK ?rw' // /leq subnBA ?rw' // add1n subn_eq0 rw.
 Qed.
 
+Lemma tecw' : w.-1.+1 = w.
+Proof. by case: w w0. Qed.
+
 Lemma tecnw : w + (n.-1 * w - r) = p.
 Proof. by rewrite addnBA ?rnpw // -mulSn prednK ?n0. Qed.
 
@@ -227,10 +230,10 @@ Proof. by case: n n2 => []//[]. Qed.
 Hint Resolve p0 n2 n0 w0 rw' rnpw : core.
 Local Open Scope ring_scope.
 
-Definition shiftr : 'M['F_2]_w :=
-  \matrix_(i, j) (1 *+ (i == j.+1 :> nat)).
-
-Definition A := \matrix_j (\row_i a`_i *+ (j == w.-1 :> nat)) + shiftr.
+Definition A :=
+  castmx (tecw', tecw')
+  (castmx (addn1 _, etrans (addnC _ w.-1) (addn1 _))
+  (block_mx 0 1%:M (nth 0 a 0)%:M (\row_i nth 0 a i.+1))).
 
 Definition S :=
   castmx (etrans (addnC _ _) tecw, tecw)
@@ -239,8 +242,8 @@ Definition S :=
 
 Definition UL : 'M['F_2]_(n.-1 * w - r, w) :=
 \matrix_(i, j) (1 *+ ((i == j - m :> nat) && (j >= m))%nat).
+
 Definition B :=
-  (* castmx (erefl _, addnC _ _) *)
   castmx (etrans (addnC _ _) tecnw, tecnw)
  (block_mx  UL 1%:M
             S  0).
@@ -415,6 +418,30 @@ apply: eq_big_cond => [|? i].
 congr (_ * _); first by congr (x 0 _); apply/val_inj.
 rewrite castmxE //=.
 by congr (block_mx _ _ _ _ _ _); apply/val_inj.
+Qed.
+
+Lemma mulSE (x : 'rV['F_2]_(n.-1 * w - r + w)) :
+  let x' := castmx (erefl, esym tecw')
+                   (rsubmx x *m castmx (etrans (addnC r.-1.+1 (w - r).-1.+1) tecw, tecw)
+                                (block_mx 0 (castmx (tecr, tecr) 1%:M)
+                                          (castmx (tecwr, tecwr) 1%:M) 0)) in
+  rsubmx x *m S =
+  castmx (erefl, tecw')
+  (if x' ord0 ord_max == 1
+   then row_mx 0 (\row_i x' ord0 (widen_ord (leqnSn w.-1) i))
+      + row_mx a`_0%:M (\row_i a`_i.+1)
+   else row_mx 0 (\row_i x' ord0 (widen_ord (leqnSn w.-1) i))).
+Proof.
+  move=> x'; rewrite mulmxA -mulAE_hidden.
+  apply/rowP => k; rewrite ?(mxE, castmxE).
+  apply: eq_big_cond => [|? i]; first by rewrite prednK.
+  rewrite ?(mxE, castmxE).
+  congr (_ * _).
+  apply/eq_bigr => j _.
+  congr (rsubmx x _ _ * _); first by apply/val_inj.
+  by rewrite !castmxE; congr (block_mx _ _ _ _ _ _); apply/val_inj.
+  set I := cast_ord _ _; set I' := cast_ord (esym _) i.
+  by have->: I = I' by apply/val_inj.
 Qed.
 
 Definition significant (x : 'M['F_2]_(n, w)) :=
