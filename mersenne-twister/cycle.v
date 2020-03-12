@@ -281,6 +281,20 @@ Qed.
 Lemma wr0 : 0 < w - r.
 Proof. by case: (w - r) wrpwr. Qed.
 
+Lemma pwn : p %/ w < n.
+Proof.
+  rewrite divnMBl ?w0 //.
+  case wr: (w %| r).
+   case/dvdnP: wr => [][|p rpw].
+    rewrite mul0n => rn0.
+    by move: rn0 r0 => ->.
+   move: rpw rw => ->.
+   rewrite mulSn => /(leq_ltn_trans (leq_addr _ _)).
+   by rewrite ltnn.
+  rewrite subn1 divn_small // subn0.
+  by case: n n0.
+Qed.
+
 Hint Resolve p0 n2' n0 w0 rw' rnpw rnmw wnpwr mn' wr0 : core.
 Local Open Scope ring_scope.
 
@@ -613,17 +627,49 @@ Proof.
   by move/eqP: jT; rewrite /= eqn_add2l eq_sym => /eqP.
 Qed.
 
-Definition pull_ord (o : 'I_p) := cast_ord tecpr (lshift r o).
+Definition row_ind (o : 'I_p) := Ordinal (ltn_pmod o w0).
+Definition col_ind_prf (o : 'I_p) : (o %/ w < n)%nat.
+Proof.
+  case: o => o oH.
+  by apply/leq_ltn_trans/pwn/(leq_div2r _ (ltnW oH)).
+Qed.
+Definition col_ind (o : 'I_p) :=
+  Ordinal (col_ind_prf o).
+
+Definition arr_ind_prf (x : 'I_n) (y : 'I_w) : (x * w + y < n * w)%nat.
+Proof.
+ case: x => x xn; case: y => y yw.
+ apply/leq_ltn_trans; first apply leq_add.
+  apply: (_ : _ <= n.-1 * w)%nat.
+   apply leq_mul => //.
+   by case: n xn n0.
+  apply: (_ : _ <= w.-1)%nat.
+  by case: w w0 yw.
+ case: n n0 => // n' _; case: w w0 => // w' _ /=.
+ by rewrite !mulSn !mulnS addnCA -!addnA ltn_add2l addnC ltn_add2r.
+Qed.
+Definition arr_ind_large (x : 'I_n) (y : 'I_w) := Ordinal (arr_ind_prf x y).
+Definition arr_ind (x : 'I_n) (y : 'I_w) :=
+match split (cast_ord (esym tecpr) (arr_ind_large x y)) with
+| inl l => l
+| inr r => cast_ord (esym tecp) ord0
+end.
 
 Definition incomplete_array (x : 'M['F_2]_(n, w)) :=
-  \row_i (mxvec x) ord0 (pull_ord i).
+  \row_i x (col_ind i) (row_ind i).
 
 Definition array_incomplete (y : 'rV['F_2]_p) : 'M_(n, w) :=
-  vec_mx (castmx (erefl, tecpr) (row_mx y 0)).
+  \matrix_(i, j) y ord0 (arr_ind i j).
 
 Lemma array_incompleteK : cancel array_incomplete incomplete_array.
 Proof.
 move=> y; rewrite /incomplete_array /array_incomplete; apply/rowP => j.
-by rewrite mxE vec_mxK castmxE /pull_ord cast_ordK row_mxEl cast_ord_id.
+rewrite !mxE; congr (y _ _); apply/ord_inj.
+rewrite /arr_ind; set T := cast_ord _ _.
+case: (splitP T) => s Ts; rewrite /= -divn_eq in Ts.
+ by rewrite Ts.
+suff: (p < p)%nat by rewrite ltnn.
+suff: (p + s < p)%nat; first by apply/leq_trans; rewrite ltnS leq_addr.
+by rewrite -Ts.
 Qed.
 End phi.
