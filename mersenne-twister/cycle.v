@@ -235,6 +235,9 @@ Proof.
 by rewrite !prednK // ?subnK ?rw' // /leq subnBA ?rw' // add1n subn_eq0 rw.
 Qed.
 
+Lemma twist : r + (w - r) = w.
+Proof. by rewrite subnKC // ltnW. Qed.
+
 Lemma tecw' : w.-1.+1 = w.
 Proof. by case: w w0. Qed.
 
@@ -246,6 +249,9 @@ Proof.
 by rewrite addnC addnA addnC addnCA -mulSn addnC addnBA
            ?rnmw // -mulnDl prednK // addnC subnK // ltnW ?mn'.
 Qed.
+
+Lemma choose_last : (n.-1 * w  - r) + w = p.
+Proof. by rewrite addnC tecnw. Qed.
 
 Lemma tecpr : p + r = n * w.
 Proof.
@@ -261,7 +267,21 @@ Proof. by case: p p3. Qed.
 Lemma tecn : n = n.-2.+2.
 Proof. by case: n n2' => []//[]. Qed.
 
-Hint Resolve p0 n2' n0 w0 rw' rnpw rnmw wnpwr mn' : core.
+Lemma wrpwr : (w - r).-1 < w - r.
+Proof.
+  by rewrite /leq prednK ?subnn // ltnNge /leq subn0 subn_eq0 -ltnNge.
+Qed.
+
+Lemma wrw : (w - r) < w.
+Proof.
+  rewrite /leq -subSn; last by apply/ltnW.
+  by rewrite subnAC subSn // subnn subn_eq0.
+Qed.
+
+Lemma wr0 : 0 < w - r.
+Proof. by case: (w - r) wrpwr. Qed.
+
+Hint Resolve p0 n2' n0 w0 rw' rnpw rnmw wnpwr mn' wr0 : core.
 Local Open Scope ring_scope.
 
 Definition A :=
@@ -425,12 +445,13 @@ Proof.
 Qed.
 
 Definition z (x : 'rV['F_2]_p) :=
-  rsubmx (castmx (erefl _, etrans (esym tecnw) (addnC w _)) x) *m
+  rsubmx (castmx (erefl _, etrans (esym tecnw) (addnC _ _)) x) *m
   castmx (etrans (addnC _ _) tecw, tecw)
  (block_mx 0 (castmx (tecr, tecr) 1%:M) (castmx (tecwr, tecwr) 1%:M) 0).
+Check rsubmx (castmx (erefl _, etrans (esym tecnw) (addnC _ _)) _).
 
 Definition y (x : 'rV['F_2]_p) :=
-lsubmx (castmx (erefl _, etrans (esym tecnw) (addnC w (n.-1 * w - r)%N)) x).
+lsubmx (castmx (erefl _, etrans (esym tecnw) (addnC _ _)) x).
 
 Lemma ULE (x : 'rV['F_2]_p) :
   y x *m UL = rsubmx (lsubmx (castmx (erefl, esym choose_m) x)).
@@ -465,17 +486,111 @@ elim: T => // t IHt.
 by rewrite iterS IHt /= GRing.addr0.
 Qed.
 
+Definition z' (x : 'rV['F_2]_p) :=
+  let l := rsubmx (castmx (erefl, esym choose_last) x) in
+  castmx (erefl, etrans (addnC _ _) twist)
+ (row_mx (rsubmx (castmx (erefl, esym twist) l))
+         (lsubmx (castmx (erefl, esym twist) l))).
+
+Lemma zE (x : 'rV['F_2]_p) : z x = z' x.
+Proof.
+  rewrite /z'.
+  set l := rsubmx (castmx (erefl, esym choose_last) x).
+  apply/rowP => j.
+  rewrite !(mxE, castmxE).
+  apply/etrans; first by apply/eq_bigr => k _; rewrite !castmxE block_mxEh !mxE.
+  set T := cast_ord _ _; set S := cast_ord _ _.
+  case: (splitP T) => i Ti.
+  - case: (splitP S) => k Sk; last first.
+     suff: (w - r < w - r)%nat by rewrite ltnn.
+     suff: (w - r + k < w - r)%nat; apply/leq_trans.
+     + by rewrite ltnS leq_addr.
+       rewrite /= in Ti, Sk; rewrite -Sk Ti.
+     + case: i {Ti} => i /=; apply.
+     + apply: wrpwr.
+    apply/etrans; first by apply/eq_bigr => t _; rewrite !(castmxE, mxE).
+    rewrite !(mxE, castmxE) !cast_ord_id !esymK.
+    have rkw: (r + k < w)%nat.
+     case: k {Sk} => k /= H.
+     apply/leq_trans.
+      apply: (_ : _  <  r + (w - r))%nat; by rewrite ltn_add2l.
+     by rewrite addnBA // addnC addnK.
+    rewrite (bigD1 (Ordinal rkw)) // -[RHS]GRing.addr0; congr (_ + _).
+     set Q' := cast_ord (esym (etrans _ _)) _; set Q := cast_ord (esym (etrans _ _)) _.
+     case: (splitP Q) => t Qt.
+      suff: (r < r)%nat by rewrite ltnn.
+      suff: (r + k < r)%nat by apply/leq_trans; rewrite ltnS leq_addr.
+      rewrite /= in Qt; rewrite Qt.
+      case: t {Qt} => t /=.
+      by rewrite prednK //.
+     rewrite castmxE mxE eqE /=.
+     move/eqP: Qt; rewrite /= prednK // eqn_add2l => /eqP <-.
+     rewrite -Sk -Ti eqxx GRing.mulr1.
+     by congr (x _ _); apply/val_inj.
+    apply/etrans; first apply/eq_bigr => q /= P.
+     set Q' := cast_ord (esym (etrans _ _)) _; set Q := cast_ord (esym (etrans _ _)) _.
+     case: (splitP Q) => t Qt.
+      by rewrite mxE GRing.mulr0.
+     rewrite /= in Qt, Sk.
+     rewrite castmxE mxE eqE /= -Ti /= Sk.
+     case tk: (t == k :> nat)%nat.
+      case: q P Q' {Q} Qt => /= q qw.
+      rewrite eqE /= (eqP tk) prednK // => qrk ? /eqP.
+      by rewrite (negPf qrk).
+     by rewrite GRing.mulr0.
+    rewrite big_const; set P := #|_|.
+    elim: P => // t IHt.
+    by rewrite iterS IHt /= GRing.addr0.
+  - case: (splitP S) => k Sk.
+     suff: (w - r < w - r)%nat by rewrite ltnn.
+     suff: (w - r + i < w - r)%nat; apply/leq_trans.
+     + by rewrite ltnS leq_addr.
+     + rewrite /= prednK // in Ti; rewrite /= in Sk.
+       rewrite -Ti Sk; case: k {Sk} => k; apply.
+     + by rewrite leqnn.
+    apply/etrans; first by apply/eq_bigr => t _; rewrite !(castmxE, mxE).
+    rewrite !(mxE, castmxE) !cast_ord_id !esymK.
+    have kw: (k < w)%nat.
+     case: k {Sk} => k /= H; by apply/(leq_trans H).
+    rewrite (bigD1 (Ordinal kw)) // -[RHS]GRing.addr0; congr (_ + _).
+     set Q' := cast_ord (esym (etrans _ _)) _; set Q := cast_ord (esym (etrans _ _)) _.
+     case: (splitP Q) => t Qt.
+      rewrite castmxE mxE eqE /=.
+      rewrite /= in Ti, Sk.
+      rewrite Sk prednK // in Ti.
+      move/eqP: Ti; rewrite eqn_add2l -Qt /= => ->.
+      rewrite GRing.mulr1.
+      by congr (x _ _); apply/val_inj.
+     rewrite /= in Qt.
+     suff: (r < r)%nat by rewrite ltnn.
+     suff: (r + t < r)%nat by apply/leq_trans; rewrite ltnS leq_addr.
+     rewrite prednK // in Qt.
+     by rewrite -Qt.
+    apply/etrans; first apply/eq_bigr => q /= P.
+     set Q' := cast_ord (esym (etrans _ _)) _; set Q := cast_ord (esym (etrans _ _)) _.
+     apply: (_ : _ = 0).
+     case: (splitP Q) => t Qt.
+      rewrite /= ?prednK // in Ti, Qt, Sk.
+      rewrite castmxE mxE eqE /= -Qt.
+      rewrite Ti in Sk; move/eqP: Sk; rewrite eqn_add2l => /eqP ->.
+      case: q P Q' {Q Qt} => //= q ?.
+      rewrite eqE /= => /negPf -> ?.
+      by rewrite GRing.mulr0.
+     by rewrite mxE GRing.mulr0.
+    rewrite big_const; set P := #|_|.
+    elim: P => // t IHt.
+    by rewrite iterS IHt /= GRing.addr0.
+Qed.
+
 Definition computeB (x : 'rV['F_2]_p) :=
 castmx (erefl _, tecnw)
  (row_mx (rsubmx (lsubmx (castmx (erefl, esym choose_m) x)) + castmx (erefl _, tecw')
- (row_mx 0 (\row_i castmx (erefl _, esym tecw') (z x) ord0 (widen_ord (leqnSn w.-1) i))
-+ row_mx a`_0%:M (\row_i a`_i.+1) *+ (castmx (erefl _, esym tecw') (z x) ord0 ord_max == 1)))
+ (row_mx 0 (\row_i castmx (erefl _, esym tecw') (z' x) ord0 (widen_ord (leqnSn w.-1) i))
++ row_mx a`_0%:M (\row_i a`_i.+1) *+ (castmx (erefl _, esym tecw') (z' x) ord0 ord_max == 1)))
  (y x)).
 
 Lemma mulBE (x : 'rV['F_2]_p) : x *m B = computeB x.
-Proof. by rewrite mulBE_hidden' mulSE ULE. Qed.
-
-(* Lemma zE (x : 'rV['F_2]_p) := *)
+Proof. by rewrite mulBE_hidden' mulSE ULE -/(z x) !zE. Qed.
 
 Lemma mulBE0 (x : 'rV['F_2]_p) (k : 'I_(n.-1 * w - r)) :
   (x *m B) ord0 (cast_ord tecnw (rshift w k)) = y x ord0 k.
@@ -492,6 +607,8 @@ Proof.
   by move/eqP: jT; rewrite /= eqn_add2l eq_sym => /eqP.
 Qed.
 
+Compute z' 0.
+Compute y 0.
 Compute computeB 0.
 
 (*
