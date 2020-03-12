@@ -587,7 +587,7 @@ castmx (erefl _, tecnw)
  (row_mx (rsubmx (lsubmx (castmx (erefl, esym choose_m) x)) + castmx (erefl _, tecw')
  (row_mx 0 (\row_i castmx (erefl _, esym tecw') (z' x) ord0 (widen_ord (leqnSn w.-1) i))
 + row_mx a`_0%:M (\row_i a`_i.+1) *+ (castmx (erefl _, esym tecw') (z' x) ord0 ord_max == 1)))
- (y x)).
+         (y x)).
 
 Lemma mulBE (x : 'rV['F_2]_p) : x *m B = computeB x.
 Proof. by rewrite mulBE_hidden' mulSE ULE -/(z x) !zE. Qed.
@@ -607,75 +607,17 @@ Proof.
   by move/eqP: jT; rewrite /= eqn_add2l eq_sym => /eqP.
 Qed.
 
-Compute z' 0.
-Compute y 0.
-Compute computeB 0.
-
-(*
-Record array := { content :> 'rV['F_2]_p; garbage : 'rV['F_2]_r; }.
-
-Lemma eq_array_ax :
-  Equality.axiom (fun a b => (content a == content b) && (garbage a == garbage b)).
-Proof.
-  case=> c1 g1 [] c2 g2.
-  apply/(iffP idP) => /= [|[] -> ->].
-  * by case/andP => /eqP -> /eqP ->.
-  * by rewrite !eqxx.
-Qed.
-
-Canonical array_eqMixin := EqMixin eq_array_ax.
-Canonical array_eqType := EqType _ array_eqMixin.
-
 Definition pull_ord (o : 'I_p) := cast_ord tecpr (lshift r o).
-Definition push_ord (o : 'I_r) := cast_ord tecpr (rshift p o).
 
-Definition incomplete_array (x : 'M['F_2]_(n, w)) : array :=
-  {| content := \row_i (mxvec x) ord0 (pull_ord i);
-     garbage := \row_i (mxvec x) ord0 (push_ord i); |}.
+Definition incomplete_array (x : 'M['F_2]_(n, w)) :=
+  \row_i (mxvec x) ord0 (pull_ord i).
 
-Definition array_incomplete (y : array) : 'M_(n, w) :=
-  vec_mx (castmx (erefl, tecpr) (row_mx y (garbage y))).
+Definition array_incomplete (y : 'rV['F_2]_p) : 'M_(n, w) :=
+  vec_mx (castmx (erefl, tecpr) (row_mx y 0)).
 
 Lemma array_incompleteK : cancel array_incomplete incomplete_array.
 Proof.
-case=> c g; rewrite /incomplete_array /array_incomplete.
-apply/eqP; rewrite eqE /=; apply/andP; split; apply/eqP/rowP => j;
-by rewrite mxE vec_mxK castmxE cast_ordK ?row_mxEl ?row_mxEr cast_ord_id.
+move=> y; rewrite /incomplete_array /array_incomplete; apply/rowP => j.
+by rewrite mxE vec_mxK castmxE /pull_ord cast_ordK row_mxEl cast_ord_id.
 Qed.
-
-Lemma incomplete_arrayK : cancel incomplete_array array_incomplete.
-Proof.
-move=> y; rewrite /incomplete_array /array_incomplete; apply/matrixP => j k.
-rewrite ?(mxE, castmxE) /=.
-set T := cast_ord _ _.
-case: (splitP T) => j0 /= j0H.
-* have j1: (nat_of_ord (enum_rank (j, k)) < p)%nat by rewrite j0H.
-  have<-: Ordinal j1 = j0 by apply/val_inj.
-  rewrite ?(mxE, castmxE).
-  set S := cast_ord _ _; have->: S = enum_rank (j, k) by apply/val_inj.
-  by rewrite !enum_rankK.
-* have j1: (nat_of_ord (enum_rank (j, k)) - p < r)%nat by rewrite j0H addnC addnK.
-  have<-: Ordinal j1 = j0 by apply/val_inj; rewrite /= j0H addnC addnK.
-  rewrite ?(mxE, castmxE).
-  set S := cast_ord _ _; have->: S = enum_rank (j, k).
-    by apply/val_inj; rewrite /= addnC subnK // j0H leq_addr.
-  by rewrite !enum_rankK.
-Qed.
-
-Definition significant (x : 'M['F_2]_(n, w)) :=
-  \row_i x (Ordinal n0) i *m pid_mx (w - r) *m A +
-  \row_i x (Ordinal (@ltn_pmod m n n0)) i +
-  \row_i x (Ordinal (@ltn_pmod 1 n n0)) i *m copid_mx r *m A.
-
-Definition shift_array (x : 'M['F_2]_(n, w)) : 'M['F_2]_(n, w) :=
-  \matrix_(k, i) x (Ordinal (@ltn_pmod k.+1 n n0)) i.
-
-Definition mapB (x : 'M['F_2]_(n, w)) :=
-  \matrix_(k, i) (shift_array x k i *+ (k != cast_ord (esym tecn) (lift ord0 (@ord_max n.-2)))
-  + significant x ord0 i *+ (k == cast_ord (esym tecn) (lift ord0 (@ord_max n.-2)))).
-
-Lemma eq_from_garbage g (y z : 'rV['F_2]_p) :
-  {|content:=y; garbage:=g|} = {|content:=z; garbage:=g|} -> y = z.
-Proof. by case. Qed.
-*)
 End phi.
