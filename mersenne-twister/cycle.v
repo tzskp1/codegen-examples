@@ -448,7 +448,6 @@ Definition z (x : 'rV['F_2]_p) :=
   rsubmx (castmx (erefl _, etrans (esym tecnw) (addnC _ _)) x) *m
   castmx (etrans (addnC _ _) tecw, tecw)
  (block_mx 0 (castmx (tecr, tecr) 1%:M) (castmx (tecwr, tecwr) 1%:M) 0).
-Check rsubmx (castmx (erefl _, etrans (esym tecnw) (addnC _ _)) _).
 
 Definition y (x : 'rV['F_2]_p) :=
 lsubmx (castmx (erefl _, etrans (esym tecnw) (addnC _ _)) x).
@@ -486,11 +485,14 @@ elim: T => // t IHt.
 by rewrite iterS IHt /= GRing.addr0.
 Qed.
 
+Definition twist_word (x y : 'rV['F_2]_w) :=
+  castmx (erefl, etrans (addnC _ _) twist)
+ (row_mx (rsubmx (castmx (erefl, esym twist) x))
+         (lsubmx (castmx (erefl, esym twist) y))).
+
 Definition z' (x : 'rV['F_2]_p) :=
   let l := rsubmx (castmx (erefl, esym choose_last) x) in
-  castmx (erefl, etrans (addnC _ _) twist)
- (row_mx (rsubmx (castmx (erefl, esym twist) l))
-         (lsubmx (castmx (erefl, esym twist) l))).
+  twist_word l l.
 
 Lemma zE (x : 'rV['F_2]_p) : z x = z' x.
 Proof.
@@ -582,12 +584,16 @@ Proof.
     by rewrite iterS IHt /= GRing.addr0.
 Qed.
 
+Definition ra : 'rV_(1 + w.-1) := (row_mx a`_0%:M (\row_i a`_i.+1)).
+
+Definition shiftr (x : 'rV['F_2]_w) : 'rV_(1 + w.-1) :=
+row_mx 0 (\row_i castmx (erefl _, esym tecw') x ord0 (widen_ord (leqnSn w.-1) i)).
+
 Definition computeB (x : 'rV['F_2]_p) :=
 castmx (erefl _, tecnw)
- (row_mx (rsubmx (lsubmx (castmx (erefl, esym choose_m) x)) + castmx (erefl _, tecw')
- (row_mx 0 (\row_i castmx (erefl _, esym tecw') (z' x) ord0 (widen_ord (leqnSn w.-1) i))
-+ row_mx a`_0%:M (\row_i a`_i.+1) *+ (castmx (erefl _, esym tecw') (z' x) ord0 ord_max == 1)))
-         (y x)).
+(row_mx (rsubmx (lsubmx (castmx (erefl, esym choose_m) x)) + castmx (erefl _, tecw')
+(shiftr (z' x) + ra *+ (castmx (erefl _, esym tecw') (z' x) ord0 ord_max == 1)))
+        (y x)).
 
 Lemma mulBE (x : 'rV['F_2]_p) : x *m B = computeB x.
 Proof. by rewrite mulBE_hidden' mulSE ULE -/(z x) !zE. Qed.
@@ -602,7 +608,7 @@ Proof.
     case: j {jT} => j H.
     by rewrite leqNgt /= H.
    by rewrite -jT /= leq_addr.
-  rewrite  ?(castmxE, mxE).
+  rewrite ?(castmxE, mxE).
   congr (x _ _); apply/val_inj => //=.
   by move/eqP: jT; rewrite /= eqn_add2l eq_sym => /eqP.
 Qed.
