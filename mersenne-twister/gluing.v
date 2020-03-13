@@ -27,6 +27,15 @@ Proof.
   by apply/val_inj.
 Qed.
 
+Lemma if_xorb (T1 T2 : bool)  :
+  (if xorb T1 T2 then 1%R else 0%R : 'F_2) =
+  ((if T1 then 1%R : 'F_2 else 0%R) + (if T2 then 1%R else 0%R))%R.
+Proof.
+  case: T1 T2 => [][]//=.
+   by rewrite GRing.addrr_char2.
+  by rewrite GRing.addr0.
+Qed.
+
 Local Open Scope N_scope.
 
 Definition w := 32.
@@ -51,9 +60,6 @@ Proof.
 by rewrite /word_of_N /= -tnth_nth tcastE tnth_map nth_enum_ord /=.
 Qed.
 
-Local Notation ai := (@array_incomplete w n m r erefl erefl erefl erefl erefl).
-Local Notation ia := (@incomplete_array w n m r erefl erefl erefl erefl).
-
 Lemma bin_of_add_nat n1 n2 :
   bin_of_nat n1 + bin_of_nat n2 = bin_of_nat (n1 + n2)%nat.
 Proof.
@@ -69,6 +75,11 @@ Qed.
 
 Lemma Num_succ i : [Num of i] + 1 = [Num of i.+1].
 Proof. by rewrite N.add_1_r succ_nat. Qed.
+
+Lemma pos_Num i : 0 <= [Num of i].
+Proof. by case: i. Qed.
+
+Hint Resolve pos_Num : core.
 
 Lemma N_of_wordK : cancel N_of_word word_of_N.
 Proof.
@@ -111,35 +122,16 @@ Proof.
   by rewrite mxE tnth_mktuple.
 Qed.
 
-Lemma lxorE x y :
-  vector_of_N (N.lxor x y) = (vector_of_N x + vector_of_N y)%R.
-Proof.
-  apply/rowP => i.
-  rewrite !mxE !tcastE !tnth_map N.lxor_spec.
-  set A := N.testbit _ _; set B := N.testbit _ _.
-  case: A B => [][]//=.
-   rewrite GRing.addrr_char2 //.
-  by rewrite GRing.addr0.
-Qed.
-
-Definition z (rand : random_state) :=
-  let state_vec := state_vector rand in
-  let ind := index rand in
-  let current := nth 0 state_vec ind in
-  let next_ind := Nat.modulo (ind + 1%nat) len in
-  let next := nth 0 state_vec next_ind in
-  N.lor (N.land current upper_mask)
-        (N.land next lower_mask).
-
-Notation cz := (@cycle.z' w n m r erefl erefl erefl).
+Local Notation ai := (@array_incomplete w n (n - m) r erefl erefl erefl erefl erefl).
+Local Notation ia := (@incomplete_array w n (n - m) r erefl erefl erefl erefl).
 
 Definition array_of_state (y : random_state) :=
   ia (\matrix_(i, j) nth 0%R (nth (word_of_N 0)
-      [seq word_of_N i | i <- rev (rot (index y) (state_vector y))] i) j)%R.
+      [seq (@rev_tuple _ _ \o word_of_N) i | i <- rev (rot (index y) (state_vector y))] i) j)%R.
 
 Definition state_of_array (y : 'rV['F_2]_(n * w - r)) :=
   {| index:=0;
-     state_vector:=rev (map N_of_word
+     state_vector:=rev (map (N_of_word \o (@rev_tuple _ _))
       (mktuple (fun j => mktuple (fun x => ai y j x))));|}.
 
 Lemma state_of_arrayK : cancel state_of_array array_of_state.
@@ -152,7 +144,7 @@ Proof.
    subst T.
    rewrite !mxE !revK (nth_map 0) /=; last by rewrite 2!size_map size_enum_ord.
    rewrite (nth_map (word_of_N 0)) /=; last by rewrite size_tuple card_ord.
-   by rewrite N_of_wordK ?nth_mktuple ?(castmxE, mxE).
+   by rewrite N_of_wordK ?revK ?nth_mktuple ?(castmxE, mxE).
   by rewrite array_incompleteK.
 Qed.
 
@@ -163,7 +155,34 @@ Lemma a32 : size ([:: 1; 0; 0; 1; 1; 0; 0; 1; 0; 0; 0; 0; 1; 0; 0; 0; 1; 0; 1;
                   1; 0; 0; 0; 0; 1; 1; 0; 1; 1; 1; 1; 1]: seq 'F_2)%R == w.
 Proof. by []. Qed.
 
-Local Notation B := (@B w n m r (Tuple a32) erefl erefl erefl erefl).
+Local Notation B := (@B w n (n - m) r (Tuple a32) erefl erefl erefl erefl).
+
+(* Local Definition cB := *)
+(*   Eval hnf in @computeB w n m r (Tuple a32) erefl erefl erefl erefl. *)
+(* Compute (initialize_random_state 338). *)
+(* Compute state_of_array (array_of_state (initialize_random_state 338)). *)
+(* Print cB. *)
+
+(* Definition T x := Eval compute in (0 : 'rV['F_2]_x)%R. *)
+(* Check computeB. *)
+(* Eval unfold T in T 2. *)
+(* Print T. *)
+(*      = (let 'tt := const_mx_key in fun x : Type => id) *)
+(*          (('I_1 -> 'I_2 -> 'I_2) -> 'rV_2) *)
+(*          (fun x : 'I_1 -> 'I_2 -> 'I_2 => *)
+(*           Matrix *)
+(*             [ffun x0 => x (let (H, _) := x0 in H) (let (_, H) := x0 in H)]) *)
+(*          (fun=> (fun=> Ordinal (ltn0Sn 1))) *)
+(*      : 'rV_2 *)
+
+(*      = (let 'tt := const_mx_key in fun x : Type => id) *)
+(*          (('I_1 -> 'I_3 -> 'I_2) -> 'rV_3) *)
+(*          (fun x : 'I_1 -> 'I_3 -> 'I_2 => *)
+(*           Matrix *)
+(*             [ffun x0 => x (let (H, _) := x0 in H) (let (_, H) := x0 in H)]) *)
+(*          (fun=> (fun=> Ordinal (ltn0Sn 1))) *)
+(*      : 'rV_3 *)
+
 
 Definition computeB :=
   array_of_state \o snd \o next_random_state \o state_of_array.
@@ -185,18 +204,17 @@ Proof. by rewrite nth_set_nth. Qed.
 
 Lemma nth_state_vector v (i : 'I_n) :
   nth 0 (state_vector (state_of_array v)) i =
-  N_of_word (mktuple (ai v (rev_ord i))).
+  N_of_word (rev_tuple (mktuple (ai v (rev_ord i)))).
 Proof.
 rewrite nth_rev; last by rewrite 2!size_map size_enum_ord.
 rewrite (nth_map (word_of_N 0)) size_map size_tuple ; last by rewrite rev_ord_proof.
 rewrite (nth_map ord0) ?size_tuple ?rev_ord_proof //.
 congr N_of_word.
 apply/eq_from_tnth => j.
-rewrite !tnth_mktuple /=.
-set T := nth _ _ _.
-have-> //: T = rev_ord i.
-apply/ord_inj.
-by rewrite nth_enum_ord // ?rev_ord_proof.
+rewrite !(tnth_nth ord0) !nth_rev ?size_tuple //
+        !(nth_map ord0) ?size_tuple ?rev_ord_proof
+        ?(esym (enumT _), size_enum_ord, rev_ord_proof) //.
+by congr (ai _ _); apply/ord_inj; rewrite /= nth_enum_ord ?rev_ord_proof.
 Qed.
 
 Lemma testbit_N_of_word v a :
@@ -208,13 +226,21 @@ Qed.
 
 Local Lemma tns v b a (Ha : (a < w)%nat) (Hb : (b < n)%nat) :
   N.testbit (nth 0 (state_vector (state_of_array v)) b) [Num of a]
-= (ai v (rev_ord (Ordinal Hb)) (Ordinal Ha) == 1%R).
+= (ai v (rev_ord (Ordinal Hb)) (rev_ord (Ordinal Ha)) == 1%R).
 Proof.
   have H: b = val (Ordinal Hb) by [].
   rewrite [in LHS]H nth_state_vector.
   have {H} H : a = val (Ordinal Ha) by [].
-  by rewrite [in LHS]H testbit_N_of_word tnth_mktuple.
+  rewrite [in LHS]H testbit_N_of_word (tnth_nth ord0) nth_rev ?size_tuple //
+          (nth_map ord0) ?size_tuple ?rev_ord_proof //.
+  congr (_ == _); congr (ai _ _); apply/ord_inj.
+  by rewrite nth_enum_ord ?rev_ord_proof.
 Qed.
+
+Lemma testbit_N_of_word_w v :
+  N.testbit (N_of_word v) w = false.
+Proof.
+  Admitted.
 
 Lemma computeBE v : computeB v = (v *m B)%R.
 Proof.
@@ -222,9 +248,12 @@ Proof.
   apply/rowP => i.
   rewrite !mxE ?castmxE ?mxE (nth_map 0); last
    by rewrite size_rev size_rot size_next_random_state.
-  rewrite nth_word_of_N /cycle.B.
+  rewrite ?nth_rev /comp ?size_tuple ?size_rot ?size_next_random_state ?ltn_pmod //.
+  set R := row_ind _ _ _.
+  have<-: (rev_ord R = w - R.+1 :> nat)%nat by [].
+  rewrite nth_word_of_N /cycle.B; subst R.
   set I := (cast_ord _ i).
-  rewrite index_next_random_state nth_rev
+  rewrite index_next_random_state
           ?size_rot ?size_next_random_state ?nth_drop //
           nth_cat size_drop ?size_next_random_state.
   set I' := col_ind _ _ _ _ _.
@@ -241,7 +270,7 @@ Proof.
   rewrite nth_drop add1n nth_next_random_state tns => *.
   + rewrite /leq -!subSn //;last by apply/leqW.
     by rewrite subnAC subSn //.
-  + by rewrite /= ltn_mod.
+  + by rewrite (rev_ord_proof (Ordinal (@ltn_pmod i w erefl))).
   rewrite break_if !mxE !castmxE.
   congr (v _ _); apply/ord_inj => //.
   rewrite /arr_ind /=.
@@ -249,7 +278,9 @@ Proof.
   case: (splitP T) => k /=.
    rewrite /= in Ij.
    rewrite Ij 3!subnS -!subn1 -!subnDA !addn1 subnDA subKn.
-    by rewrite subn2 /= !divnDl // divnn add1n modnDl -divn_eq => ->.
+    rewrite subn2 /= !divnDl // divnn add1n modnDl // -subSn
+            ?ltn_mod // subSS subKn; last by rewrite ltnW // ltn_mod.
+    by rewrite -divn_eq => ->.
    rewrite divnDl // add1n /leq !subSS subn_eq0.
    case: j {Ij} => j H.
    apply/leq_trans.
@@ -258,7 +289,9 @@ Proof.
    by [].
    rewrite /= in Ij.
    rewrite Ij 3!subnS -!subn1 -!subnDA !addn1 subnDA subKn.
-    rewrite subn2 /= !divnDl // divnn add1n modnDl -divn_eq => jnwr.
+    rewrite subn2 /= !divnDl // divnn add1n modnDl // -subSn
+            ?ltn_mod // subSS subKn; last by rewrite ltnW // ltn_mod.
+    rewrite -divn_eq => jnwr.
     case: j {Ij} jnwr => j H jnwr.
     suff: (n.-1 * w - r < n.-1 * w - r)%nat by rewrite ltnn.
      apply/leq_trans.
@@ -277,220 +310,77 @@ Proof.
    rewrite /= in Ij.
    have->: val I' = 0 by rewrite /= Ij divn_small.
    rewrite subn1 ltnn ?(mxE, castmxE) subnn nth_take // nth_set_nth.
-   rewrite !N.lxor_spec tns ?ltn_pmod // => *.
-   rewrite N.shiftr_spec //.
-   rewrite N.lor_spec !N.land_spec !addn1.
-   rewrite !Num_succ.
+   rewrite !N.lxor_spec // N.shiftr_spec // N.lor_spec !N.land_spec.
+   rewrite !if_xorb tns ?(rev_ord_proof (Ordinal (@ltn_pmod i w erefl))) // => Hp.
+   rewrite !break_if.
+   rewrite mxE -!GRing.addrA.
+   congr (_ + _)%R; first congr (v _ _); apply/ord_inj => //.
+   rewrite /= /arr_ind; set P := cast_ord _ _.
+   case: (splitP P) => l Pl.
+    by rewrite /= modn_small ?Ij // 2!subSS subKn // -ltnS in Pl.
+   move/eqP: Pl; rewrite /= modn_small ?Ij //.
+   have H: (n = n - m.+1 + m.+1)%nat by rewrite subnK.
+   rewrite [X in _ == (X * _ - _ + _)%nat]H mulnDl eqn_add2l => /eqP je.
+   suff: (w < w)%nat by rewrite ltnn.
+   apply/leq_trans/(_ : j < w)%nat => //.
+   rewrite 2!subSS // subKn // in je; last by rewrite -ltnS.
+   by rewrite ltnS je.
+
+   set R := cast_ord _ _.
+   case: (splitP (R : 'I_(1 + w.-1))) => r Rr.
+    rewrite /= in Rr.
+    case: r Rr => [][]// ? Rr.
+
+    rewrite /=.
+    rewrite !Num_succ !tns; try by rewrite /= Ij Rr.
+    rewrite /= Ij Rr mod0n subn1. (rev_ord_proof (Ordinal (@ltn_pmod i w erefl))).
+    rewrite /=.
+    move=> ? ?.
+    set U := N.testbit upper_mask _.
+    have->: U = false by rewrite /U /= Ij Rr.
+    set L := N.testbit lower_mask _.
+    have->: L = true by rewrite /L /= Ij Rr.
+    rewrite andbF orFb andbT break_if.
+    rewrite !mxE.
+    rewrite /arr_ind.
+
+    rewrite /=.
+     rewrite /= in Rr.
+
+    rewrite /= Ij Rr.
+    move=> ? ->.
+   rewrite /= in Rr.
+   rewrite castmxE.
+   congr (_ + _)%R.
+
+    done.
+    apply/leq_trans.
+    rewrite -addnC.
+    rewrite ltnS#h ltnW //.
+    done.
+    have: (j < w)%nat by [].
+    rewrite je => /ltnW /(leq_trans _) => jle.
+    rewrite -/(addn _ _) in jle.
+
+   rewrite /= modn_small in Pl.
+    Search (_ == _ +_)%nat.
+   rewrite /=.
+          rewrite /=
+
+    Print mt.m.
+   done.
+   done.
+   rewrite /=.
+   Check nth_state_vector.
+   rewrite -!N.shiftr_spec //.
+    !addn1 !Num_succ.
+   rewrite ?tns.
+   rewrite /=.
+
+   set T' := cast_ord _ _.
+   set T'' := cast_ord _ _.
+   set T := cast_ord _ _.
+   rewrite /=.
+
 
    (* TODO *)
-   rewrite tns.
-   rewrite /=.
-
-   rewrite N.add_1_r -succ_nat.
-
-   rewrite addn1.
-   rewrite tns.
-   rewrite /index .
-   rewrite tns.
-   rewrite /=.
-   rewrite /=.#ht
-   rewrite
-
-
-     done.
-      H.
-   rewrite divnDl // add1n /leq !subSS subn_eq0.
-  rewrite
-
-   move: Tk.
-   rewrite /=.
-   rewrite /=.
-     rewrite /=.
-     done.
-     apply: (_ : _ < n.-1 * w)%nat.
-
-
-    Search ((_ + _)%% _)%nat.
-    rewrite
-
-   rewrite -subnBA.
-   rewrite -addnBA.
-   rewrite
-   Search (_ - (_ - _))%nat.
-   rewrite subnAC.
-   rewrite subnAC.
-   rewrite subnAC.
-   rewrite subnAC.
-   rewrite subnBA.
-   rewrite
-   rewrite subnS.
-   rewrite subnS.
-   rewrite /= in Tk.
-
-  rew
-
-
-  rewrite /=.
-  rewrite -subSn // subSS /leq.
-  rewrite -subSn //=.
-  subnAC.
-  case: I' I'0 => [][]//= I' I'H _.
-  rewrite subnS prednK //.
-  apply rev_ord_proof.
-  apply rev_ord
-  rewrite /=.
-  elim: I' I'0 => //.
-  rewrite
-  rewrite /leq.
-  rewrite subnS.
-  case: I' I'0 => // *.
-  rewrite /= subnS prednK //.
-  rewrite /=.
-  rewrite
-   Search ((_ + _) %/ _)%nat.
-   rewrite /=.
-    rewrite /=.
-
-     Search
-     rewrite -subnDA.
-      subnS.
-     case:
-     Search (_ - _.-1)%nat.
-    suff?: (n - I' > 0)%nat.
-
-     subSn.
-    case: I'
-   rewrite subnS.
-  rewrite /= in Ij.
-  have: val I' = 0%nat.
-  rewrite /=.
-  have: val (col_ind (erefl _) (erefl _) (erefl _) (erefl _) i).+1 = 0%nat.
-  rewrite
-   case H: (n - (enum_val I').1.+1 < n - 1%N)%nat.
-    rewrite nth_drop add1n nth_next_random_state -subSn // subSS tns //=.
-     rewrite /leq -subSn; last by apply ltnW.
-     rewrite subnAC subSn // subnn subn_eq0.
-     by case: (enum_val I').1 H => [][]//.
-
-  set I' := (cast_ord _ (pull_ord _ _ i)).
-  have II: nat_of_ord I = nat_of_ord I' by [].
-    move=> H1 H2.
-    set S := rev_ord _.
-    have: S = (enum_val I').1.
-     apply/ord_inj.
-     rewrite /=.
-   rewrite /=.
-    rewrite break_if.
-    hh?(mxE, castmxE).
-    rewrite break_if ?(mxE, castmxE).
-    set T := cast_ord _ _.
-    case: (splitP T) => k Tk.
-     congr (v _ _); apply/val_inj => //.
-     rewrite /=.
-     rewrite /= in Tk.
-    rewrite /= in Ij.
-    rewrite /= in Tk.
-
-    rewrite
-   rewrite /y.
-   have: val T = (enum_val I').1.-1.
-   rewrite /T.
-   apply/val_inj.
-   rewrite /=.
-   rewrite //=.
-   rewrite testbit_N_of_word.
-   rewrite subSS subnAC subnn .
-
-   case H: (val (enum_val I').1 == 0)%nat; last first.
-   move: H.
-   rewrite /enum_val enumT /=.
-   rewrite nth_map.
-   rewrite /prod_enum.
-   rewrite /= unlock.
-   rewrite /=.
-    have H'': (enum_val I') = (ord0, j).
-     apply/enum_rank_inj.
-     rewrite enum_valK /enum_rank /enum_rank_in /insubd /odflt /oapp /insub.
-     destruct idP; last first.
-      apply/val_inj.
-      move/negP: n0 => /=.
-      by rewrite cardT index_mem mem_enum.
-     apply/ord_inj.
-     by rewrite -II Ij /= (nth_enum_prod n.-1).
-    have H''1: (enum_val I').1 = ord0 by rewrite H''.
-    by rewrite H''1 in H.
-  rewrite break_if.
-
-   have H': (n - (enum_val I').1.+1 < n - 1%N)%nat.
-    case: ((enum_val I').1) H => []/=[]// n0.
-    rewrite ltnS subSS subn1 => nn.
-    by move: (rev_ord_proof (Ordinal nn)).
-    rewrite /=.
-    rewrite H' nth_drop add1n nth_next_random_state tns //.
-    by case: (enum_val I') => + [].
-   move=> H'''.
-   case: (splitP I) => j Ij.
-    have H'': (enum_val I') = (ord0, j).
-     apply/enum_rank_inj.
-     rewrite enum_valK /enum_rank /enum_rank_in /insubd /odflt /oapp /insub.
-     destruct idP; last first.
-      apply/val_inj.
-      move/negP: n0 => /=.
-      by rewrite cardT index_mem mem_enum.
-     apply/ord_inj.
-     by rewrite -II Ij /= (nth_enum_prod n.-1).
-    have H''1: (enum_val I').1 = ord0 by rewrite H''.
-    by rewrite H''1 in H.
-   rewrite break_if.
-   have j' : (j < n * w - r)%nat.
-    case: j {Ij} => j Hj.
-    by apply: (leq_trans Hj).
-   rewrite ?(mxE, castmxE) cast_ord_id.
-   (* apply/etrans; last first. *)
-   (*  apply: (_ : v ord0 (Ordinal j') = _). *)
-   (*  rewrite [in LHS](row_sum_delta v) summxE. *)
-   (*  rewrite /lsubmx. *)
-   (*  apply eq_bigr => k _. *)
-   (*  rewrite !mxE eqxx /=. *)
-   (*  congr (_ * _)%R. *)
-   (*  set S := cast_ord _ _. *)
-   (*  case: (splitP S) => /= l lS. *)
-   (*   by rewrite mxE eqE /= lS eq_sym. *)
-   (*  rewrite eqE mxE /=. *)
-   (*  case jk: (val j == nat_of_ord k) => //. *)
-   (*  move/eqP: jk => jk. *)
-   (*  case: j jk {Ij j'} => j /= + jk. *)
-   (*  by rewrite jk lS ltnNge leq_addr. *)
-   (* rewrite ?(mxE, castmxE) cast_ord_id. *)
-   set T := cast_ord _ _.
-   case: v => c g.
-   case: (splitP T) => k /= Tk; last first.
-    move: Tk; set S := rev_ord _.
-    have I'p: ((enum_val I').1.-1 < n)%nat.
-     case: (enum_val I').1 H {H' T S} => [][]//= ? Hc _.
-     by apply: (leq_trans _ Hc).
-    have->: S = Ordinal I'p.
-     apply/val_inj.
-     by rewrite /= 2!subnS subnBA.
-    rewrite enum_rank_prodE /= => Hc.
-    have: (n * w - r + k < n * w - r + k)%nat.
-    rewrite -[X in (X < _)%nat]Hc.
-    case: (enum_val I').2 => b Hb.
-    apply: leq_trans.
-     apply: (_ : (_ < (enum_val I').1.-1 * w + w)%nat); by rewrite ltn_add2l.
-    rewrite addnC -mulSn.
-    apply: leq_trans; last first.
-     apply: (_ : n.-1 * w <= _)%nat.
-     apply: leq_trans.
-     apply: (_ : _ <= n * w - r)%nat.
-      have Hn: n = n.-1.+1 by [].
-      by rewrite [X in (_ <= X *_ - _)%nat]Hn mulSn addnC -addnBA //.
-     by rewrite leq_addr.
-    rewrite leq_mul2r /=.
-    by case: (enum_val I').1 H => /=[][].
-    by rewrite ltnn.
-   congr (c _ _); apply/ord_inj => //.
-   rewrite -Tk enum_rank_prodE /= 2!subnS subnBA // [X in (X - n)%nat]addnC addnK.
-   Focus 2.
-   move/eqP: H => H.
-   rewrite H ltnn subnn nth_take //.
