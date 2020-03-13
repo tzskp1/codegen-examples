@@ -34,17 +34,40 @@ Definition N_of_word (t : w.-tuple 'F_2) :=
   foldr (fun x y => 2*y + x) 0
         (map_tuple (fun x => if (x == 1 :> 'F_2)%R then 1%N else 0) t).
 
-Definition word_of_N (n' : N) :=
-  tcast (card_ord _)
-        (map_tuple (fun i => if N.testbit n' [Num of (val i)]
-                          then 1%R : 'F_2 else 0%R) (enum_tuple 'I_w)).
+Fixpoint word_of_N_iter (fuel : nat) (p : positive) : seq 'F_2 :=
+  match fuel, p with
+  | f.+1, xI p0 => 1%R :: word_of_N_iter f p0
+  | f.+1, xO p0 => 0%R :: word_of_N_iter f p0
+  | f.+1, xH => 1%R :: map (fun _ => 0%R) (iota 0 f)
+  | 0%nat, _ => [::]
+  end.
 
-Lemma nth_word_of_N x d (i : 'I_w) :
-  nth d (word_of_N x) i =
-  if N.testbit x [Num of (val i)]
-  then 1%R : 'F_2 else 0%R.
+Definition zero_size : size (map (fun _ => (0%R : 'F_2)) (iota 0 w)) == w.
+Proof. by rewrite size_map size_iota. Qed.
+Definition zero := Tuple zero_size.
+
+Lemma word_of_N_iter0 p : size (word_of_N_iter 0 p) == 0.
+Proof. by []. Qed.
+
+Lemma size_word_of_N_iter p : size (word_of_N_iter w p) == w.
 Proof.
-by rewrite /word_of_N /= -tnth_nth tcastE tnth_map nth_enum_ord /=.
+  elim: (nat_of_bin w) p => // w IH p.
+  case: p => [p|p|].
+    by rewrite /= (eqP (IH _)).
+   by rewrite /= (eqP (IH _)).
+  by rewrite /= size_map size_iota.
+Defined.
+
+Definition word_of_N (n' : N) :=
+  match n' with
+  | N0 => zero
+  | N.pos p => Tuple (size_word_of_N_iter p)
+  end.
+
+Lemma word_of_N0 d (i : 'I_w) : nth d (word_of_N 0) i = 0%R.
+Proof.
+  case: i => //= i.
+  do 32!(case: i => // i).
 Qed.
 
 Lemma bin_of_add_nat n1 n2 :
@@ -66,16 +89,52 @@ Proof. by rewrite N.add_1_r succ_nat. Qed.
 Lemma pos_Num i : 0 <= [Num of i].
 Proof. by case: i. Qed.
 
+Lemma nat_of_pos_pred i : (nat_of_pos i).-1 = nat_of_bin (Pos.pred_N i).
+Proof.
+  elim: i => // i IH; rewrite /= natTrecE.
+  case: i IH => //= p; rewrite /= ?natTrecE // => <-.
+  rewrite -!subn1 doubleB subn2 subn1 prednK //.
+  have: (nat_of_pos p > 0)%nat.
+   elim: p => //= p IH.
+   rewrite natTrecE.
+   by case: (nat_of_pos p) IH.
+  by case: (nat_of_pos p).
+Qed.
+
+Lemma pos_of_nat_pred_succ i : Pos.pred_N (pos_of_nat i i) = bin_of_nat i.
+Proof.
+  apply: (can_inj nat_of_binK).
+  rewrite bin_of_natK -nat_of_pos_pred.
+  have->: nat_of_pos (pos_of_nat i i) = nat_of_bin (bin_of_nat i.+1) by [].
+  by rewrite bin_of_natK.
+Qed.
+
+Lemma nth_word_of_N x d (i : 'I_w) :
+  nth d (word_of_N x) i =
+  if N.testbit x [Num of (val i)]
+  then 1%R : 'F_2 else 0%R.
+Proof.
+case: x; first by rewrite word_of_N0.
+rewrite /word_of_N => p.
+rewrite -tnth_nth (tnth_nth 0%R).
+have->: tval (Tuple (size_word_of_N_iter p)) = word_of_N_iter w p by [].
+elim: (nat_of_bin w) i p => [[][]//|] w IH i p.
+case: p => [p|p|].
++ case: i => [][]//= i; rewrite ltnS => i0.
+  by move: (IH (Ordinal i0) p) ->; rewrite pos_of_nat_pred_succ.
++ case: i => [][]//= i; rewrite ltnS => i0.
+  by move: (IH (Ordinal i0) p) ->; rewrite pos_of_nat_pred_succ.
++ case: i => [][]//= i _.
+  elim: (iota 0 w) i => [*|? l IHl []//]; by rewrite nth_default.
+Qed.
+
 Hint Resolve pos_Num : core.
 
 Lemma N_of_wordK : cancel N_of_word word_of_N.
 Proof.
-  move=> x.
-  rewrite /word_of_N /N_of_word.
-  apply/eq_from_tnth => j.
+  move=> x; apply/eq_from_tnth => j.
+  rewrite (tnth_nth 0%R) nth_word_of_N /N_of_word.
   set T := (fun x0 y : N => 2 * y + x0).
-  rewrite tcastE tnth_map (tnth_nth 0%R) /=
-          ?size_enum_ord // nth_enum_ord ?rev_ord_proof //.
   case: x j => x xH [] i iH.
   rewrite (tnth_nth 0%R) /= => {xH iH}.
   elim: x i => [?|x0 x IH i].
@@ -141,10 +200,8 @@ Lemma state_of_arrayK : cancel state_of_array array_of_state.
 Proof.
   move=> x.
   rewrite /array_of_state /state_of_array rot0.
-  set T := (\matrix_(_, _) _)%R.
-  have->: T = (ai x)%R.
-   apply/matrixP => i j.
-   subst T.
+  set T := (\matrix_(_, _) _)%R; have->: T = (ai x)%R.
+   apply/matrixP => i j; subst T.
    rewrite !mxE !revK (nth_map 0) /=; last by rewrite 2!size_map size_enum_ord.
    rewrite (nth_map (word_of_N 0)) /=; last by rewrite size_tuple card_ord.
    by rewrite N_of_wordK ?revK ?nth_mktuple ?(castmxE, mxE).
@@ -154,13 +211,9 @@ Qed.
 Lemma pm : prime (2 ^ (n * w - r) - 1).
 Admitted.
 
-Compute word_of_N a.
-Lemma a32 : size ([:: 1; 0; 0; 1; 1; 0; 0; 1; 0; 0; 0; 0; 1; 0; 0; 0; 1; 0; 1;
-                  1; 0; 0; 0; 0; 1; 1; 0; 1; 1; 1; 1; 1]: seq 'F_2)%R == w.
-Proof. by []. Qed.
-(* 10011001000010001011000011011111 *)
+Local Notation B := (@B w n (n - m) r (rev_tuple (word_of_N a)) erefl erefl erefl erefl).
 
-Local Notation B := (@B w n (n - m) r (Tuple a32) erefl erefl erefl erefl).
+(* Local Notation B := (@B w n (n - m) r (Tuple a32) erefl erefl erefl erefl). *)
 
 Definition computeB :=
   array_of_state \o snd \o next_random_state \o state_of_array.
@@ -406,58 +459,3 @@ Proof.
     case: (splitP Tmp) => t Tmpt.
     rewrite -Tmpt /= Ij Rr Pp.
     rewrite modn_small //.
-
-    Print len.
-    rewrite
-    native_compute.
-    done.
-    ring.
-    done.
-    rewrite subnS.
-    rewrite subnS.
-    rewrite -subSn ?ltn_mod //.
-    rewrite -subSn ?ltn_mod //.
-    rewrite -subSn ?ltn_mod //.
-    rewrite !subSS.
-    done.
-    rewrite -subSn.
-    rewrite -subSn.
-    rewrite subSS.
-    rewrite -subSn.
-    rewrite subnBA.
-    q30.
-
-   congr (_ + _)%R.
-   rewrite q30.
-   set TT := val (rev_ord _).
-   have: TT = 1.
-   rewrite /TT /=.
-   Check (val (rev_ord (row_ind (erefl _) (erefl (gluing.r < w)%N) i))).+1.
-   rewrite /=.
-
-
-
-      rewrite TT30 //=.
-      rewrite /=.
-      rewrite modn_small //.
-      rewrite modn_small //.
-
-      rewrite modn_small //.
-      rewrite eqE /=.
-     by rewrite /= Rr in Rr'.
-    by rewrite mxE.
-
-    rewrite mxE.
-     rewrite /=.
-     done.
-     rewrite /= in Tmpt.
-    rewrite
-     Compute N.testbit upper_mask [Num of 31].
-    rewrite /=.
-    rewrite /TT.
-    rewrite /=.
-
-    rewrite Ij.
-    rewrite /= in Rr.
-    rewrite /TT.
-    rewrite /=.
