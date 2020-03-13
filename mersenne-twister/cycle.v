@@ -159,7 +159,7 @@ case x00: (x ord0 ord_max == 1); rewrite !mxE.
 Qed.
 End mulAE.
 
-Section phi.
+Section Main.
 Variables w n m r : nat.
 Variable a : w.-tuple [fieldType of 'F_2].
 Notation p := (n * w - r).
@@ -465,6 +465,14 @@ Definition z (x : 'rV['F_2]_p) :=
 Definition y (x : 'rV['F_2]_p) :=
 lsubmx (castmx (erefl _, etrans (esym tecnw) (addnC _ _)) x).
 
+Lemma sum_f2_eq0 q (P : pred 'I_q) :
+\big[GRing.add_comoid [ringType of 'F_2]/0]_(i0 | P i0) 0 = 0.
+Proof.
+rewrite big_const; set T := #|_|.
+elim: T => // t IHt.
+by rewrite iterS IHt /= GRing.addr0.
+Qed.
+
 Lemma ULE (x : 'rV['F_2]_p) :
   y x *m UL = rsubmx (lsubmx (castmx (erefl, esym choose_m) x)).
 Proof.
@@ -493,9 +501,7 @@ case mpwj : (m.-1 * w <= j)%nat.
   by rewrite subnK //.
  by rewrite GRing.mulr0.
  by rewrite andbF GRing.mulr0.
-rewrite big_const; set T := #|_|.
-elim: T => // t IHt.
-by rewrite iterS IHt /= GRing.addr0.
+by apply sum_f2_eq0.
 Qed.
 
 Definition twist_word (x y : 'rV['F_2]_w) :=
@@ -553,9 +559,7 @@ Proof.
       rewrite eqE /= (eqP tk) prednK // => qrk ? /eqP.
       by rewrite (negPf qrk).
      by rewrite GRing.mulr0.
-    rewrite big_const; set P := #|_|.
-    elim: P => // t IHt.
-    by rewrite iterS IHt /= GRing.addr0.
+    by apply sum_f2_eq0.
   - case: (splitP S) => k Sk.
      suff: (w - r < w - r)%nat by rewrite ltnn.
      suff: (w - r + i < w - r)%nat; apply/leq_trans.
@@ -592,9 +596,7 @@ Proof.
       rewrite eqE /= => /negPf -> ?.
       by rewrite GRing.mulr0.
      by rewrite mxE GRing.mulr0.
-    rewrite big_const; set P := #|_|.
-    elim: P => // t IHt.
-    by rewrite iterS IHt /= GRing.addr0.
+    by apply sum_f2_eq0.
 Qed.
 
 Definition ra : 'rV_(1 + w.-1) := (row_mx a`_0%:M (\row_i a`_i.+1)).
@@ -671,4 +673,4 @@ suff: (p < p)%nat by rewrite ltnn.
 suff: (p + s < p)%nat; first by apply/leq_trans; rewrite ltnS leq_addr.
 by rewrite -Ts.
 Qed.
-End phi.
+End Main.
