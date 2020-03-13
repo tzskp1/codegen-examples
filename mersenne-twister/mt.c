@@ -25,6 +25,7 @@
 #define n2_shiftl(n1,n2) ((n1)<<(n2))
 #define n2_shiftr(n1,n2) ((n1)>>(n2))
 #define n2_eqb_0(n1,n2) ((n1)==(n2))
+#define n2_testbit(n1,n2) ((n1)&(1<<(n2)))
 #define n1_of_nat(n) ((uint32_t)n)
 
 #define positive uint32_t

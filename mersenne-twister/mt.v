@@ -44,7 +44,7 @@ Definition next_random_state (rand : random_state) : (N * random_state) :=
   let state_vec := state_vector rand in
   let ind := index rand in
   let current := nth 0 state_vec ind in
-  let next_ind := Nat.modulo (ind +  1%nat) len in
+  let next_ind := Nat.modulo (ind + 1%nat) len in
   let next := nth 0 state_vec next_ind in
   let far_ind := Nat.modulo (ind + m) len in
   (* x_{k+m} in (2.1), p.5 *)
@@ -55,7 +55,7 @@ Definition next_random_state (rand : random_state) : (N * random_state) :=
   (* (2.1) in p.5 combined with the equation for xA in p.6*)
   let xi := N.lxor (N.lxor far
                            (N.shiftr z 1))
-                   (if N.eqb (N.land z 1) 0 then 0 else a) in
+                   (if N.testbit z 0 then a else 0) in
   (* (2.2) to (2.5) in p.6 *)
   let y1 := N.lxor xi (N.shiftr xi u) in
   let y2 := N.lxor y1 (N.land (N.shiftl y1 s) b) in
