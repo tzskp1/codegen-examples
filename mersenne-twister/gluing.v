@@ -184,6 +184,7 @@ Proof.
   by rewrite mxE tnth_mktuple.
 Qed.
 
+(* Local Notation ai := (@arr_ind w n (n - m) r erefl erefl erefl erefl erefl). *)
 Local Notation ai := (@array_incomplete w n (n - m) r erefl erefl erefl erefl erefl).
 Local Notation ia := (@incomplete_array w n (n - m) r erefl erefl erefl erefl).
 
@@ -276,52 +277,58 @@ Proof.
           ?(rev_ord_proof (Ordinal Hb)) // N_of_word_last.
 Qed.
 
+Lemma lower_maskT i : (i < r)%nat -> N.testbit lower_mask [Num of i] = true.
+Proof. by do 31!(case: i => // i). Qed.
+Lemma upper_maskF i : (i < r)%nat -> N.testbit upper_mask [Num of i] = false.
+Proof. by do 31!(case: i => // i). Qed.
+
+Lemma testbita i :
+  (i < r)%nat ->
+  (if N.testbit a [Num of i] then 1%R else 0%R) = nth 0%R (word_of_N a) i.
+Proof. by do 32!(case: i => // i). Qed.
+
 Lemma computeBE v : computeB v = (v *m B)%R.
 Proof.
   rewrite /computeB mulBE /cycle.computeB.
   apply/rowP => i.
-  rewrite !mxE ?castmxE ?mxE (nth_map 0); last
-   by rewrite size_rev size_rot size_next_random_state.
-  rewrite ?nth_rev /comp ?size_tuple ?size_rot ?size_next_random_state ?ltn_pmod //.
+  rewrite !mxE ?castmxE ?mxE (nth_map 0)
+          ?nth_rev ?size_tuple ?size_rot ?ltn_pmod //
+          ?size_rev ?size_rot ?size_next_random_state //.
   set R := row_ind _ _ _.
   have<-: (rev_ord R = w - R.+1 :> nat)%nat by [].
-  rewrite nth_word_of_N /cycle.B; subst R.
-  set I := (cast_ord _ i).
-  rewrite index_next_random_state
+  set I := (cast_ord _ i); subst R.
+  rewrite nth_word_of_N /cycle.B index_next_random_state
           ?size_rot ?size_next_random_state ?nth_drop //
           nth_cat size_drop ?size_next_random_state.
   set I' := col_ind _ _ _ _ _.
-  case: (splitP I) => j Ij; last first.
+  case: (splitP I) => j Ij; rewrite /= in Ij; last first.
    have I'0: (I' > 0)%nat.
-    rewrite /= in Ij.
     by rewrite /= Ij divnDl.
    have->: (n - I'.+1 < n - 1%N)%nat.
-   rewrite /leq subn1 subnS.
-   case H: (n - I' > 0)%nat.
-    by rewrite prednK // subnAC -subn1 subnBA.
-   rewrite lt0n in H.
-   by move/negP/negP/eqP: H => ->.
-  rewrite nth_drop add1n nth_next_random_state tns => *.
-  + rewrite /leq -!subSn //;last by apply/leqW.
-    by rewrite subnAC subSn //.
-  + by rewrite (rev_ord_proof (Ordinal (@ltn_pmod i w erefl))).
-  rewrite break_if !mxE !castmxE.
-  congr (v _ _); apply/ord_inj => //.
-  rewrite /arr_ind /=.
-  set T := cast_ord _ _.
-  case: (splitP T) => k /=.
-   rewrite /= in Ij.
-   rewrite Ij 3!subnS -!subn1 -!subnDA !addn1 subnDA subKn.
-    rewrite subn2 /= !divnDl // divnn add1n modnDl // -subSn
-            ?ltn_mod // subSS subKn; last by rewrite ltnW // ltn_mod.
-    by rewrite -divn_eq => ->.
-   rewrite divnDl // add1n /leq !subSS subn_eq0.
-   case: j {Ij} => j H.
-   apply/leq_trans.
-    apply leq_div2r.
-    by apply H.
-   by [].
-   rewrite /= in Ij.
+    rewrite /leq subn1 subnS.
+    case H: (n - I' > 0)%nat.
+     by rewrite prednK // subnAC -subn1 subnBA.
+    rewrite lt0n in H.
+    by move/negP/negP/eqP: H => ->.
+   rewrite nth_drop add1n nth_next_random_state tns => *.
+     rewrite /leq -!subSn //;last by apply/leqW.
+     by rewrite subnAC subSn //.
+    by rewrite (rev_ord_proof (Ordinal (@ltn_pmod i w erefl))).
+   rewrite break_if !mxE !castmxE.
+   congr (v _ _); apply/ord_inj => //.
+   rewrite /arr_ind /=.
+   set T := cast_ord _ _.
+   case: (splitP T) => k /=.
+    rewrite Ij 3!subnS -!subn1 -!subnDA !addn1 subnDA subKn.
+     rewrite subn2 /= !divnDl // divnn add1n modnDl // -subSn
+             ?ltn_mod // subSS subKn; last by rewrite ltnW // ltn_mod.
+     by rewrite -divn_eq => ->.
+    rewrite divnDl // add1n /leq !subSS subn_eq0.
+    case: j {Ij} => j H.
+    apply/leq_trans.
+     apply leq_div2r.
+     by apply H.
+    by [].
    rewrite Ij 3!subnS -!subn1 -!subnDA !addn1 subnDA subKn.
     rewrite subn2 /= !divnDl // divnn add1n modnDl // -subSn
             ?ltn_mod // subSS subKn; last by rewrite ltnW // ltn_mod.
@@ -341,7 +348,6 @@ Proof.
      by apply H.
     by [].
 
-   rewrite /= in Ij.
    have->: val I' = 0 by rewrite /= Ij divn_small.
    rewrite subn1 ltnn ?(mxE, castmxE) subnn nth_take // nth_set_nth.
    rewrite !N.lxor_spec // N.shiftr_spec // N.lor_spec !N.land_spec.
@@ -457,5 +463,52 @@ Proof.
     rewrite /= /arr_ind.
     set Tmp := cast_ord _ _.
     case: (splitP Tmp) => t Tmpt.
-    rewrite -Tmpt /= Ij Rr Pp.
-    rewrite modn_small //.
+     rewrite -Tmpt /= Ij Rr Pp.
+     rewrite modn_small; last by rewrite -Pp add1n ltnS.
+     by rewrite 3!subSS !subnDA subn1 -subnDA subKn subSn // -Pp -ltnS.
+    rewrite /= Ij Rr Pp modn_small in Tmpt; last by rewrite -Pp add1n ltnS.
+    rewrite 3!subSS !subnDA subn1 -subnDA subKn subSn // -Pp in Tmpt;
+     last by rewrite -ltnS.
+    suff: (n.-2 * w + r < n.-2 * w + r)%nat by rewrite ltnn.
+    rewrite [X in (_ < X)%nat]Tmpt.
+    apply/leq_trans.
+     apply: (_ : _ < n.-2 * w + w.-1)%nat; first by rewrite ltn_add2l.
+    by [].
+   have->: W = Y.
+    congr (v _ _); apply/ord_inj => //.
+    rewrite /= /arr_ind.
+    set Tmp := cast_ord _ _.
+    case: (splitP Tmp) => t Tmpt //.
+    by rewrite -Tmpt /= q30.
+   set TT := val (rev_ord _).
+   have TTwp2: (TT = gluing.r - p.+2)%nat.
+    subst TT.
+    by rewrite /= Ij modn_small // Rr Pp subSS.
+   have->: N.testbit lower_mask [Num of TT.+1] = true.
+    rewrite add1n in Pp.
+    rewrite lower_maskT // TTwp2 -subSn.
+     by rewrite subSS ?rev_ord_proof.
+    by rewrite -Pp.
+   have->: N.testbit upper_mask [Num of TT.+1] = false.
+    rewrite add1n in Pp.
+    rewrite upper_maskF // TTwp2 -subSn.
+     by rewrite subSS ?rev_ord_proof.
+    by rewrite -Pp.
+   rewrite andbF andbT /= break_if.
+   case YE: (Y == 1%R).
+    rewrite TTwp2 mxE.
+    case: (splitP (R : 'I_(1 + w.-1))) => r' Rr';
+     rewrite /= in Rr'.
+     case: r' Rr' => [][]// ? Rr'.
+     by rewrite Rr' in Rr.
+    rewrite Rr' !add1n in Rr.
+    case: Rr => Rr.
+    have->: r' = r by apply/ord_inj.
+    have->: p.+1 = r by rewrite Pp.
+    rewrite mxE nth_rev ?size_tuple // ?subSS; last by rewrite ltnS.
+    rewrite testbita //.
+    apply/leq_ltn_trans.
+     apply leq_subr.
+    by [].
+   by rewrite mxE /=.
+Qed.
