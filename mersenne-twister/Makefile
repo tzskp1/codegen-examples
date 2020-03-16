@@ -6,7 +6,10 @@ Makefile.coq: _CoqProject
 # all:mt
 
 mt: mt.c mt_generated.c
-	gcc -g -Wall mt.c -o mt
+	gcc -g -Wall $< -o $@
+
+inv: inversive_decimation.c inversive_decimation_generated.c
+	gcc -g -Wall $< -o $@
 
 # mt_generated.c: mt.v
 # 	coqc mt.v

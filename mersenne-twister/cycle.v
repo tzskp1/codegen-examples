@@ -240,6 +240,18 @@ Proof. by rewrite subnKC // ltnW. Qed.
 Lemma tecw' : w.-1.+1 = w.
 Proof. by case: w w0. Qed.
 
+Lemma tecw'' : 1 + w.-1 = w.
+Proof. by case: w w0. Qed.
+
+Lemma rnwp : r <= n * w.-1.
+Proof.
+  case: n mn' m0 => []//=[|*]; first by case m.
+  move: rw => rw''.
+  rewrite -tecw' ltnS in rw''.
+  rewrite mulSn.
+  by apply/leq_trans/leq_addr/rw''.
+Qed.
+
 Lemma tecnw : w + (n.-1 * w - r) = p.
 Proof. by rewrite addnBA ?rnpw // -mulSn prednK ?n0. Qed.
 
@@ -249,7 +261,7 @@ by rewrite addnC addnA addnC addnCA -mulSn addnC addnBA
            ?rnmw // -mulnDl prednK // addnC subnK // ltnW ?mn'.
 Qed.
 
-Lemma choose_last : (n.-1 * w  - r) + w = p.
+Lemma choose_last : (n.-1 * w - r) + w = p.
 Proof. by rewrite addnC tecnw. Qed.
 
 Lemma tecpr : p + r = n * w.
@@ -277,6 +289,12 @@ Proof.
   by rewrite subnAC subSn // subnn subn_eq0.
 Qed.
 
+Lemma wrp : (w - r) < p.
+Proof.
+  apply/(leq_trans wrw).
+  by rewrite -choose_last leq_addl.
+Qed.
+
 Lemma wr0 : 0 < w - r.
 Proof. by case: (w - r) wrpwr. Qed.
 
@@ -294,7 +312,7 @@ Proof.
   by case: n n0.
 Qed.
 
-Hint Resolve p0 n2' n0 w0 rw' rnpw rnmw wnpwr mn' wr0 : core.
+Hint Resolve p0 n2' n0 w0 rw' rnwp rnpw rnmw wnpwr mn' wr0 : core.
 Local Open Scope ring_scope.
 
 Definition A :=
@@ -673,4 +691,40 @@ suff: (p < p)%nat by rewrite ltnn.
 suff: (p + s < p)%nat; first by apply/leq_trans; rewrite ltnS leq_addr.
 by rewrite -Ts.
 Qed.
+
+(* Definition b (v : 'rV['F_2]_p) := v ord0 (Ordinal wrp). *)
+
+(* Definition Phi S : 'rV['F_2]_p := *)
+(*   \row_i b (S *m (castmx (esym tecp, esym tecp) (castmx (tecp, tecp) B ^+ i))). *)
+
+(* Lemma nmp (i : 'I_p) : (i - n + m < p)%nat. *)
+(* Proof. *)
+(*   have H: (n = (n - m) + m)%nat by rewrite subnK // ltnW. *)
+(*   rewrite [X in (_ - X + _ < _)%nat]H subnDA. *)
+(*   case minm: (m <= i - (n - m))%N; last first. *)
+(*    move/negP/negP: minm; rewrite -ltnNge => /ltnW minm. *)
+(*    rewrite -subn_eq0 in minm. *)
+(*    rewrite (eqP minm) add0n -tecw' mulnS. *)
+(*    apply: (leq_trans mn'). *)
+(*    by rewrite -addnBA // leq_addr. *)
+(*   rewrite subnK //. *)
+(*   apply/(leq_ltn_trans (_ : _ <= i)%nat) => //. *)
+(*   by rewrite leq_subr. *)
+(* Qed. *)
+
+(* Lemma n1p (i : 'I_p) : (i - n + 1 < p)%nat. *)
+(* Proof. *)
+(*   have H: (n = (n - 1) + 1)%nat by rewrite subn1 addn1 prednK //. *)
+(*   rewrite [X in (_ - X + _ < _)%nat]H subnDA. *)
+(*   case minm: (1 <= i - (n - 1))%N; last first. *)
+(*    move/negP/negP: minm; rewrite -ltnNge => /ltnW minm. *)
+(*    rewrite -subn_eq0 in minm. *)
+(*    by rewrite (eqP minm) add0n // ltnW. *)
+(*   rewrite subnK //. *)
+(*   apply/(leq_ltn_trans (_ : _ <= i)%nat) => //. *)
+(*   by rewrite leq_subr. *)
+(* Qed. *)
+
+(* Definition update (y : 'M['F_2]_(p, w)) (i : 'I_p) : 'M['F_2]_(p, w). *)
+(*   Check row i y + row (Ordinal (nmp i)) y + castmx (erefl, tecw'') (y (Ordinal (n1p i)) (cast_ord tecw' ord_max) *: ra). *)
 End Main.

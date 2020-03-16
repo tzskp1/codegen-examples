@@ -184,7 +184,6 @@ Proof.
   by rewrite mxE tnth_mktuple.
 Qed.
 
-(* Local Notation ai := (@arr_ind w n (n - m) r erefl erefl erefl erefl erefl). *)
 Local Notation ai := (@array_incomplete w n (n - m) r erefl erefl erefl erefl erefl).
 Local Notation ia := (@incomplete_array w n (n - m) r erefl erefl erefl erefl).
 

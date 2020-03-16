@@ -790,6 +790,25 @@ Proof.
             [X in X == _ %[mod _]]H4 eqn_modDr.
     by rewrite mod0n.
 Qed.
+
+Lemma iter_sand_H s :
+   iter s ((@npoly_rV _ _) \o H \o (@rVnpoly _ _))
+=1 (@npoly_rV _ _) \o iter s H \o (@rVnpoly _ _).
+Proof.
+  elim: s => [?|s IH x].
+   by rewrite /= rVnpolyK.
+  by rewrite iterS IH /= npoly_rV_K.
+Qed.
+
+Lemma iterHP q :
+  iter q H =1 id <-> iter q ((@npoly_rV _ _) \o H \o (@rVnpoly _ _)) =1 id.
+Proof.
+  split => H0 x.
+   by rewrite iter_sand_H /= H0 rVnpolyK.
+  move: (H0 (npoly_rV x)).
+  rewrite iter_sand_H /= npoly_rV_K.
+  by move/(can_inj (@npoly_rV_K _ _)).
+Qed.
 End inverse.
 
 Lemma irreducibleP :
