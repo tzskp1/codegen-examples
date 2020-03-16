@@ -15,7 +15,62 @@ Proof.
   by apply/val_inj.
 Qed.
 
-Section new.
+Lemma f2eqp_eq (p q : {poly 'F_2}) : (p %= q)%R = (p == q).
+Proof.
+  case q0: (q == 0%R).
+   by move/eqP: q0 => ->; rewrite eqp0.
+  case p0: (p == 0%R).
+   by move/eqP: p0 => ->; rewrite eq_sym -eqp0 eqp_sym.
+  rewrite eqp_monic // f2p_monic //.
+  + by move/negP/negP: p0.
+  + by move/negP/negP: q0.
+Qed.
+
+Lemma lem1 q n : prime q -> (n < q -> n.+1 != n %[mod q])%N.
+Proof.
+  move=> Hq nq.
+  case n0: (n == 0)%N.
+   move/eqP: n0 => ->.
+   rewrite mod0n modn_small //.
+   by case: q Hq nq => []//[].
+  case nsq: (n.+1 == q).
+   move/eqP: nsq => <-.
+   by rewrite modnn modn_small // eq_sym n0.
+  have nsq': (n.+1 < q)%N
+   by rewrite ltn_neqAle nq nsq.
+  rewrite !modn_small //.
+  by elim n.
+Qed.
+
+Lemma exp2_dvd a b :
+  2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
+Proof.
+elim: b => [|b IHb]; first by rewrite muln0 expn0 subn1 big_ord0 muln0.
+rewrite big_ord_recl mulnDr -IHb mulnBl !subn1 -mulnBl mulnS expnD.
+have H: forall a, 2 ^ a = 2 ^ a - 1 + 1 by move=> *; rewrite subnK // expn_gt0.
+by rewrite [in LHS]H mulnDl mul1n [X in _ + X]H addn1 !addnS !subn1.
+Qed.
+
+Lemma m_is_prime m : prime (2 ^ m - 1) -> prime m.
+Proof.
+apply: contraLR => /primePn []; first by case: m => []//[].
+case => a aH /dvdnP[] b mba; move: mba aH => -> mba.
+rewrite exp2_dvd; apply/primePn; right.
+exists (2 ^ b - 1); rewrite ?dvdn_mulr //.
+have? : 1 < 2 ^ b - 1.
+ case: b mba => [|[|b _]].
+  by rewrite mul0n ltn0 andbF.
+  by rewrite mul1n ltnn andbF.
+ have: 2 ^ b > 0 by rewrite expn_gt0.
+ rewrite subn1 !expnS !mul2n.
+ by case: (2 ^ b).
+apply/andP; split => //; apply/ltn_Pmulr/ltnW => //.
+case: a mba => []//[]// a mba.
+rewrite !big_ord_recr /= subnn muln0 expn0 -[X in X < _]add0n ltn_add2r.
+by rewrite subSnn muln1 ltn_addl // expn_gt0.
+Qed.
+
+Section Quotient.
 Variable phi : {poly 'F_2}.
 Variable phi_gt1 : size phi > 1.
 Local Open Scope ring_scope.
@@ -71,7 +126,6 @@ Canonical phiI_idealr := MkIdeal phiI_zmodPred phiI_proper_ideal.
 Local Open Scope quotient_scope.
 
 Definition QphiI := {ideal_quot keyd_phiI}.
-Canonical Quotient.rquot_comRingType.
 
 Definition QphiI_rV (x : QphiI) : 'rV['F_2]_(size phi).-1 :=
   poly_rV (rmodp (generic_quotient.repr x) phi).
@@ -89,6 +143,76 @@ by rewrite -Quotient.idealrBE /= unfold_in rmodp_add //
            rmodp_small ?ltn_rmodp // -rmodp_add // subrr rmod0p.
 Qed.
 
+Canonical QphiI_finMixin := CanFinMixin QphiI_rV_K.
+Canonical QphiI_finType := FinType QphiI QphiI_finMixin.
+Canonical Quotient.rquot_comRingType.
+Canonical QphiI_unitRingMixin :=
+  Eval hnf in FinRing.Ring.UnitMixin [finRingType of QphiI].
+Canonical QphiI_unitRingType := UnitRingType QphiI QphiI_unitRingMixin.
+Canonical QphiI_comUnitRingType := Eval hnf in [comUnitRingType of QphiI].
+Canonical QphiI_finComUnitRingType := Eval hnf in [finComUnitRingType of QphiI].
+Canonical QphiI_finUnitRingType := Eval hnf in [finUnitRingType of QphiI].
+End Quotient.
+
+Section new.
+Variable phi : {poly 'F_2}.
+Local Notation m := (size phi).-1.
+Hypothesis pm : prime (2 ^ m - 1).
+Local Notation m_is_prime := (m_is_prime pm).
+
+Lemma phi_gt1 : 1 < size phi.
+Proof. by case: (size phi) m_is_prime => []//[]. Qed.
+
+Lemma phi_gt2 : 2 < size phi.
+Proof. by case: (size phi) m_is_prime => []//[]//[]. Qed.
+
+Lemma phi_gt0 : 0 < size phi.
+Proof. by case: (size phi) m_is_prime. Qed.
+
+Local Open Scope ring_scope.
+Local Open Scope quotient_scope.
+Import GRing.Theory.
+Import Pdiv.Ring.
+Import Pdiv.RingMonic.
+
+Hint Resolve (phi_is_monic phi_gt1) (phi_neq0 phi_gt1) phi_gt1 phi_gt2 phi_gt0 : core.
+
+Section direct.
+Variable H1 : ('X ^ 2 %% phi)%R != ('X %% phi)%R.
+Variable H2 : ('X ^ (2 ^ m)%N %% phi)%R == ('X %% phi)%R.
+
+Lemma H2E : (\pi 'X : QphiI phi_gt1)^(2 ^ m)%nat == \pi 'X.
+  rewrite -exprnP -rmorphX /= -Quotient.idealrBE unfold_in rmodp_add // addr_eq0.
+  set T := rmodp _ phi; have->: T = 'X ^ (2 ^ (size phi).-1)%N %% phi.
+   by apply/eqP; rewrite -f2eqp_eq eqp_rmod_mod.
+  set S := - _; have-> //: S = 'X %% phi.
+  by rewrite /S rmodp_small ?modp_small ?opprK // ?size_opp ?size_polyX.
+Qed.
+
+Lemma piX_unit : (\pi 'X : QphiI) \is a GRing.unit.
+Proof.
+  rewrite /= unfold_in.
+  rewrite /=.
+
+Lemma irreducibleP_direct : irreducible_poly phi.
+Proof.
+  split => //.
+  rewrite /irreducible_poly.
+  rewrite phi_gt1 /=.
+
+Check {unit QphiI}.
+
+Check FinRing.unit QphiI (\pi 'X).
+
+Check {unit QphiI} _.
+
+Check [unitRingType of QphiI].
+
+Check [finRingType of QphiI].
+
+Eval hnf in FinRing.Ring.UnitMixin [finRingType of QphiI].
+
+Check
 End new.
 
 Check {ideal_quot _}.
@@ -131,22 +255,6 @@ Proof.
   by rewrite subSn ?ltnS ?IH // ltnW.
 Qed.
 
-Lemma lem1 q n : prime q -> (n < q -> n.+1 != n %[mod q])%N.
-Proof.
-  move=> Hq nq.
-  case n0: (n == 0)%N.
-   move/eqP: n0 => ->.
-   rewrite mod0n modn_small //.
-   by case: q Hq nq => []//[].
-  case nsq: (n.+1 == q).
-   move/eqP: nsq => <-.
-   by rewrite modnn modn_small // eq_sym n0.
-  have nsq': (n.+1 < q)%N
-   by rewrite ltn_neqAle nq nsq.
-  rewrite !modn_small //.
-  by elim n.
-Qed.
-
 Lemma ltn_size_polyC_X (R : fieldType) (p : {poly R}) (c : R) (n : nat) :
   p != 0%R -> (size (c%:P)%R < size (p * 'X)%R)%N.
 Proof.
@@ -164,56 +272,12 @@ Lemma polyXn_eq0 (R : fieldType) n :
   (('X^n : [ringType of {poly R}]) == 0)%R = false.
 Proof. by rewrite -size_poly_eq0 size_polyXn. Qed.
 
-Lemma exp2_dvd a b :
-  2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
-Proof.
-elim: b => [|b IHb]; first by rewrite muln0 expn0 subn1 big_ord0 muln0.
-rewrite big_ord_recl mulnDr -IHb mulnBl !subn1 -mulnBl mulnS expnD.
-have H: forall a, 2 ^ a = 2 ^ a - 1 + 1 by move=> *; rewrite subnK // expn_gt0.
-by rewrite [in LHS]H mulnDl mul1n [X in _ + X]H addn1 !addnS !subn1.
-Qed.
-
-Lemma m_is_prime m : prime (2 ^ m - 1) -> prime m.
-Proof.
-apply: contraLR => /primePn []; first by case: m => []//[].
-case => a aH /dvdnP[] b mba; move: mba aH => -> mba.
-rewrite exp2_dvd; apply/primePn; right.
-exists (2 ^ b - 1); rewrite ?dvdn_mulr //.
-have? : 1 < 2 ^ b - 1.
- case: b mba => [|[|b _]].
-  by rewrite mul0n ltn0 andbF.
-  by rewrite mul1n ltnn andbF.
- have: 2 ^ b > 0 by rewrite expn_gt0.
- rewrite subn1 !expnS !mul2n.
- by case: (2 ^ b).
-apply/andP; split => //; apply/ltn_Pmulr/ltnW => //.
-case: a mba => []//[]// a mba.
-rewrite !big_ord_recr /= subnn muln0 expn0 -[X in X < _]add0n ltn_add2r.
-by rewrite subSnn muln1 ltn_addl // expn_gt0.
-Qed.
-
 Section irreducibility.
 Variable phi : {poly 'F_2}.
 Local Notation m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
 
 Local Notation m_is_prime := (m_is_prime pm).
-
-Lemma phi_neq0 : (phi != 0)%R.
-Proof.
-  move: m_is_prime.
-  rewrite -size_poly_eq0.
-  by case: (size phi).
-Qed.
-
-Lemma phi_gt1 : 1 < size phi.
-Proof. by case: (size phi) m_is_prime => []//[]. Qed.
-
-Lemma phi_gt2 : 2 < size phi.
-Proof. by case: (size phi) m_is_prime => []//[]//[]. Qed.
-
-Lemma phi_gt0 : 0 < size phi.
-Proof. by case: (size phi) m_is_prime. Qed.
 
 Lemma predpower_gt_succpower : (2 ^ m).-1 < (2 ^ m).+1.
 Proof. by case: (2 ^ m) pm. Qed.
