@@ -23,17 +23,23 @@ Import GRing.Theory.
 Import Pdiv.Ring.
 Import Pdiv.RingMonic.
 
-Definition phiI := rdvdp phi.
-Fact phiI_key : pred_key phiI. Proof. by []. Qed.
-
-Canonical keyd_phiI : keyed_pred phiI_key.
-by apply (@PackKeyedPred _ phiI phiI_key (rdvdp phi)).
-Defined.
+Lemma phi_neq0 : phi != 0.
+Proof.
+  rewrite -size_poly_eq0.
+  by case: (size phi) phi_gt1.
+Qed.
 
 Lemma phi_is_monic : phi \is monic.
 Proof. by apply f2p_monic; rewrite -size_poly_gt0 ltnW. Qed.
 
-Hint Resolve phi_is_monic : core.
+Hint Resolve phi_is_monic phi_neq0 : core.
+
+Definition phiI := rdvdp phi.
+Fact phiI_key : pred_key phiI. Proof. by []. Qed.
+
+Canonical keyd_phiI : keyed_pred phiI_key.
+by apply (@PackKeyedPred _ _ phiI_key (rdvdp phi)).
+Defined.
 
 Lemma phiI_addr_closed: addr_closed phiI.
 Proof.
@@ -54,9 +60,7 @@ Lemma phiI_proper_ideal : proper_ideal phiI.
 Proof.
   split => [|??].
   * by rewrite unfold_in rmodp_small ?size_polyC ?size_p oner_neq0.
-  * rewrite !unfold_in -rmodp_mulmr ?f2p_monic //;
-     last by rewrite -size_poly_gt0 ltnW.
-    move/eqP => ->.
+  * rewrite !unfold_in -rmodp_mulmr ?f2p_monic // => /eqP ->.
     by rewrite mulr0 rmod0p.
 Qed.
 
@@ -67,12 +71,23 @@ Canonical phiI_idealr := MkIdeal phiI_zmodPred phiI_proper_ideal.
 Local Open Scope quotient_scope.
 
 Definition QphiI := {ideal_quot keyd_phiI}.
+Canonical Quotient.rquot_comRingType.
 
-Check AddrPred phiI_addr_closed.
-Check OpprPred _.
-      phiI_oppr_closed.
-Check MkIdeal _.
+Definition QphiI_rV (x : QphiI) : 'rV['F_2]_(size phi).-1 :=
+  poly_rV (rmodp (generic_quotient.repr x) phi).
+Definition rVQphiI : 'rV['F_2]_(size phi).-1 -> QphiI :=
+  \pi \o rVpoly.
 
+Lemma QphiI_rV_K : cancel QphiI_rV rVQphiI.
+Proof.
+move=> x.
+rewrite /rVQphiI /QphiI_rV /= poly_rV_K;
+last by case: (size phi) (ltn_rmodpN0 (generic_quotient.repr x) phi_neq0) phi_gt1.
+rewrite -[x in RHS]reprK !piE /=.
+apply/eqP.
+by rewrite -Quotient.idealrBE /= unfold_in rmodp_add //
+           rmodp_small ?ltn_rmodp // -rmodp_add // subrr rmod0p.
+Qed.
 
 End new.
 
