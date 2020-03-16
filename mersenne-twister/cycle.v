@@ -397,6 +397,15 @@ Proof.
     by apply/(irreducible.cycleH_dvdP pm' H q)/irreducible.expand_H/eqP.
 Qed.
 
+Lemma irreducibleP' :
+  irreducible_poly phi <->
+  iter (size phi).-1
+  ((@npoly_rV _ _) \o irreducible.H (pm:=pm') \o (@rVnpoly _ _)) =1 id.
+Proof.
+  split => [/irreducibleP/irreducible.expand_H/irreducible.iterHP|X] //.
+  by apply/irreducibleP/irreducible.expand_H/irreducible.iterHP.
+Qed.
+
 Lemma size_ord_enum q : size (ord_enum q) = q.
 Proof. by rewrite -(size_map val) val_ord_enum size_iota. Qed.
 
