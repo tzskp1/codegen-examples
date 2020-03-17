@@ -5,8 +5,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-   Check cyclic.eq_expg_mod_order .
-
 Lemma f2p_monic (p : {poly 'F_2}) :
   (p != 0)%R -> p \is monic.
 Proof.
@@ -180,6 +178,30 @@ Proof. by case: (2 ^ m - 1) pm. Qed.
 Lemma predpower_neq0 : 0 != 2 ^ m - 1.
 Proof. by case: (2 ^ m - 1) pm. Qed.
 
+Lemma predpower_gt_succpower : (2 ^ m).-1 < (2 ^ m).+1.
+Proof. by case: (2 ^ m) pm. Qed.
+
+Lemma phi_gtb (b : bool) : b < size phi.
+Proof. by case: b; rewrite ?phi_gt1 ?phi_gt0. Qed.
+
+Lemma predphi_neq0 : m != 0.
+Proof. by case: m m_is_prime. Qed.
+
+Lemma predphi_gt1 : 1 < m.
+Proof. by case: m m_is_prime => []//[]. Qed.
+
+Lemma predpredpower_power : (2 ^ m - 1).-1 < 2 ^ m - 1.
+Proof. by case: (2 ^ m - 1) pm. Qed.
+
+Lemma predpredpower_gt0 : 0 < (2 ^ m - 1).-1.
+Proof. by case: (2 ^ m - 1) pm => []//[]. Qed.
+
+Lemma p_ord_prf : (2 ^ m - 1 < (2 ^ m).+1)%N.
+Proof. by rewrite subn1 predpower_gt_succpower. Qed.
+
+Lemma predphi_geq1 : 1 <= m.
+Proof. by case: m m_is_prime => []//[]. Qed.
+
 Local Open Scope ring_scope.
 Local Open Scope quotient_scope.
 Import GRing.Theory.
@@ -188,7 +210,145 @@ Import Pdiv.RingMonic.
 
 Hint Resolve (phi_is_monic phi_gt1) (phi_neq0 phi_gt1)
      phi_gt1 phi_gt2 phi_gt0
+     phi_gtb predphi_neq0 predphi_gt1 predpredpower_power
+     predpredpower_gt0 p_ord_prf predphi_geq1
+     predpower_gt_succpower
      power_gt0 predpower_gt0 predpower_neq0 : core.
+
+Section Order.
+Definition stab (a : QphiI phi_gt1) n := (a ^+ n * a == a) && (n > 0)%nat.
+
+Variable x : QphiI phi_gt1.
+Variable H1 : (x ^ 2 != x)%R.
+Variable H2 : (x ^ (2 ^ m)%N == x)%R.
+Variable exstab : stab x (2 ^ m - 1)%nat.
+
+Definition minstab := ex_minn (@ex_intro _ (stab x) _ exstab).
+
+Lemma minstab_cond : stab x minstab.
+Proof.
+  rewrite /minstab.
+  by case: (ex_minnP (@ex_intro _ (stab x) _ exstab)).
+Qed.
+
+Lemma minstab_exp y : x ^+ minstab ^+ y * x = x.
+ elim: y => [|n IH].
+  by rewrite GRing.expr0 GRing.mul1r.
+ rewrite GRing.exprSr -GRing.mulrA.
+ by case/andP: minstab_cond => /eqP -> _.
+Qed.
+
+Lemma minstab_dvd : forall y, stab x y -> (minstab %| y)%nat.
+Proof.
+move=> y.
+rewrite /stab (divn_eq y minstab) addnC GRing.exprD mulnC GRing.exprM
+ => /andP[] H3.
+have H4: x ^+ minstab ^+ (y %/ minstab)%nat * x = x.
+ by rewrite minstab_exp.
+rewrite -GRing.mulrA H4 in H3.
+case ym: (y %% minstab)%nat => *.
+ by rewrite add0n dvdn_mulr.
+have H5: stab x (y %% minstab)%N.
+ by rewrite /stab H3 ym.
+move: H5; rewrite /minstab.
+case: (ex_minnP (@ex_intro _ (stab x) _ exstab)) => m /andP [] ?? H /H.
+by rewrite leqNgt ltn_pmod.
+Qed.
+
+Lemma minstabE : minstab = (2 ^ m - 1)%nat.
+Proof.
+  case/primeP: pm => _ /(_ _ (minstab_dvd exstab))/orP [|/eqP []//].
+  rewrite /minstab.
+  case: (ex_minnP (@ex_intro _ (stab x) _ exstab)) => [][]//[]// /andP [].
+  rewrite -exprSr => H3.
+  by move/negP: H1; rewrite H3.
+Qed.
+
+Lemma minstab_attain :
+  minstab == (2 ^ m - 1)%nat ->
+forall l k : nat, x ^+ l * x = x ^+ k * x -> (k = l %[mod 2 ^ m - 1])%nat.
+Proof.
+move=> H3.
+have base: forall l, (0 < l < 2 ^ m - 1)%N -> x ^+ l * x != x.
+ move/eqP: H3 => H l /andP [] Hl0 Hl; apply/negP => /eqP C.
+  move: H; rewrite /minstab.
+  case: (ex_minnP (@ex_intro _ (stab x) _ exstab)) => m ? H5 H4.
+  have/H5 : stab x l by rewrite /stab C Hl0 eqxx.
+  by rewrite leqNgt H4 Hl.
+have base1:
+  forall l k, (l < 2 ^ m - 1 -> 0 < k < 2 ^ m - 1 ->
+  (x ^+ l * x = x ^+ k * x)%R -> k = l)%N.
+ move=> l k.
+ case kl: (k == l %[mod (2 ^ m - 1)])%N.
+  move: kl => + Hl1 /andP [] Hk1 Hk2.
+  by rewrite !modn_small // => /eqP ->.
+ move=> Hl Hk2.
+ case kl': (k > l)%N.
+  have: (0 < l + (2 ^ m - 1 - k) < 2 ^ m - 1)%N.
+   apply/andP; split.
+    rewrite lt0n addn_eq0; apply/negP => /andP [] /eqP l0 mk.
+    move: l0 mk kl => ->.
+    rewrite subn_eq0 leqNgt.
+    by case/andP: Hk2 => ? ->.
+   case/andP: Hk2 => ? Hk2.
+   rewrite addnBA; last by apply ltnW.
+   rewrite addnC -subnBA ?ltn_subr //; last by apply ltnW.
+   case: (2 ^ m - 1)%nat Hk2 => // ??.
+   by rewrite /leq subSS -subnDA addnC subnDA subSn // subnn subnBA
+             ?add1n ?subn_eq0 // ltnW.
+  move/base => + lk.
+  rewrite addnC GRing.exprD -GRing.mulrA lk GRing.mulrA -GRing.exprD subnK.
+   by rewrite ?subn1 -GRing.exprSr prednK // H2.
+  by case/andP: Hk2 => ??; rewrite ltnW.
+ move/negP/negP: kl'; rewrite -ltnNge ltnS leq_eqVlt => /orP [/eqP ->|] // kl'.
+ have: (0 < k + (2 ^ m - 1 - l) < 2 ^ m - 1)%N.
+  apply/andP; split.
+   rewrite lt0n addn_eq0; apply/negP => /andP [] /eqP l0 mk.
+   move: l0 mk kl => ->.
+   by rewrite subn_eq0 leqNgt Hl.
+  rewrite addnBA; last by apply ltnW.
+  rewrite addnC -subnBA ?ltn_subr //; last by apply ltnW.
+  case/andP: Hk2 => ? Hk2.
+   case: (2 ^ m - 1)%nat Hk2 => // ??.
+   by rewrite /leq subSS -subnDA addnC subnDA subSn // subnn subnBA
+             ?add1n ?subn_eq0 // ltnW.
+ move/base => + lk.
+ rewrite addnC GRing.exprD -GRing.mulrA -lk GRing.mulrA -GRing.exprD subnK //.
+  by rewrite subn1 -GRing.exprSr prednK // H2.
+ by rewrite ltnW.
+have base2:
+  forall l k : nat, (0 < k < 2 ^ m - 1)%N ->
+  x ^+ l * x = x ^+ k * x -> (k = l %% (2 ^ m - 1))%N.
+  move=> l k /base1 b.
+  rewrite [X in (_ ^+ X * _)%R](divn_eq l (2 ^ m - 1)) addnC GRing.exprD
+          -GRing.mulrA mulnC exprM -(eqP H3) minstab_exp.
+  apply/b.
+  by rewrite minstabE ltn_pmod //.
+move=> l k.
+rewrite (divn_eq k (2 ^ m - 1)) addnC GRing.exprD -GRing.mulrA
+        mulnC exprM -(eqP H3) minstab_exp.
+case: k.
+
+ rewrite !mod0n !expr0 mul1r add0n div0n muln0.
+ rewrite modn_mod.
+ move/base.
+  -exprnP. expn0.
+move/base2.
+rewrite !minstabE ltn_pmod // -!minstabE.
+
+rewrite modnDl.
+move/eqP: (H3) => ->. /eqP ->.
+rewrite /= ltn_mod; apply.
+rewrite addnC modnMDl modn_mod.
+case k0: (k %% (2 ^ m - 1))%N.
+ case l0: (l %% (2 ^ m - 1))%N => //.
+ rewrite (divn_eq l (2 ^ m - 1)) addnC GRing.exprD -GRing.mulrA.
+ move: (min_stab_cond (l %/ (2 ^ m - 1)) H1 predpower_neq0).
+ move/eqP: (H3) => -> /eqP -> /esym/base2.
+ by rewrite ltn_mod l0 /= mod0n => ->.
+move/base2.
+Qed.
+End Order.
 
 Section direct.
 Variable H1 : ('X ^ 2 %% phi)%R != ('X %% phi)%R.
@@ -202,27 +362,32 @@ Lemma H2E : (\pi 'X : QphiI phi_gt1)^(2 ^ m)%nat == \pi 'X.
   by rewrite /S rmodp_small ?modp_small ?opprK // ?size_opp ?size_polyX.
 Qed.
 
-Definition stab a n := ((\pi 'X : QphiI phi_gt1) ^+ n * a == a) && (n > 0)%nat.
+Lemma exstab : stab (\pi 'X) (2 ^ m - 1)%nat.
+by rewrite /stab -rmorphX -rmorphM -exprSr subn1 prednK //
+           exprnP rmorphX H2E /= -subn1.
+Qed.
+
+Check minstab.
 
 Lemma piX_unit : (\pi 'X : QphiI phi_gt1) \is a GRing.unit.
 Proof.
   have H: stab (\pi 'X) (2 ^ m - 1)%nat.
    by rewrite /stab -rmorphX -rmorphM -exprSr subn1 prednK //
               exprnP rmorphX H2E /= -subn1.
-  have: 
-   Check ex_minn (@ex_intro _ (stab (\pi 'X)) _ H). 
+  have:
+   Check ex_minn (@ex_intro _ (stab (\pi 'X)) _ H).
    Check {stab (\pi 'X)}.
    Check ex_minn.
    Check (@ex_intro _ _ _ H).
   Check ex_minn H.
-   
-    
+
+
   ('X ^ (2 ^ m)%N %% phi)%R == ('X %% phi)%R.
   Check ex_minn (stab (\pi 'X)).
-  
+
   apply/existsP.
 Check FinRing.unit (QphiI phi_gt1) _.
-  
+
   exists (\pi 'X : QphiI phi_gt1)^(2 ^ m)%na
   rewrite /= unfold_in.
   rewrite /=.
@@ -312,38 +477,6 @@ Hypothesis pm : prime (2 ^ m - 1).
 
 Local Notation m_is_prime := (m_is_prime pm).
 
-Lemma predpower_gt_succpower : (2 ^ m).-1 < (2 ^ m).+1.
-Proof. by case: (2 ^ m) pm. Qed.
-
-Lemma power_gt0 : 0 < 2 ^ m.
-Proof. by case: (2 ^ m) pm. Qed.
-
-Lemma predpower_gt0 : 0 < 2 ^ m - 1.
-Proof. by case: (2 ^ m - 1) pm. Qed.
-
-Lemma predpower_neq0 : 0 != 2 ^ m - 1.
-Proof. by case: (2 ^ m - 1) pm. Qed.
-
-Lemma phi_gtb (b : bool) : b < size phi.
-Proof. by case: b; rewrite ?phi_gt1 ?phi_gt0. Qed.
-
-Lemma predphi_neq0 : m != 0.
-Proof. by case: m m_is_prime. Qed.
-
-Lemma predphi_gt1 : 1 < m.
-Proof. by case: m m_is_prime => []//[]. Qed.
-
-Lemma predpredpower_power : (2 ^ m - 1).-1 < 2 ^ m - 1.
-Proof. by case: (2 ^ m - 1) pm. Qed.
-
-Lemma predpredpower_gt0 : 0 < (2 ^ m - 1).-1.
-Proof. by case: (2 ^ m - 1) pm => []//[]. Qed.
-
-Lemma p_ord_prf : (2 ^ m - 1 < (2 ^ m).+1)%N.
-Proof. by rewrite subn1 predpower_gt_succpower. Qed.
-
-Lemma predphi_geq1 : 1 <= m.
-Proof. by case: m m_is_prime => []//[]. Qed.
 
 Canonical qpoly_ringType_phi :=
   Eval hnf in qpoly_ringType phi_gt1.
