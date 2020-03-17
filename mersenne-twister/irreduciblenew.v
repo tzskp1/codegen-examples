@@ -326,27 +326,16 @@ have base2:
   by rewrite minstabE ltn_pmod //.
 move=> l k.
 rewrite (divn_eq k (2 ^ m - 1)) addnC GRing.exprD -GRing.mulrA
-        mulnC exprM -(eqP H3) minstab_exp.
-case: k.
-
- rewrite !mod0n !expr0 mul1r add0n div0n muln0.
- rewrite modn_mod.
- move/base.
-  -exprnP. expn0.
-move/base2.
-rewrite !minstabE ltn_pmod // -!minstabE.
-
-rewrite modnDl.
-move/eqP: (H3) => ->. /eqP ->.
-rewrite /= ltn_mod; apply.
-rewrite addnC modnMDl modn_mod.
-case k0: (k %% (2 ^ m - 1))%N.
- case l0: (l %% (2 ^ m - 1))%N => //.
- rewrite (divn_eq l (2 ^ m - 1)) addnC GRing.exprD -GRing.mulrA.
- move: (min_stab_cond (l %/ (2 ^ m - 1)) H1 predpower_neq0).
- move/eqP: (H3) => -> /eqP -> /esym/base2.
- by rewrite ltn_mod l0 /= mod0n => ->.
-move/base2.
+        mulnC exprM -(eqP H3) minstab_exp addnC mulnC modnMDl.
+case k0: (k %% minstab)%N.
+ rewrite expr0 mul1r.
+ case l0: (l %% minstab)%N; first by rewrite mod0n.
+ rewrite (divn_eq l minstab) addnC exprD -mulrA mulnC exprM minstab_exp => /eqP C.
+ move: (base (l %% minstab)%nat).
+ by rewrite !minstabE ltn_pmod // -!minstabE l0 /= -l0 C => /implyP.
+move/base2 => /=.
+rewrite -k0 !minstabE ltn_pmod // -!minstabE => C.
+by rewrite modn_mod C.
 Qed.
 End Order.
 
