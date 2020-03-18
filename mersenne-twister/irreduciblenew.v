@@ -401,24 +401,20 @@ Proof.
 Qed.
 
 Lemma map_piP q :
-(forall l k : nat, (pi 'X ^+ l * pi 'X)%R = (pi 'X ^+ k * pi 'X)%R
-              -> k = l %[mod 2 ^ m - 1])
--> reflect (exists (r : 'Z_(2 ^ m - 1)), pi ('X ^ r * 'X)%R = q)
-(q \in (image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R)
-'Z_(2 ^ m - 1))).
+reflect (exists (r : 'Z_(2 ^ m - 1)), x ^ r * x = q)
+(q \in (image (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) 'Z_(2 ^ m - 1))).
 Proof.
-move/map_pi_inj => inj.
+move: map_pi_inj => inj.
 apply/(iffP idP).
 * rewrite /image_mem.
   elim: (enum 'Z_(2 ^ m - 1)) => // a l IH.
   rewrite in_cons => /orP [/eqP ->|/IH //]; by exists a.
 * case => q0 <-.
-  rewrite mem_image // => x y.
-  rewrite ?(GRing.rmorphM, GRing.rmorphX).
-  apply/inj.
+  set T := (fun (i : 'Z_(2 ^ (size phi).-1 - 1)) => x ^ i * x).
+  set S := x ^ q0 * x.
+  have->: S = T q0 by [].
+  by rewrite mem_map // mem_enum.
 Qed.
-
-
 End Order.
 
 Section direct.
