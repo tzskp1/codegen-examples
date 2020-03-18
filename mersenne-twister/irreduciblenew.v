@@ -265,10 +265,9 @@ Proof.
 Qed.
 
 Lemma minstab_attain :
-  minstab == (2 ^ m - 1)%nat ->
 forall l k : nat, x ^+ l * x = x ^+ k * x -> (k = l %[mod 2 ^ m - 1])%nat.
 Proof.
-move=> H3.
+move: minstabE => /eqP H3.
 have base: forall l, (0 < l < 2 ^ m - 1)%N -> x ^+ l * x != x.
  move/eqP: H3 => H l /andP [] Hl0 Hl; apply/negP => /eqP C.
   move: H; rewrite /minstab.
@@ -337,6 +336,89 @@ move/base2 => /=.
 rewrite -k0 !minstabE ltn_pmod // -!minstabE => C.
 by rewrite modn_mod C.
 Qed.
+
+Lemma map_pi_inj :
+injective (fun (i : 'Z_(2 ^ m - 1)) => x ^+ i * x).
+Proof.
+  move=> y z /eqP.
+  rewrite eqE /= => /eqP /minstab_attain.
+  case: y => y yH.
+  case: z => z zH.
+  rewrite !modn_small //=.
+  by move=> yx; apply/val_inj.
+  apply: (leq_trans yH); by rewrite prednK.
+  apply: (leq_trans zH); by rewrite prednK.
+Qed.
+
+Lemma map_pi_card :
+#|image (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) 'Z_(2 ^ m - 1)| = (2 ^ m - 1)%N.
+Proof.
+  have Hc : #|'Z_(2 ^ m - 1)| = (2 ^ m - 1)%nat.
+   rewrite card_ord.
+   by case: (2 ^ m - 1)%nat pm => [][].
+  rewrite -[RHS]Hc.
+  apply/eqP/image_injP => [][] y Hy1 [] z Hz1 _ _ /minstab_attain /esym H;
+   apply/ord_inj.
+  rewrite /= ?modn_small // in H.
+  move: (Hy1) (Hz1) => ??.
+  rewrite /= /Zp_trunc /= ?prednK // in Hy1, Hz1.
+  rewrite /= /Zp_trunc /= ?prednK // in Hy1, Hz1.
+Qed.
+
+Lemma Xn_phi_neq0 (a : nat) : x ^+ a * x != 0.
+Proof.
+  move: minstab_attain => H0; apply/negP => /eqP Hc.
+  move: (H0 a a.+1).
+  rewrite GRing.exprS -GRing.mulrA Hc GRing.mulr0 => /(_ erefl)/eqP.
+  rewrite (divn_eq a (2 ^ m - 1)) -addnS !modnMDl.
+  by apply/negP/lem1 => //; rewrite ltn_mod.
+Qed.
+
+Lemma map_piE :
+image (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) 'Z_(2 ^ m - 1)
+=i (finset [finComRingType of QphiI phi_gt1] :\ 0%R).
+Proof.
+ have H3: [seq x ^ i * x | i : 'Z_(2 ^ (size phi).-1 - 1)] \subset
+          [set x | [finComRingType of QphiI phi_gt1] x] :\ 0.
+  suff: codom (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x)
+        \subset (finset [finComRingType of QphiI phi_gt1] :\ 0%R).
+   by apply/subset_trans/subsetP/image_codom.
+  apply/subsetP => y.
+  rewrite codomE !inE /=.
+  elim: (enum 'Z_(2 ^ m - 1)) => // a l IH.
+  rewrite in_cons => /orP [/eqP ->|/IH -> //].
+  by move: (Xn_phi_neq0 a) => ->.
+ apply/subset_cardP => //.
+ move: (subset_leq_card H3).
+ rewrite !cardsDS /= ?sub1set ?inE // !cardsT !map_pi_card
+         cards1 leq_eqVlt => /orP [/eqP //|].
+ rewrite ltnNge /= leq_sub2r //.
+ move: (@card_in_image _ _ (@QphiI_rV _ phi_gt1) predT) <-
+  => [|????]; last by apply (can_inj (@QphiI_rV_K _ phi_gt1)).
+ have<-: (#|'rV['F_2]_(size phi).-1| = 2 ^ (size phi).-1)%nat
+  by rewrite card_matrix mul1n card_ord.
+ by apply/subset_leq_card/subsetP.
+Qed.
+
+Lemma map_piP q :
+(forall l k : nat, (pi 'X ^+ l * pi 'X)%R = (pi 'X ^+ k * pi 'X)%R
+              -> k = l %[mod 2 ^ m - 1])
+-> reflect (exists (r : 'Z_(2 ^ m - 1)), pi ('X ^ r * 'X)%R = q)
+(q \in (image (fun (x: [ringType of 'Z_(2 ^ m - 1)]) => pi ('X ^ x * 'X)%R)
+'Z_(2 ^ m - 1))).
+Proof.
+move/map_pi_inj => inj.
+apply/(iffP idP).
+* rewrite /image_mem.
+  elim: (enum 'Z_(2 ^ m - 1)) => // a l IH.
+  rewrite in_cons => /orP [/eqP ->|/IH //]; by exists a.
+* case => q0 <-.
+  rewrite mem_image // => x y.
+  rewrite ?(GRing.rmorphM, GRing.rmorphX).
+  apply/inj.
+Qed.
+
+
 End Order.
 
 Section direct.
