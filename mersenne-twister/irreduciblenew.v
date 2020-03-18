@@ -227,12 +227,19 @@ Hint Resolve (phi_is_monic phi_gt1) (phi_neq0 phi_gt1)
      power_gt0 predpower_gt0 predpower_neq0 : core.
 
 Section Order.
+(*
+based on:
+ http://www.math.sci.hiroshima-u.ac.jp/~m-mat/TEACH/0407-2.pdf
+ P. 27
+*)
 Definition stab (a : QphiI phi_gt1) n := (a ^+ n * a == a) && (n > 0)%nat.
 
 Variable x : QphiI phi_gt1.
 Variable H1 : (x ^ 2 != x)%R.
 Variable H2 : (x ^ (2 ^ m)%N == x)%R.
-Variable exstab : stab x (2 ^ m - 1)%nat.
+
+Lemma exstab : stab x (2 ^ m - 1)%nat.
+Proof. by rewrite /stab -exprSr subn1 prednK // H2 -subn1. Qed.
 
 Definition minstab := ex_minn (@ex_intro _ (stab x) _ exstab).
 
