@@ -160,9 +160,81 @@ apply/eqP.
 by rewrite -Quotient.idealrBE subr0 unfold_in rmodpp.
 Qed.
 
-Lemma piM p q :
-  \pi_QphiI (p * q) = (\pi p : QphiI) * \pi q.
+Lemma pi1 : \pi 1 = 1 :> QphiI.
+Proof.
+have->: 1 = \pi 1 :> QphiI by rewrite -pi_oner.
+apply/eqP.
+by rewrite -Quotient.idealrBE subrr unfold_in rmod0p.
+Qed.
+
+Lemma piM p q : \pi_QphiI (p * q) = (\pi p : QphiI) * \pi q.
 Proof. by rewrite -rmorphM. Qed.
+
+Lemma piD p q : \pi_QphiI (p + q) = (\pi p : QphiI) + \pi q.
+Proof.
+by rewrite (rmorphD (pi_rmorphism (Quotient.rquot_ringQuotType keyd_phiI))).
+Qed.
+
+Lemma piB p q : \pi_QphiI (p - q) = (\pi p : QphiI) - (\pi q : QphiI).
+Proof.
+by rewrite (rmorphB (pi_rmorphism (Quotient.rquot_ringQuotType keyd_phiI))).
+Qed.
+
+Section Field.
+Variable ip : irreducible_poly phi.
+Definition QphiI_inv (q : [ringType of QphiI]) :=
+  if q == 0 then 0
+  else \pi_QphiI ((egcdp phi (generic_quotient.repr q)).2 %% phi).
+
+Lemma QphiI_field : GRing.Field.axiom QphiI_inv.
+Proof.
+  move=> p /negPf i.
+  rewrite /QphiI_inv i -[p in _ * p]reprK -piM -pi1.
+  apply/eqP.
+  set P := (generic_quotient.repr p).
+  rewrite -Quotient.idealrBE unfold_in rmodp_add //
+          [rmodp (-1) _]rmodp_small ?size_opp ?size_polyC //
+          subr_eq0 -f2eqp_eq // -Pdiv.IdomainMonic.modpE //
+          mulrC modp_mul mulrC.
+  have<-: (((egcdp phi P).1 * phi + (egcdp phi P).2 * P)) %% phi =
+          ((egcdp phi P).2 * P) %% phi
+   by rewrite modp_add -modp_mul modpp mulr0 mod0p add0r.
+  have->: ((egcdp phi P).1 * phi + (egcdp phi P).2 * P) = gcdp phi P
+   by apply/esym/eqP; rewrite -f2eqp_eq // egcdpE.
+  suff: gcdp phi P %= 1.
+   rewrite !f2eqp_eq => /eqP ->.
+   by rewrite modp_small // size_polyC.
+  rewrite eqp_sym; apply/eqp_trans/gcdp_modr; rewrite eqp_sym.
+  rewrite -size_poly_eq1; apply/eqP; rewrite coprimep_size_gcd //.
+  apply/coprimepP => d.
+  case d0: (size d == 0)%nat.
+   rewrite size_poly_eq0 in d0.
+   rewrite (eqP d0) dvd0p => /negPn.
+   by rewrite phi_neq0.
+  case d1: (size d == 1)%nat.
+   case: d d0 d1 => [][|[]]//[|[]]// i0 []//= *.
+   set T := Polynomial _; have->: T = 1.
+    apply/val_inj; rewrite /= polyseq1.
+    congr (_ :: _); apply/val_inj.
+    by rewrite /= modn_small //.
+   by rewrite eqpxx.
+  case: (ip) => _ H1 H2.
+  move/H1: H2; rewrite d1 => /implyP /=.
+  rewrite f2eqp_eq => /eqP -> /dvdp_leq.
+  rewrite leqNgt ltn_modp phi_neq0 => C.
+  suff: false by []; apply/C.
+  rewrite -[p]reprK -pi_zeror -Quotient.idealrBE subr0 unfold_in
+             -Pdiv.IdomainMonic.modpE // in i.
+  by rewrite i.
+Qed.
+
+Lemma QphiI_inv0 : QphiI_inv 0 = 0.
+Proof. by rewrite /QphiI_inv eqxx. Qed.
+
+Definition QphiI_fieldMixin :=
+  @FieldMixin _ QphiI_inv QphiI_field QphiI_inv0.
+Canonical QphiI_fieldType := Eval hnf in FieldType _ QphiI_fieldMixin.
+End Field.
 End Quotient.
 
 Section new.
@@ -498,14 +570,11 @@ Variable ip : irreducible_poly phi.
 
 Lemma piX_neq0 : \pi_(QphiI phi_gt1) 'X%R != 0%R.
 Proof.
-  apply/negP => /eqP /(f_equal val).
-  rewrite /= modp_small ?size_polyX // => /eqP.
-  by rewrite -size_poly_eq0 size_polyX.
+  by rewrite -pi_zeror -Quotient.idealrBE subr0 unfold_in
+          rmodp_small ?size_polyX // -size_poly_eq0 size_polyX.
 Qed.
 
-Definition qpoly_fieldType_phi := Eval hnf in qpoly_fieldType ip.
-
-Definition Xu: ((pi 'X : qpoly_fieldType_phi) \is a GRing.unit)%R.
+Definition Xu: ((\pi 'X : QphiI_fieldType phi_gt1 ip) \is a GRing.unit)%R.
   by rewrite GRing.unitfE piX_neq0.
 Defined.
 
@@ -533,12 +602,13 @@ Definition sL : <<1; z>>%VS = (fullv : {vspace L}).
   by case/irredp_FAdjoin: ip => ?? [].
 Defined.
 
-Definition e0 : {qpoly phi} -> L
-  := (fun g => (map_poly (GRing.in_alg L) g).[z])%R.
+Definition e0 : QphiI_fieldType phi_gt1 ip -> L
+  := (fun g => (map_poly (GRing.in_alg L) (generic_quotient.repr g)).[z])%R.
 
-Definition rme : rmorphism (e0 : qpoly_fieldType_phi -> _).
+Definition rme : rmorphism e0.
   rewrite /e0; repeat constructor.
    * move=> x y.
+     rewrite rmorphB.
      by rewrite /= !GRing.rmorphB hornerD hornerN.
    * move=> x y.
      rewrite /= -hornerM -GRing.rmorphM.
