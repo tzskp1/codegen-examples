@@ -182,7 +182,7 @@ Qed.
 
 Section Field.
 Variable ip : irreducible_poly phi.
-Definition QphiI_inv (q : [ringType of QphiI]) :=
+Definition QphiI_inv (q : QphiI) :=
   if q == 0 then 0
   else \pi_QphiI ((egcdp phi (generic_quotient.repr q)).2 %% phi).
 
@@ -232,8 +232,10 @@ Lemma QphiI_inv0 : QphiI_inv 0 = 0.
 Proof. by rewrite /QphiI_inv eqxx. Qed.
 
 Definition QphiI_fieldMixin :=
-  @FieldMixin _ QphiI_inv QphiI_field QphiI_inv0.
-Canonical QphiI_fieldType := Eval hnf in FieldType _ QphiI_fieldMixin.
+  @FieldMixin [comRingType of QphiI] QphiI_inv QphiI_field QphiI_inv0.
+Definition QphiI_fieldType :=
+  Eval hnf in FieldType _ QphiI_fieldMixin.
+
 End Field.
 End Quotient.
 
@@ -575,95 +577,62 @@ Proof.
 Qed.
 
 Definition Xu: ((\pi 'X : QphiI_fieldType phi_gt1 ip) \is a GRing.unit)%R.
-  by rewrite GRing.unitfE piX_neq0.
+  by rewrite unitfE piX_neq0.
 Defined.
-
-Definition L : fieldExtType [fieldType of 'F_2].
-  by case/irredp_FAdjoin: ip.
-Defined.
-
-Definition dL : \dim (fullv : {vspace L}) = (size phi).-1.
-  rewrite /L.
-  by case/irredp_FAdjoin: ip.
-Defined.
-
-Definition z : L.
-  rewrite /L.
-  by case/irredp_FAdjoin: ip => ?? [].
-Defined.
-
-Definition zsp : root (map_poly (GRing.in_alg L) phi) z.
-  rewrite /z /L /=.
-  by case/irredp_FAdjoin: ip => ?? [].
-Defined.
-
-Definition sL : <<1; z>>%VS = (fullv : {vspace L}).
-  rewrite /z /L /=.
-  by case/irredp_FAdjoin: ip => ?? [].
-Defined.
-
-Definition e0 : QphiI_fieldType phi_gt1 ip -> L
-  := (fun g => (map_poly (GRing.in_alg L) (generic_quotient.repr g)).[z])%R.
-
-Definition rme : rmorphism e0.
-  rewrite /e0; repeat constructor.
-   * move=> x y.
-     rewrite rmorphB.
-     by rewrite /= !GRing.rmorphB hornerD hornerN.
-   * move=> x y.
-     rewrite /= -hornerM -GRing.rmorphM.
-     set T := (_ * _)%R.
-     rewrite [in RHS](divp_eq T phi) GRing.rmorphD hornerD GRing.rmorphM hornerM.
-     move/rootP: zsp => ->.
-     by rewrite GRing.mulr0 GRing.add0r.
-   * by rewrite /= modp_small ?GRing.rmorph1 ?hornerC // size_polyC.
-Defined.
-
-Definition e := RMorphism rme.
-
-Lemma inje: injective e. Proof. by apply GRing.fmorph_inj. Qed.
-
-Lemma a1f: agenv ([aspace of 1%AS] : {subfield L}) = fullv -> False.
-Proof.
- have K1: ((\sum_(i < (size phi).-1)
-       ([aspace of 1%AS] : {subfield L}) ^+ i)%VS = 1%VS).
-  have: (size phi).-1 != 0 by [].
-  elim: (size phi).-1 => // n IHn _.
-  rewrite big_ord_recr expv1n /=.
-  case n0: (n == 0).
-   move/eqP: n0 => ->.
-   by rewrite big_ord0 add0v.
-  by rewrite IHn ?n0 // addvv.
- rewrite /agenv dL K1.
- move: dL => + f1.
- rewrite -f1 dimv1 => p1.
- by move: p1 m_is_prime => <-.
-Qed.
 
 Local Hint Resolve Xu : core.
 
-Lemma piX2X : (pi ('X ^ 2) != pi 'X)%R.
+Lemma piX2X : (\pi_(QphiI phi_gt1) ('X ^ 2) != \pi 'X)%R.
 Proof.
-   set fT := qpoly_fieldType_phi.
-   apply/negP => /eqP /(f_equal (fun x => (pi 'X : fT)^-1 * x))%R.
-   rewrite GRing.mulVr //.
-   have ->: (pi ('X ^ 2) = (pi 'X : fT) * (pi 'X : fT))%R.
-    rewrite -exprnP GRing.exprS GRing.expr1 GRing.rmorphM.
-   by apply/val_inj.
-   rewrite GRing.mulKr // => /(f_equal e) z1; move: z1 sL.
-   rewrite /e /e0 /= !modp_small ?size_polyC ?size_polyX //
-           map_polyC hornerC map_polyX hornerX /= GRing.scale1r => ->.
-   by rewrite addvv => /a1f.
+  rewrite -Quotient.idealrBE unfold_in; apply/negP => /rdvdpP.
+  rewrite phi_is_monic // => [][]// x.
+  case x0: (x == 0).
+   move/eqP: x0 => -> /eqP.
+   rewrite mul0r subr_eq0 => /eqP/(f_equal (size : {poly 'F_2} -> _)).
+   by rewrite size_polyXn size_polyX.
+  case x1: (size x == 1)%nat.
+   case: x x0 x1 => [][]// [][|[]//] i []// ???.
+   set T := Polynomial _; have->: T = 1.
+    apply/val_inj; rewrite /= polyseq1.
+    congr (_ :: _); apply/val_inj.
+    by rewrite /= modn_small //.
+   rewrite mul1r => x2xp.
+   move: x2xp ip => <- [] _ /(_ 'X).
+   have->: 'X %| 'X ^ 2 - 'X.
+    move=> t.
+    by rewrite -exprnP exprS expr1 -[X in _ - X]mulr1 -mulrBr dvdp_mulr //.
+   rewrite size_polyX /= => C.
+   have/(f_equal (size : {poly 'F_2} -> _)): 'X = 'X ^ 2 - 'X :> {poly 'F_2}
+    by apply/eqP; rewrite -f2eqp_eq C.
+   by rewrite size_addl ?size_opp ?size_polyXn ?size_polyX.
+  move/negP/negP: x0 => x0 /(f_equal (size : {poly 'F_2} -> _)).
+  rewrite size_mul // size_addl ?size_polyXn ?size_opp ?size_polyX //.
+  rewrite -size_poly_eq0 in x0.
+  case: (size x) x0 x1 => []//[]// sx _ _.
+  rewrite !addSn /= => [][] C.
+  suff: (2 < 2)%nat by [].
+  rewrite [X in (_ < X)%nat]C.
+  by apply/leq_trans/leq_addl.
 Qed.
 
-Definition piX := FinRing.unit [finFieldType of qpoly_fieldType_phi] Xu.
+Canonical QphiI_fieldType_ip := QphiI_fieldType phi_gt1 ip.
+Definition piX := FinRing.unit [finFieldType of QphiI_fieldType_ip] Xu.
+Check order_primeChar.
+Check card_primeChar.
+Check #[piX]%g.
+Check order_primeChar.
+  Check card_primeChar.
 
-Lemma piX_order : #[piX]%g = 2 ^ m - 1.
+
+
+Lemma piX_order : #[piX]%g = (2 ^ m - 1)%nat.
 Proof.
   have/cyclic.order_dvdG: piX \in
-      [group of [set: {unit [finFieldType of qpoly_fieldType_phi]}]]
+      [group of [set: {unit [finFieldType of QphiI_fieldType_ip]}]]
     by rewrite inE.
-  rewrite card_finField_unit card_npoly card_ord.
+  rewrite card_finField_unit.
+  rewrite /=.
+  card_npoly card_ord.
   case/primeP: pm => _.
   rewrite !subn1 => H /H {H} /orP [|/eqP] //.
   rewrite order_eq1 => piX1.
@@ -942,3 +911,10 @@ Proof.
    by rewrite /stab -rmorphX -rmorphM -exprSr subn1 prednK //
               exprnP rmorphX H2E /= -subn1.
   have:
+
+Lemma card_QphiI_field :
+  #|[finFieldType of QphiI_fieldType]| = ((2 ^ (size phi)).-1)%nat.
+Proof.
+  Check card_primeChar.
+  rewrite card_vspace.
+  rewrite card_finCharP.
