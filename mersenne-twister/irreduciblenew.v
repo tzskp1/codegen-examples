@@ -143,6 +143,17 @@ by rewrite -Quotient.idealrBE /= unfold_in rmodp_add //
            rmodp_small ?ltn_rmodp // -rmodp_add // subrr rmod0p.
 Qed.
 
+Lemma rVQphiIK : cancel rVQphiI QphiI_rV.
+Proof.
+move=> x.
+rewrite /rVQphiI /QphiI_rV /= -[RHS]rVpolyK; congr (poly_rV _).
+case: piP => y /eqP.
+rewrite -Quotient.idealrBE unfold_in rmodp_add // addr_eq0
+        -!Pdiv.IdomainMonic.modpE // modp_opp opprK => /eqP <-.
+rewrite modp_small //.
+by apply(leq_ltn_trans (size_poly _ _)); case: (size phi) phi_gt1.
+Qed.
+
 Canonical QphiI_finMixin := CanFinMixin QphiI_rV_K.
 Canonical QphiI_finType := FinType QphiI QphiI_finMixin.
 Canonical Quotient.rquot_comRingType.
@@ -178,6 +189,19 @@ Qed.
 Lemma piB p q : \pi_QphiI (p - q) = (\pi p : QphiI) - (\pi q : QphiI).
 Proof.
 by rewrite (rmorphB (pi_rmorphism (Quotient.rquot_ringQuotType keyd_phiI))).
+Qed.
+
+Lemma card_QphiI : (#|[finType of QphiI]| = 2 ^ (size phi).-1)%N.
+Proof.
+have<-: (#|'rV['F_2]_(size phi).-1| = 2 ^ (size phi).-1)%nat
+ by rewrite card_matrix mul1n card_ord.
+apply/eqP; rewrite eqn_leq; apply/andP; split.
+* move: (@card_in_image _ _ QphiI_rV predT) <- => [|????];
+   last by apply (can_inj QphiI_rV_K).
+  by apply/subset_leq_card/subsetP.
+* move: (@card_in_image _ _ rVQphiI predT) <- => [|????];
+   last by apply (can_inj rVQphiIK).
+  by apply/subset_leq_card/subsetP.
 Qed.
 
 Section Field.
@@ -481,15 +505,7 @@ Proof.
   rewrite in_cons => /orP [/eqP ->|/IH -> //].
   by move: (Xn_phi_neq0 a) => ->.
  apply/subset_cardP => //.
- move: (subset_leq_card H3).
- rewrite !cardsDS /= ?sub1set ?inE // !cardsT !map_pi_card
-         cards1 leq_eqVlt => /orP [/eqP //|].
- rewrite ltnNge /= leq_sub2r //.
- move: (@card_in_image _ _ (@QphiI_rV _ phi_gt1) predT) <-
-  => [|????]; last by apply (can_inj (@QphiI_rV_K _ phi_gt1)).
- have<-: (#|'rV['F_2]_(size phi).-1| = 2 ^ (size phi).-1)%nat
-  by rewrite card_matrix mul1n card_ord.
- by apply/subset_leq_card/subsetP.
+ by rewrite !cardsDS /= ?sub1set ?inE // !cardsT !map_pi_card cards1 card_QphiI.
 Qed.
 
 Lemma map_piP q :
@@ -617,56 +633,49 @@ Qed.
 
 Canonical QphiI_fieldType_ip := QphiI_fieldType phi_gt1 ip.
 Definition piX := FinRing.unit [finFieldType of QphiI_fieldType_ip] Xu.
-Check order_primeChar.
-Check card_primeChar.
-Check #[piX]%g.
-Check order_primeChar.
-  Check card_primeChar.
-
-
 
 Lemma piX_order : #[piX]%g = (2 ^ m - 1)%nat.
 Proof.
   have/cyclic.order_dvdG: piX \in
       [group of [set: {unit [finFieldType of QphiI_fieldType_ip]}]]
     by rewrite inE.
-  rewrite card_finField_unit.
-  rewrite /=.
-  card_npoly card_ord.
+  rewrite card_finField_unit card_QphiI.
   case/primeP: pm => _.
   rewrite !subn1 => H /H {H} /orP [|/eqP] //.
-  rewrite order_eq1 => piX1.
-  move: piX1 piX2X;
-  rewrite /piX GRing.rmorphX !eqE /= !eqE /= => /eqP ->.
-  (* TODO : fix canonical structure *)
-  by rewrite !modp_small ?GRing.mulr1 ?size_polyC ?eqxx.
+  rewrite order_eq1 => /eqP piX1.
+  move: piX2X.
+  rewrite -exprnP exprS piM expr1 /=.
+  set T := \pi 'X; have<-: val piX = T by [].
+  by rewrite piX1 /= mul1r eqxx.
 Qed.
 
-Lemma val_piX_expE p : val (piX ^+ p)%g = pi ('X ^+ p)%R.
+Lemma val_piX_expE p : val (piX ^+ p)%g = \pi_(QphiI phi_gt1) ('X ^+ p)%R.
 Proof.
-  elim: p => [|p IHp].
-   by apply/val_inj.
-  rewrite !GRing.exprS GRing.rmorphM expgS /= IHp.
-  by apply/val_inj.
+  elim: p => [|p IHp]; first by rewrite expr0 pi1.
+  by rewrite !GRing.exprS piM expgS /= IHp.
 Qed.
 
-Lemma X2mp_eq1 : (pi ('X ^+ (2 ^ m - 1)) = 1)%R.
+Lemma X2mp_eq1 : (\pi_(QphiI_fieldType_ip) ('X ^+ (2 ^ m - 1)) = \pi 1)%R.
 Proof.
   suff/(f_equal val): (piX ^+ (2 ^ m - 1))%g = 1%g.
    rewrite val_piX_expE /= => ->.
-   by apply/val_inj.
-  suff<-: #[piX]%g = 2 ^ m - 1 by rewrite expg_order.
+   by rewrite pi1.
+  suff<-: #[piX]%g = (2 ^ m - 1)%nat by rewrite expg_order.
   by rewrite piX_order.
 Qed.
 
 Lemma irreducibleP_inverse :
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
 Proof.
-  apply/andP; split; first by move: piX2X; rewrite eqE.
-  suff/(f_equal val) /= ->: (pi ('X ^ (2 ^ m)%N) = (pi 'X))%R by [].
-  move: X2mp_eq1; rewrite GRing.rmorphX => H.
-  have->: 2 ^ m = (2 ^ m - 1).+1 by rewrite subn1 prednK.
-  by rewrite GRing.rmorphX GRing.exprS H GRing.mulr1.
+apply/andP; split.
+* move: piX2X.
+  by rewrite -Quotient.idealrBE unfold_in rmodp_add //
+             addr_eq0 -!Pdiv.IdomainMonic.modpE // modp_opp opprK.
+* suff/eqP: (\pi_(QphiI_fieldType_ip) ('X ^+ (2 ^ m)) = \pi 'X)%R.
+   by rewrite -Quotient.idealrBE unfold_in rmodp_add //
+           addr_eq0 -!Pdiv.IdomainMonic.modpE // modp_opp opprK.
+  have->: (2 ^ m = (2 ^ m - 1).+1)%nat by rewrite subn1 prednK.
+  by rewrite exprS piM exprnP X2mp_eq1 pi1 mulr1.
 Qed.
 
 Lemma char2_phi : 2 \in [char {qpoly phi}]%R.
@@ -794,12 +803,6 @@ Proof.
   by move/(can_inj (@npoly_rV_K _ _)).
 Qed.
 
-Lemma piXE : (pi 'X = 'X %% phi :> {poly 'F_2})%R.
-Proof. by []. Qed.
-
-Lemma piXnE q : (pi ('X ^ q) = 'X ^ q %% phi :> {poly 'F_2})%R.
-Proof. by []. Qed.
-
 Lemma irreducibleE0 q :
   ('X^(2 ^ q) %% phi == 'X %% phi)%R =
   (iter q ((@npoly_rV _ _) \o H \o (@rVnpoly _ _)) (npoly_rV (pi 'X))
@@ -911,10 +914,3 @@ Proof.
    by rewrite /stab -rmorphX -rmorphM -exprSr subn1 prednK //
               exprnP rmorphX H2E /= -subn1.
   have:
-
-Lemma card_QphiI_field :
-  #|[finFieldType of QphiI_fieldType]| = ((2 ^ (size phi)).-1)%nat.
-Proof.
-  Check card_primeChar.
-  rewrite card_vspace.
-  rewrite card_finCharP.
