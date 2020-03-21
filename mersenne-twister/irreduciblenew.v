@@ -163,6 +163,28 @@ Canonical QphiI_unitRingType := UnitRingType QphiI QphiI_unitRingMixin.
 Canonical QphiI_comUnitRingType := Eval hnf in [comUnitRingType of QphiI].
 Canonical QphiI_finComUnitRingType := Eval hnf in [finComUnitRingType of QphiI].
 Canonical QphiI_finUnitRingType := Eval hnf in [finUnitRingType of QphiI].
+Canonical QphiI_zmodType := Eval hnf in [zmodType of QphiI].
+
+Local Definition scale a v := rVQphiI (scalemx a (QphiI_rV v)).
+Local Fact scale1x A : scale 1 A = A.
+Proof. by rewrite /scale scale1mx QphiI_rV_K. Qed.
+Local Fact scaleA x y A : scale x (scale y A) = scale (x * y) A.
+Proof. by rewrite /scale rVQphiIK scalemxA. Qed.
+Local Fact scalexDl A x y : scale (x + y) A = scale x A + scale y A.
+Proof. by rewrite /scale scalemxDl -rmorphD -linearD. Qed.
+Local Fact scalexDr x A B : scale x (A + B) = scale x A + scale x B.
+Proof.
+  rewrite /scale -rmorphD -linearD -scalemxDr; congr (rVQphiI (scalemx x _)).
+  rewrite -linearD -rmodp_add //; congr (poly_rV _).
+  rewrite -[A]reprK -[B]reprK.
+  case: piP => a ->; case: piP => b ->.
+  rewrite -rmorphD; case: piP => ab /eqP.
+  by rewrite -Quotient.idealrBE unfold_in -!Pdiv.IdomainMonic.modpE //
+             modp_add modp_opp subr_eq0 eq_sym => /eqP.
+Qed.
+Definition QphiI_lmodMixin := LmodMixin scaleA scale1x scalexDr scalexDl.
+Canonical QphiI_lmodType :=
+  Eval hnf in LmodType 'F_2 QphiI QphiI_lmodMixin.
 
 Lemma pi_phi0 : \pi phi = 0 :> QphiI.
 Proof.
@@ -172,11 +194,7 @@ by rewrite -Quotient.idealrBE subr0 unfold_in rmodpp.
 Qed.
 
 Lemma pi1 : \pi 1 = 1 :> QphiI.
-Proof.
-have->: 1 = \pi 1 :> QphiI by rewrite -pi_oner.
-apply/eqP.
-by rewrite -Quotient.idealrBE subrr unfold_in rmod0p.
-Qed.
+Proof. by rewrite -pi_oner. Qed.
 
 Lemma piM p q : \pi_QphiI (p * q) = (\pi p : QphiI) * \pi q.
 Proof. by rewrite -rmorphM. Qed.
@@ -664,56 +682,61 @@ Proof.
   by rewrite piX_order.
 Qed.
 
+Lemma XnE q :
+  ('X ^ q %% phi == 'X %% phi) = (\pi_(QphiI phi_gt1) ('X ^ q) == \pi 'X)%R.
+Proof.
+  by rewrite -Quotient.idealrBE unfold_in rmodp_add //
+             addr_eq0 -!Pdiv.IdomainMonic.modpE // modp_opp opprK.
+Qed.
+
 Lemma irreducibleP_inverse :
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
 Proof.
-apply/andP; split.
-* move: piX2X.
-  by rewrite -Quotient.idealrBE unfold_in rmodp_add //
-             addr_eq0 -!Pdiv.IdomainMonic.modpE // modp_opp opprK.
-* suff/eqP: (\pi_(QphiI_fieldType_ip) ('X ^+ (2 ^ m)) = \pi 'X)%R.
-   by rewrite -Quotient.idealrBE unfold_in rmodp_add //
-           addr_eq0 -!Pdiv.IdomainMonic.modpE // modp_opp opprK.
-  have->: (2 ^ m = (2 ^ m - 1).+1)%nat by rewrite subn1 prednK.
-  by rewrite exprS piM exprnP X2mp_eq1 pi1 mulr1.
+rewrite !XnE piX2X /=.
+have->: (2 ^ m = (2 ^ m - 1).+1)%nat by rewrite subn1 prednK.
+by rewrite -exprnP exprS piM X2mp_eq1 pi1 mulr1.
 Qed.
 
-Lemma char2_phi : 2 \in [char {qpoly phi}]%R.
+Lemma char2_phi : 2 \in [char QphiI phi_gt1]%R.
 Proof.
-by apply/(GRing.rmorph_char pi)
+by apply/(GRing.rmorph_char
+         (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi))))
         /(GRing.rmorph_char (polyC_rmorphism [ringType of 'F_2])).
 Qed.
 
-Definition H := Frobenius_aut char2_phi.
+Definition F :
+  [lmodType 'F_2 of QphiI phi_gt1] -> [lmodType 'F_2 of QphiI phi_gt1]
+  := Frobenius_aut char2_phi.
 
-Lemma linear_H : linear H.
+Lemma linearF : linear F.
 Proof.
-  move=> a x y.
-  case: a => [][|[]//] i; set T := Ordinal i.
-   have->: T = 0%R by apply/val_inj.
-   by rewrite !GRing.scale0r !GRing.add0r.
-  have->: T = 1%R by apply/val_inj.
-  rewrite !GRing.scale1r /H GRing.Frobenius_autD_comm //.
-  apply/val_inj.
-  by rewrite /= GRing.mulrC.
+move=> a x y.
+case: a => [][|[]//] i; set T := Ordinal i.
+ have->: T = 0%R by apply/val_inj.
+ by rewrite !GRing.scale0r !GRing.add0r.
+have->: T = 1%R by apply/val_inj.
+by rewrite !GRing.scale1r /F GRing.Frobenius_autD_comm // /GRing.comm GRing.mulrC.
 Qed.
 
-Canonical linearType_H := Eval hnf in Linear linear_H.
+Canonical linearType_F := Eval hnf in Linear linearF.
 
-Lemma expXpE p x : iter p H x = (x ^+ (2 ^ p))%R.
+Lemma expXpE p x : iter p F x = (x ^+ (2 ^ p))%R.
 Proof.
   elim: p x => [x|p IH x].
    by rewrite /= expn0 GRing.expr1.
-  by rewrite iterS IH /H GRing.Frobenius_autE
+  by rewrite iterS IH /F GRing.Frobenius_autE
              !GRing.exprS GRing.expr0 GRing.mulr1
              -GRing.exprD addnn expnS mul2n.
 Qed.
 
-Lemma expand_H q :
-  reflect (iter q H =1 id) ('X^(2 ^ q) %% phi == 'X %% phi)%R.
+Lemma expandF q :
+  reflect (iter q F =1 id) ('X^(2 ^ q) %% phi == 'X %% phi)%R.
 Proof.
+  rewrite exprnP
+          XnE (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
   apply/(iffP idP).
   * move/eqP=> H0 x.
+    rewrite /= in x.
     rewrite (coord_basis (npolyX_full _ _) (memvf x)).
     set e0 := npolyX _ _.
     rewrite GRing.linear_sum; apply/eq_big => // i _.
