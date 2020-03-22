@@ -785,6 +785,24 @@ Proof.
              addr_eq0 -!Pdiv.IdomainMonic.modpE // modp_opp opprK.
 Qed.
 
+Lemma XnpE q :
+  (q > 0)%nat ->
+  (\pi_(QphiI phi_gt1) ('X ^ q.-1) == \pi 1)%R
+  = (\pi_(QphiI phi_gt1) ('X ^ q) == \pi 'X)%R.
+Proof.
+  case: q => // q _; rewrite /= -!exprnP exprS piM.
+  set T := _ == _.
+  case Te: T.
+   move/eqP: Te ->.
+   set S := \pi 1; have->: S = 1 :> QphiI phi_gt1 by rewrite -pi_oner.
+   by rewrite mulr1 eqxx.
+  apply/negP; case: ifP => //.
+  set S := \pi_(QphiI phi_gt1) 'X.
+  rewrite -[X in _ == X](mulr1 (S : [ringType of QphiI phi_gt1]))
+          => /eqP/(mulrI Xu)/eqP.
+  by rewrite -pi_oner -/T Te.
+Qed.
+
 Lemma irreducibleP_inverse :
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
 Proof.
@@ -831,7 +849,7 @@ Proof.
 pose rmorphX :=
     (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
 rewrite exprnP XnE rmorphX.
-apply/(iffP idP) => [/eqP H0 x|/(_ (\pi 'X)) ].
+apply/(iffP idP) => [/eqP H0 x|/(_ (\pi 'X))].
 * rewrite (coord_basis (QphiIX_full _) (memvf x)).
   rewrite linear_sum; apply/eq_big => // i _.
   set e0 := QphiIX _.
@@ -842,44 +860,35 @@ Qed.
 Lemma cycleF_dvdP p :
   reflect (iter p F =1 id) (2 ^ m - 1 %| 2 ^ p - 1)%nat.
 Proof.
-  (* have H0: (\pi ('X ^ (2 ^ m)%N) = \pi 'X)%R. *)
-  (*  apply/val_inj. *)
-  (*  by case/andP: irreducibleP_inverse => _ /eqP. *)
-  apply/(iffP idP).
-  * case/dvdnP => q H1 x.
-    rewrite expXpE.
-    case p0: (p > 0)%nat; last first.
-     rewrite lt0n in p0.
-     by move/negP/negP/eqP: p0 ->.
-    have->: (2 ^ p = ((2 ^ p) - 1).+1)%nat.
-     rewrite subn1 prednK // {H1}.
-     elim: p p0 => // [][] // p IH _.
-     have->: (0 = 2 * 0)%nat by [].
-     by rewrite expnS ltn_mul2l /= muln0 IH.
-    rewrite {}H1 GRing.exprS.
-    elim: q => [|q /eqP IH].
-     by rewrite mul0n GRing.expr0 GRing.mulr1.
-    rewrite mulSn addnC GRing.exprD GRing.mulrA GRing.mulrC -modp_mul IH
-            modp_mul -GRing.exprSr subn1 prednK //.
-    by move: (f_equal val H0) => /= ->.
-  * move=> H1.
-    move: (H1 (pi 'X))%R.
-    rewrite expXpE -GRing.rmorphX -val_piX_expE -H0 -val_piX_expE => /val_inj/eqP.
-    rewrite cyclic.eq_expg_mod_order piX_order.
-    have H2: 2 ^ (size phi).-1 = ((2 ^ (size phi).-1) - 1) + 1
-     by rewrite addn1 subn1 prednK.
-    have H3: 1 = 0 + 1 by rewrite add0n.
-    case p0: (p > 0); last first.
-     rewrite lt0n in p0.
-     by move/negP/negP/eqP: p0 ->.
-    have H4: (2 ^ p) = ((2 ^ p) - 1) + 1.
-     rewrite subn1 addn1 prednK // {H1}.
-     elim: p p0 => // [][] // p IH _.
-     have->: 0 = 2 * 0 by [].
-     by rewrite expnS ltn_mul2l /= muln0 IH.
-    rewrite [X in _ == X %[mod _]]H2 modnDl [X in _ == X %[mod _]]H3
-            [X in X == _ %[mod _]]H4 eqn_modDr.
-    by rewrite mod0n.
+pose rmorphX :=
+  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+case/andP: irreducibleP_inverse => _ H0.
+apply/(iffP idP).
+* case/dvdnP => q H1.
+  rewrite XnE -XnpE // in H0.
+  apply/expandF.
+  rewrite exprnP XnE -XnpE; last first.
+   elim: p {H1} => // n IH.
+   apply/(leq_trans IH).
+   by rewrite -[(2 ^ n)%nat]mul1n expnS leq_mul2r orbT.
+  by rewrite -subn1 H1 mulnC -exprnP exprM rmorphX !subn1 /= (eqP H0) pi1 expr1n.
+* move/(_ (\pi 'X)).
+  rewrite XnE in H0.
+  rewrite expXpE -rmorphX /= -(eqP H0) -!val_piX_expE => /val_inj/eqP.
+  rewrite cyclic.eq_expg_mod_order piX_order.
+  have H2: (2 ^ (size phi).-1 = ((2 ^ (size phi).-1) - 1) + 1)%nat
+   by rewrite addn1 subn1 prednK.
+  have H3: (1 = 0 + 1)%nat by rewrite add0n.
+  case p0: (p > 0)%nat; last first.
+   rewrite lt0n in p0.
+   by move/negP/negP/eqP: p0 ->.
+  have H4: ((2 ^ p) = ((2 ^ p) - 1) + 1)%nat.
+   rewrite subn1 addn1 prednK //.
+   elim: p p0 => // [][] // p IH _.
+   have->: (0 = 2 * 0)%nat by [].
+   by rewrite expnS ltn_mul2l /= muln0 IH.
+  by rewrite [X in (_ == X %[mod _])%nat]H2 modnDl [X in (_ == X %[mod _])%nat]H3
+             [X in (X == _ %[mod _])%nat]H4 eqn_modDr mod0n.
 Qed.
 
 Lemma iter_sand_H s :
