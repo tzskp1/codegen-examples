@@ -154,6 +154,8 @@ rewrite modp_small //.
 by apply(leq_ltn_trans (size_poly _ _)); case: (size phi) phi_gt1.
 Qed.
 
+Hint Resolve QphiI_rV_K rVQphiIK : core.
+
 Canonical QphiI_finMixin := CanFinMixin QphiI_rV_K.
 Canonical QphiI_finType := FinType QphiI QphiI_finMixin.
 Canonical Quotient.rquot_comRingType.
@@ -165,6 +167,16 @@ Canonical QphiI_finComUnitRingType := Eval hnf in [finComUnitRingType of QphiI].
 Canonical QphiI_finUnitRingType := Eval hnf in [finUnitRingType of QphiI].
 Canonical QphiI_zmodType := Eval hnf in [zmodType of QphiI].
 
+Lemma QphiI_rV_D A B : QphiI_rV (A + B) = QphiI_rV A + QphiI_rV B.
+Proof.
+  rewrite -linearD -rmodp_add //; congr (poly_rV _).
+  rewrite -[A]reprK -[B]reprK.
+  case: piP => a ->; case: piP => b ->.
+  rewrite -rmorphD; case: piP => ab /eqP.
+  by rewrite -Quotient.idealrBE unfold_in -!Pdiv.IdomainMonic.modpE //
+             modp_add modp_opp subr_eq0 eq_sym => /eqP.
+Qed.
+
 Local Definition scale a v := rVQphiI (scalemx a (QphiI_rV v)).
 Local Fact scale1x A : scale 1 A = A.
 Proof. by rewrite /scale scale1mx QphiI_rV_K. Qed.
@@ -173,18 +185,32 @@ Proof. by rewrite /scale rVQphiIK scalemxA. Qed.
 Local Fact scalexDl A x y : scale (x + y) A = scale x A + scale y A.
 Proof. by rewrite /scale scalemxDl -rmorphD -linearD. Qed.
 Local Fact scalexDr x A B : scale x (A + B) = scale x A + scale x B.
-Proof.
-  rewrite /scale -rmorphD -linearD -scalemxDr; congr (rVQphiI (scalemx x _)).
-  rewrite -linearD -rmodp_add //; congr (poly_rV _).
-  rewrite -[A]reprK -[B]reprK.
-  case: piP => a ->; case: piP => b ->.
-  rewrite -rmorphD; case: piP => ab /eqP.
-  by rewrite -Quotient.idealrBE unfold_in -!Pdiv.IdomainMonic.modpE //
-             modp_add modp_opp subr_eq0 eq_sym => /eqP.
-Qed.
+Proof. by rewrite /scale -rmorphD -linearD -scalemxDr QphiI_rV_D. Qed.
 Definition QphiI_lmodMixin := LmodMixin scaleA scale1x scalexDr scalexDl.
 Canonical QphiI_lmodType :=
   Eval hnf in LmodType 'F_2 QphiI QphiI_lmodMixin.
+
+Lemma QphiI_rV_scaler a A : QphiI_rV (a *: A) = a *: QphiI_rV A.
+Proof.
+case: a => [][|[]]// i.
+* have->: Ordinal i = 0 by apply/val_inj.
+  rewrite !scale0r /QphiI_rV -pi_zeror.
+  case: piP => x /eqP.
+  rewrite -Quotient.idealrBE sub0r unfold_in -!Pdiv.IdomainMonic.modpE //
+          modp_opp oppr_char2
+          ?(GRing.rmorph_char (polyC_rmorphism [ringType of 'F_2])) // => /eqP ->.
+  by rewrite linear0.
+* have->: Ordinal i = 1 by apply/val_inj.
+  by rewrite !scale1r.
+Qed.
+
+Lemma QphiI_vect_axiom : Vector.axiom (size phi).-1 QphiI.
+Proof.
+by exists QphiI_rV; [move=> ???; rewrite QphiI_rV_D QphiI_rV_scaler|exists rVQphiI].
+Qed.
+
+Definition QphiI_vect_mixin := VectMixin QphiI_vect_axiom.
+Canonical QphiI_vect_type := VectType 'F_2 QphiI QphiI_vect_mixin.
 
 Lemma pi_phi0 : \pi phi = 0 :> QphiI.
 Proof.
@@ -277,6 +303,16 @@ Definition QphiI_fieldMixin :=
   @FieldMixin [comRingType of QphiI] QphiI_inv QphiI_field QphiI_inv0.
 Definition QphiI_fieldType :=
   Eval hnf in FieldType _ QphiI_fieldMixin.
+
+Definition QphiIX : (size phi).-1.-tuple QphiI_lmodType
+  := [tuple \pi 'X^i | i < (size phi).-1].
+
+Lemma QphiIX_free : free QphiIX.
+Proof.
+  apply/freeP => i.
+  rewrite /=.
+
+Lemma npolyX_free : free npolyX.
 
 End Field.
 End Quotient.
@@ -734,10 +770,9 @@ Lemma expandF q :
 Proof.
   rewrite exprnP
           XnE (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
-  apply/(iffP idP).
-  * move/eqP=> H0 x.
+  apply/(iffP idP) => [/eqP H0 x|].
+  * rewrite (coord_basis (npolyX_full _ _) (memvf x)).
     rewrite /= in x.
-    rewrite (coord_basis (npolyX_full _ _) (memvf x)).
     set e0 := npolyX _ _.
     rewrite GRing.linear_sum; apply/eq_big => // i _.
     rewrite GRing.linearZ_LR /= expXpE.
