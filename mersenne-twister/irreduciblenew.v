@@ -890,134 +890,54 @@ apply/(iffP idP).
   by rewrite [X in (_ == X %[mod _])%nat]H2 modnDl [X in (_ == X %[mod _])%nat]H3
              [X in (X == _ %[mod _])%nat]H4 eqn_modDr mod0n.
 Qed.
-
-Lemma iter_sand_H s :
-   iter s ((@npoly_rV _ _) \o H \o (@rVnpoly _ _))
-=1 (@npoly_rV _ _) \o iter s H \o (@rVnpoly _ _).
-Proof.
-  elim: s => [?|s IH x].
-   by rewrite /= rVnpolyK.
-  by rewrite iterS IH /= npoly_rV_K.
-Qed.
-
-Lemma iterHP q :
-  iter q H =1 id <-> iter q ((@npoly_rV _ _) \o H \o (@rVnpoly _ _)) =1 id.
-Proof.
-  split => H0 x.
-   by rewrite iter_sand_H /= H0 rVnpolyK.
-  move: (H0 (npoly_rV x)).
-  rewrite iter_sand_H /= npoly_rV_K.
-  by move/(can_inj (@npoly_rV_K _ _)).
-Qed.
-
-Lemma irreducibleE0 q :
-  ('X^(2 ^ q) %% phi == 'X %% phi)%R =
-  (iter q ((@npoly_rV _ _) \o H \o (@rVnpoly _ _)) (npoly_rV (pi 'X))
-  == npoly_rV (pi 'X))%R.
-Proof.
-  rewrite iter_sand_H /= npoly_rV_K expXpE exprnP -piXnE -piXE.
-  set T := _ == _; case H0: T; subst T.
-   move/eqP: H0 => /= H0.
-   apply/esym/eqP/f_equal/eqP.
-   rewrite eqE /= -H0; set T := qpolify _ _; have->: (T = pi 'X)%R by [].
-   by rewrite -GRing.rmorphX.
-  apply/esym/negP/negP.
-  move/negP/negP: H0; apply/contra.
-  move/eqP/(can_inj (@npoly_rV_K _ _))/eqP.
-  set T := qpolify _ _; have->: (T = pi 'X)%R by [].
-  by rewrite GRing.rmorphX.
-Qed.
-End inverse.
+End Inverse.
 
 Lemma irreducibleP :
 reflect (irreducible_poly phi)
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
 Proof.
-  apply/(iffP idP).
-   by case/andP; apply irreducibleP_direct.
-  by apply irreducibleP_inverse.
+pose rmorphX :=
+  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+apply/(iffP idP); last by apply irreducibleP_inverse.
+case/andP; rewrite !XnE -!exprnP !rmorphX.
+by apply irreducibleP_direct.
 Qed.
 
-Lemma irreducibleP1 q :
-reflect (irreducible_poly phi)
-  [exists x, (((@npoly_rV _ _) \o H \o (@rVnpoly _ _)) x != x) &&
-        (iter q ((@npoly_rV _ _) \o H \o (@rVnpoly _ _)) x == x)%R].
+Definition H := (@QphiI_rV _ _) \o F \o (@rVQphiI _ _).
+
+Lemma iterHE s :
+   iter s H =1 (@QphiI_rV _ _) \o iter s F \o (@rVQphiI _ _).
 Proof.
-  apply/(iffP idP).
-  + case/existsP => x /andP[] H1 H2.
-    apply/irreducibleP/andP; split; last first.
-    - rewrite irreducibleE0.
-
-    - apply/expand_H.
-        Check expand_H.
-      rewrite -iterHP in H2.
-    - move: H1; apply/contra => /eqP H1.
-      rewrite /= (coord_basis (npolyX_full _ _) (memvf (rVnpoly x))).
-      set e0 := npolyX _ _.
-      rewrite GRing.linear_sum; apply/eqP/(can_inj (@rVnpolyK _ _)).
-      rewrite npoly_rV_K.
-              ; apply/etrans.
-      apply/eq_big => [//|i _].
-      rewrite /=.
-      rewrite /= (nth_map (pi 'X%R)).
-    rewrite GRing.linearZ_LR /= expXpE.
-    congr (_ *: _)%R.
-    rewrite (nth_map i) // ?size_enum_ord //=
-            nth_enum_ord ?size_polyXn // .
-    set Xi := npolyp _ _.
-    have->: Xi = (pi 'X^i)%R.
-     apply/npolyP => j.
-     subst Xi => /=.
-     rewrite npolypK ?modp_small ?size_polyXn // .
-     case: i => i Hi.
-     by case: (size phi) Hi phi_gt1.
-    case p0: (q > 0); last first.
-     rewrite lt0n in p0.
-     by move/negP/negP/eqP: p0 ->.
-    rewrite GRing.rmorphX GRing.exprAC -[in LHS]GRing.rmorphX.
-    set T := (pi 'X^(2 ^ q))%R.
-    suff->: T = (pi 'X)%R by [].
-    apply/val_inj.
-    by rewrite /= H0.
-      rewrite /=.
-    set e0 := npolyX _ _.
-
-  rewrite irreducibleE0.
-  rewrite iter_sand_H /= npoly_rV_K expXpE exprnP -piXnE -piXE.
-  set T := _ == _; case H0: T; subst T.
-   move/eqP: H0 => /= H0.
-   apply/esym/eqP/f_equal/eqP.
-   rewrite eqE /= -H0; set T := qpolify _ _; have->: (T = pi 'X)%R by [].
-   by rewrite -GRing.rmorphX.
-  apply/esym/negP/negP.
-  move/negP/negP: H0; apply/contra.
-  move/eqP/(can_inj (@npoly_rV_K _ _))/eqP.
-  set T := qpolify _ _; have->: (T = pi 'X)%R by [].
-  by rewrite GRing.rmorphX.
-Qed.
-End irreducibility.
-
-Section direct.
-Variable H1 : ('X ^ 2 %% phi)%R != ('X %% phi)%R.
-Variable H2 : ('X ^ (2 ^ m)%N %% phi)%R == ('X %% phi)%R.
-
-Lemma H2E : (\pi 'X : QphiI phi_gt1)^(2 ^ m)%nat == \pi 'X.
-  rewrite -exprnP -rmorphX /= -Quotient.idealrBE unfold_in rmodp_add // addr_eq0.
-  set T := rmodp _ phi; have->: T = 'X ^ (2 ^ (size phi).-1)%N %% phi.
-   by apply/eqP; rewrite -f2eqp_eq eqp_rmod_mod.
-  set S := - _; have-> //: S = 'X %% phi.
-  by rewrite /S rmodp_small ?modp_small ?opprK // ?size_opp ?size_polyX.
+  elim: s => [?|s IH x].
+   by rewrite /= rVQphiIK.
+  by rewrite iterS IH /H /= QphiI_rV_K.
 Qed.
 
-Lemma exstab : stab (\pi 'X) (2 ^ m - 1)%nat.
-by rewrite /stab -rmorphX -rmorphM -exprSr subn1 prednK //
-           exprnP rmorphX H2E /= -subn1.
-Qed.
-
-
-Lemma piX_unit : (\pi 'X : QphiI phi_gt1) \is a GRing.unit.
+Lemma irreducibleP1 :
+  reflect (irreducible_poly phi)
+  [exists x, (H x != x) && (iter (size phi).-1 H x == x)%R].
 Proof.
-  have H: stab (\pi 'X) (2 ^ m - 1)%nat.
-   by rewrite /stab -rmorphX -rmorphM -exprSr subn1 prednK //
-              exprnP rmorphX H2E /= -subn1.
-  have:
+pose rmorphX :=
+  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+apply/(iffP idP).
+* case/existsP => x /andP [].
+  rewrite iterHE /H /= => H1' H2'.
+  have H1: (F (rVQphiI phi_gt1 x)) != rVQphiI phi_gt1 x.
+   move: H1'; apply/contra => /eqP ->.
+   by rewrite rVQphiIK.
+  have H2: (iter (size phi).-1 F (rVQphiI phi_gt1 x))
+           == (rVQphiI phi_gt1 x)
+   by apply/eqP/canRL/(eqP H2')/QphiI_rV_K.
+  rewrite expXpE in H2.
+  rewrite /F Frobenius_autE in H1.
+  by apply (irreducibleP_direct H1 H2).
+* case/irreducibleP/andP.
+  rewrite !XnE => H1 H2; apply/existsP; exists (QphiI_rV (\pi_(QphiI phi_gt1) 'X)).
+  apply/andP; split.
+   rewrite /H /= QphiI_rV_K /F Frobenius_autE.
+   move: H1; apply/contra => /eqP/(can_inj (@QphiI_rV_K _ _))/eqP.
+   by rewrite rmorphX.
+  rewrite -!exprnP !rmorphX -!expXpE in H2.
+  by rewrite iterHE /= QphiI_rV_K (eqP H2).
+Qed.
+End new.
