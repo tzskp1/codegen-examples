@@ -828,55 +828,35 @@ Qed.
 Lemma expandF q :
   reflect (iter q F =1 id) ('X^(2 ^ q) %% phi == 'X %% phi)%R.
 Proof.
-  rewrite exprnP
-          XnE (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
-  apply/(iffP idP) => [/eqP H0 x|].
-  * rewrite (coord_basis (npolyX_full _ _) (memvf x)).
-    rewrite /= in x.
-    set e0 := npolyX _ _.
-    rewrite GRing.linear_sum; apply/eq_big => // i _.
-    rewrite GRing.linearZ_LR /= expXpE.
-    congr (_ *: _)%R.
-    rewrite (nth_map i) // ?size_enum_ord //=
-            nth_enum_ord ?size_polyXn // .
-    set Xi := npolyp _ _.
-    have->: Xi = (pi 'X^i)%R.
-     apply/npolyP => j.
-     subst Xi => /=.
-     rewrite npolypK ?modp_small ?size_polyXn // .
-     case: i => i Hi.
-     by case: (size phi) Hi phi_gt1.
-    case p0: (q > 0); last first.
-     rewrite lt0n in p0.
-     by move/negP/negP/eqP: p0 ->.
-    rewrite GRing.rmorphX GRing.exprAC -[in LHS]GRing.rmorphX.
-    set T := (pi 'X^(2 ^ q))%R.
-    suff->: T = (pi 'X)%R by [].
-    apply/val_inj.
-    by rewrite /= H0.
-  * move=> H1.
-    move/(f_equal val): (H1 (pi 'X))%R.
-    by rewrite expXpE -GRing.rmorphX /= => ->.
+pose rmorphX :=
+    (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+rewrite exprnP XnE rmorphX.
+apply/(iffP idP) => [/eqP H0 x|/(_ (\pi 'X)) ].
+* rewrite (coord_basis (QphiIX_full _) (memvf x)).
+  rewrite linear_sum; apply/eq_big => // i _.
+  set e0 := QphiIX _.
+  by rewrite linearZ_LR /= expXpE !QphiIXE rmorphX -exprM mulnC exprM H0.
+* by rewrite expXpE => ->.
 Qed.
 
-Lemma cycleH_dvdP p :
-  reflect (iter p H =1 id) (2 ^ m - 1 %| 2 ^ p - 1).
+Lemma cycleF_dvdP p :
+  reflect (iter p F =1 id) (2 ^ m - 1 %| 2 ^ p - 1)%nat.
 Proof.
-  have H0: (pi ('X ^ (2 ^ m)%N) = pi 'X)%R.
-   apply/val_inj.
-   by case/andP: irreducibleP_inverse => _ /eqP.
+  (* have H0: (\pi ('X ^ (2 ^ m)%N) = \pi 'X)%R. *)
+  (*  apply/val_inj. *)
+  (*  by case/andP: irreducibleP_inverse => _ /eqP. *)
   apply/(iffP idP).
   * case/dvdnP => q H1 x.
-    apply/expand_H.
-    case p0: (p > 0); last first.
+    rewrite expXpE.
+    case p0: (p > 0)%nat; last first.
      rewrite lt0n in p0.
      by move/negP/negP/eqP: p0 ->.
-    have->: (2 ^ p) = ((2 ^ p) - 1).+1.
+    have->: (2 ^ p = ((2 ^ p) - 1).+1)%nat.
      rewrite subn1 prednK // {H1}.
      elim: p p0 => // [][] // p IH _.
-     have->: 0 = 2 * 0 by [].
+     have->: (0 = 2 * 0)%nat by [].
      by rewrite expnS ltn_mul2l /= muln0 IH.
-    rewrite H1 {H1} GRing.exprS.
+    rewrite {}H1 GRing.exprS.
     elim: q => [|q /eqP IH].
      by rewrite mul0n GRing.expr0 GRing.mulr1.
     rewrite mulSn addnC GRing.exprD GRing.mulrA GRing.mulrC -modp_mul IH
