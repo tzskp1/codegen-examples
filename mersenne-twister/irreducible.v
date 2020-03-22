@@ -940,4 +940,17 @@ apply/(iffP idP).
   rewrite -!exprnP !rmorphX -!expXpE in H2.
   by rewrite iterHE /= QphiI_rV_K (eqP H2).
 Qed.
+
+Lemma irreducibleP2 x :
+  H x != x ->
+  reflect (irreducible_poly phi) (iter (size phi).-1 H x == x)%R.
+Proof.
+move=> Hxx.
+apply/(iffP idP) => [iHxx|].
+* apply/irreducibleP1/existsP.
+  by exists x; rewrite Hxx iHxx.
+* case/irreducibleP/andP => ? /expandF/(_ (rVQphiI _ x)).
+  rewrite iterHE /= => ->.
+  by rewrite rVQphiIK.
+Qed.
 End Irreducible.
