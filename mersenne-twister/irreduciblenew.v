@@ -70,6 +70,18 @@ rewrite !big_ord_recr /= subnn muln0 expn0 -[X in X < _]add0n ltn_add2r.
 by rewrite subSnn muln1 ltn_addl // expn_gt0.
 Qed.
 
+Section iter_lin.
+Variable K : fieldType.
+Variable R : vectType K.
+Variable f : {linear R -> R}%R.
+Lemma iter_linear m : linear (iter m f).
+Proof.
+  elim: m => // m IHm a x y.
+  by rewrite !iterSr !GRing.linearP IHm.
+Qed.
+Canonical iter_linearType m := Linear (iter_linear m).
+End iter_lin.
+
 Section Quotient.
 Variable phi : {poly 'F_2}.
 Variable phi_gt1 : size phi > 1.
@@ -77,6 +89,9 @@ Local Open Scope ring_scope.
 Import GRing.Theory.
 Import Pdiv.Ring.
 Import Pdiv.RingMonic.
+
+Lemma ltn_phi_pred : ((size phi).-1 < size phi)%nat.
+Proof. by case: (size phi) phi_gt1. Qed.
 
 Lemma phi_neq0 : phi != 0.
 Proof.
@@ -87,7 +102,7 @@ Qed.
 Lemma phi_is_monic : phi \is monic.
 Proof. by apply f2p_monic; rewrite -size_poly_gt0 ltnW. Qed.
 
-Hint Resolve phi_is_monic phi_neq0 : core.
+Hint Resolve phi_is_monic phi_neq0 ltn_phi_pred : core.
 
 Definition phiI := rdvdp phi.
 Fact phiI_key : pred_key phiI. Proof. by []. Qed.
@@ -151,7 +166,7 @@ case: piP => y /eqP.
 rewrite -Quotient.idealrBE unfold_in rmodp_add // addr_eq0
         -!Pdiv.IdomainMonic.modpE // modp_opp opprK => /eqP <-.
 rewrite modp_small //.
-by apply(leq_ltn_trans (size_poly _ _)); case: (size phi) phi_gt1.
+by apply(leq_ltn_trans (size_poly _ _)).
 Qed.
 
 Hint Resolve QphiI_rV_K rVQphiIK : core.
@@ -248,6 +263,61 @@ apply/eqP; rewrite eqn_leq; apply/andP; split.
   by apply/subset_leq_card/subsetP.
 Qed.
 
+Definition QphiIX : (size phi).-1.-tuple QphiI_lmodType
+  := [tuple \pi 'X^i | i < (size phi).-1].
+
+Lemma QphiIXE (i : 'I_(size phi).-1) : QphiIX`_i = \pi 'X^i.
+Proof. by rewrite nth_mktuple. Qed.
+
+Lemma pi_linear : linear (\pi : _ -> [lmodType 'F_2 of QphiI]).
+Proof.
+  move=> a x y.
+  case: a => [][|[]//] i.
+    have->: Ordinal i = 0 by apply/val_inj.
+    by rewrite !scale0r !add0r.
+   have->: Ordinal i = 1 by apply/val_inj.
+   by rewrite !scale1r -rmorphD.
+Qed.
+Canonical pi_linearType := Linear pi_linear.
+
+Lemma QphiIX_free : free QphiIX.
+Proof.
+apply/freeP => k.
+set T := \sum__ _; have->: T = \sum_(i < (size phi).-1) \pi_QphiI (k i *: 'X^i).
+ apply/eq_bigr => j _.
+ by rewrite QphiIXE -[k j *: 'X^j]addr0 linearP /= pi_zeror addr0.
+rewrite -linear_sum -pi_zeror => /eqP.
+rewrite -Quotient.idealrBE unfold_in subr0 rmodp_small; last first.
+* apply/(leq_ltn_trans (size_sum _ _ _))/leq_trans/ltn_phi_pred/bigmax_leqP=> i _.
+  by apply/(leq_trans (size_scale_leq _ _)); rewrite size_polyXn.
+* move: k {T}; elim: (size phi).-1 => [?? [] //|n IHn k].
+  rewrite big_ord_recr /=.
+  case k0: (k ord_max == 0).
+   rewrite (eqP k0) scale0r addr0 => /IHn H i.
+   case: (splitP (cast_ord (esym (addn1 _)) i)) => j ji.
+    move/H: (j) <-; congr (k _); apply/ord_inj.
+    by rewrite /= -ji.
+   suff->: i = ord_max by apply/eqP.
+   case: j ji => [][|[]//] ?.
+   rewrite /= addn0 => ?.
+   by apply/ord_inj.
+  case: (k ord_max) k0 => [][|[]]// i; have->: Ordinal i = 1 by apply/ord_inj.
+  rewrite scale1r addr_eq0 => _ /eqP/(f_equal (size : {poly 'F_2} -> _)).
+  rewrite size_opp size_polyXn => C.
+  suff: (n.+1 < n.+1)%nat by rewrite ltnn.
+  rewrite -[X in (X < _)%nat]C.
+  apply/(leq_ltn_trans (size_sum _ _ _))/bigmax_leqP => j _.
+  by apply/(leq_trans (size_scale_leq _ _)); rewrite size_polyXn.
+Qed.
+
+Lemma dim_QphiI : \dim (fullv : {vspace QphiI}) = (size phi).-1.
+Proof. by rewrite [LHS]mxrank_gen mxrank1. Qed.
+
+Lemma QphiIX_full : basis_of fullv QphiIX.
+Proof.
+by rewrite basisEfree QphiIX_free subvf size_map size_enum_ord dim_QphiI /=.
+Qed.
+
 Section Field.
 Variable ip : irreducible_poly phi.
 Definition QphiI_inv (q : QphiI) :=
@@ -303,16 +373,6 @@ Definition QphiI_fieldMixin :=
   @FieldMixin [comRingType of QphiI] QphiI_inv QphiI_field QphiI_inv0.
 Definition QphiI_fieldType :=
   Eval hnf in FieldType _ QphiI_fieldMixin.
-
-Definition QphiIX : (size phi).-1.-tuple QphiI_lmodType
-  := [tuple \pi 'X^i | i < (size phi).-1].
-
-Lemma QphiIX_free : free QphiIX.
-Proof.
-  apply/freeP => i.
-  rewrite /=.
-
-Lemma npolyX_free : free npolyX.
 
 End Field.
 End Quotient.
