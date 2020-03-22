@@ -2,7 +2,6 @@
 
 mt.v
 generate.v
-polyn.v
 irreducible.v
 cycle.v
 inversive_decimation.v

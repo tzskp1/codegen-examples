@@ -1,6 +1,6 @@
-From mathcomp Require Import all_ssreflect all_algebra all_field all_fingroup.
+From mathcomp
+Require Import all_ssreflect all_algebra all_field all_fingroup.
 Require irreducible.
-Require Import polyn.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -376,6 +376,8 @@ Proof.
  by rewrite -eqp_monic ?char_poly_monic ?mxminpoly_monic.
 Qed.
 
+Local Open Scope quotient_scope.
+
 Lemma cycleB_dvdP :
   irreducible_poly phi ->
   forall q, (castmx (tecp, tecp) B ^+ (2 ^ q) == castmx (tecp, tecp) B)
@@ -386,24 +388,16 @@ Proof.
   * rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX
             (divp_eq 'X^(2 ^ q) phi) GRing.rmorphD
             GRing.rmorphM /= Cayley_Hamilton GRing.mulr0 GRing.add0r.
-    move/(irreducible.cycleH_dvdP pm' H q)/(_ (irreducible.pi pm' 'X)) : H0.
-    rewrite irreducible.expXpE -GRing.rmorphX => /(f_equal val) /= ->.
+    move/(irreducible.cycleF_dvdP pm' H q)/(_ (\pi 'X)) : H0.
+    rewrite irreducible.expXpE -GRing.rmorphX => /eqP.
+    rewrite exprnP -irreducible.XnE => /eqP ->.
     by rewrite modp_small // size_polyX size_char_poly prednK ltnW // ltnW.
   * move=> H1.
     suff: (2 ^ (size phi).-1 - 1 %| 2 ^ q - 1)%N by rewrite H0.
     rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /= in H1.
     move/(f_equal (mx_inv_horner (castmx (tecp, tecp) B))): H1.
     rewrite !horner_mxK -!phi_mxminpoly // => H1.
-    by apply/(irreducible.cycleH_dvdP pm' H q)/irreducible.expand_H/eqP.
-Qed.
-
-Lemma irreducibleP' :
-  irreducible_poly phi <->
-  iter (size phi).-1
-  ((@npoly_rV _ _) \o irreducible.H (pm:=pm') \o (@rVnpoly _ _)) =1 id.
-Proof.
-  split => [/irreducibleP/irreducible.expand_H/irreducible.iterHP|X] //.
-  by apply/irreducibleP/irreducible.expand_H/irreducible.iterHP.
+    by apply/(irreducible.cycleF_dvdP pm' H q)/irreducible.expandF/eqP.
 Qed.
 
 Lemma size_ord_enum q : size (ord_enum q) = q.
@@ -700,40 +694,4 @@ suff: (p < p)%nat by rewrite ltnn.
 suff: (p + s < p)%nat; first by apply/leq_trans; rewrite ltnS leq_addr.
 by rewrite -Ts.
 Qed.
-
-(* Definition b (v : 'rV['F_2]_p) := v ord0 (Ordinal wrp). *)
-
-(* Definition Phi S : 'rV['F_2]_p := *)
-(*   \row_i b (S *m (castmx (esym tecp, esym tecp) (castmx (tecp, tecp) B ^+ i))). *)
-
-(* Lemma nmp (i : 'I_p) : (i - n + m < p)%nat. *)
-(* Proof. *)
-(*   have H: (n = (n - m) + m)%nat by rewrite subnK // ltnW. *)
-(*   rewrite [X in (_ - X + _ < _)%nat]H subnDA. *)
-(*   case minm: (m <= i - (n - m))%N; last first. *)
-(*    move/negP/negP: minm; rewrite -ltnNge => /ltnW minm. *)
-(*    rewrite -subn_eq0 in minm. *)
-(*    rewrite (eqP minm) add0n -tecw' mulnS. *)
-(*    apply: (leq_trans mn'). *)
-(*    by rewrite -addnBA // leq_addr. *)
-(*   rewrite subnK //. *)
-(*   apply/(leq_ltn_trans (_ : _ <= i)%nat) => //. *)
-(*   by rewrite leq_subr. *)
-(* Qed. *)
-
-(* Lemma n1p (i : 'I_p) : (i - n + 1 < p)%nat. *)
-(* Proof. *)
-(*   have H: (n = (n - 1) + 1)%nat by rewrite subn1 addn1 prednK //. *)
-(*   rewrite [X in (_ - X + _ < _)%nat]H subnDA. *)
-(*   case minm: (1 <= i - (n - 1))%N; last first. *)
-(*    move/negP/negP: minm; rewrite -ltnNge => /ltnW minm. *)
-(*    rewrite -subn_eq0 in minm. *)
-(*    by rewrite (eqP minm) add0n // ltnW. *)
-(*   rewrite subnK //. *)
-(*   apply/(leq_ltn_trans (_ : _ <= i)%nat) => //. *)
-(*   by rewrite leq_subr. *)
-(* Qed. *)
-
-(* Definition update (y : 'M['F_2]_(p, w)) (i : 'I_p) : 'M['F_2]_(p, w). *)
-(*   Check row i y + row (Ordinal (nmp i)) y + castmx (erefl, tecw'') (y (Ordinal (n1p i)) (cast_ord tecw' ord_max) *: ra). *)
 End Main.
