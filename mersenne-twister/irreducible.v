@@ -398,6 +398,16 @@ Proof. by case: (2 ^ m) pm. Qed.
 Lemma predpower_gt0 : 0 < 2 ^ m - 1.
 Proof. by case: (2 ^ m - 1) pm. Qed.
 
+Lemma predpower_gt0' : 0 < (2 ^ m).-1.
+Proof. by rewrite -subn1 predpower_gt0. Qed.
+
+Lemma predpower_gt1 : 1 < 2 ^ m.
+Proof.
+  case: (2 ^ m) pm => // n.
+  rewrite subSS ltnS subn0.
+  by case n.
+Qed.
+
 Lemma predpower_neq0 : 0 != 2 ^ m - 1.
 Proof. by case: (2 ^ m - 1) pm. Qed.
 
@@ -435,7 +445,7 @@ Hint Resolve (phi_is_monic phi_gt1) (phi_neq0 phi_gt1)
      phi_gt1 phi_gt2 phi_gt0
      phi_gtb predphi_neq0 predphi_gt1 predpredpower_power
      predpredpower_gt0 p_ord_prf predphi_geq1
-     predpower_gt_succpower
+     predpower_gt_succpower predpower_gt1
      power_gt0 predpower_gt0 predpower_neq0 : core.
 
 Section Order.
