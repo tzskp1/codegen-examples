@@ -215,9 +215,6 @@ Local Notation B := (@B w n (n - m) r (rev_tuple (word_of_N a)) erefl erefl eref
 
 (* Local Notation B := (@B w n (n - m) r (Tuple a32) erefl erefl erefl erefl). *)
 
-Definition computeB :=
-  array_of_state \o snd \o next_random_state \o state_of_array.
-
 Lemma size_next_random_state v :
 size (state_vector (next_random_state (state_of_array v)).2) = n.
 Proof.
@@ -286,7 +283,8 @@ Lemma testbita i :
   (if N.testbit a [Num of i] then 1%R else 0%R) = nth 0%R (word_of_N a) i.
 Proof. by do 32!(case: i => // i). Qed.
 
-Lemma computeBE v : computeB v = (v *m B)%R.
+Lemma computeBE v :
+  (array_of_state \o snd \o next_random_state \o state_of_array) v = (v *m B)%R.
 Proof.
   rewrite /computeB mulBE /cycle.computeB.
   apply/rowP => i.
