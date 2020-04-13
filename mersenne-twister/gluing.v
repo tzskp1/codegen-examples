@@ -283,7 +283,7 @@ Lemma testbita i :
   (if N.testbit a [Num of i] then 1%R else 0%R) = nth 0%R (word_of_N a) i.
 Proof. by do 32!(case: i => // i). Qed.
 
-Lemma computeBE v :
+Theorem next_random_stateE v :
   (array_of_state \o snd \o next_random_state \o state_of_array) v = (v *m B)%R.
 Proof.
   rewrite /computeB mulBE /cycle.computeB.
