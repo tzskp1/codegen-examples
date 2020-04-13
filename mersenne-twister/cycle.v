@@ -380,24 +380,25 @@ Local Open Scope quotient_scope.
 
 Lemma cycleB_dvdP :
   irreducible_poly phi ->
-  forall q, (castmx (tecp, tecp) B ^+ (2 ^ q) == castmx (tecp, tecp) B)
-        = (2 ^ (size phi).-1 - 1 %| 2 ^ q - 1)%nat.
+  forall q, (q > 0)%nat ->
+    (castmx (tecp, tecp) B ^+ q == castmx (tecp, tecp) B)
+        = (2 ^ (size phi).-1 - 1 %| q - 1)%nat.
 Proof.
-  move=> H q.
+  move=> H q q0.
   apply/eqP; case: ifP => H0.
   * rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX
-            (divp_eq 'X^(2 ^ q) phi) GRing.rmorphD
+            (divp_eq 'X^q phi) GRing.rmorphD
             GRing.rmorphM /= Cayley_Hamilton GRing.mulr0 GRing.add0r.
-    move/(irreducible.cycleF_dvdP pm' H q)/(_ (\pi 'X)) : H0.
-    rewrite irreducible.expXpE -GRing.rmorphX => /eqP.
-    rewrite exprnP -irreducible.XnE => /eqP ->.
+    move/(irreducible.cycleF_dvdP' pm' H q0)/eqP : H0.
+    rewrite -GRing.rmorphX /= exprnP -irreducible.XnE => /eqP ->.
     by rewrite modp_small // size_polyX size_char_poly prednK ltnW // ltnW.
   * move=> H1.
-    suff: (2 ^ (size phi).-1 - 1 %| 2 ^ q - 1)%N by rewrite H0.
     rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /= in H1.
     move/(f_equal (mx_inv_horner (castmx (tecp, tecp) B))): H1.
     rewrite !horner_mxK -!phi_mxminpoly // => H1.
-    by apply/(irreducible.cycleF_dvdP pm' H q)/irreducible.expandF/eqP.
+    suff: (2 ^ (size phi).-1 - 1 %| q - 1)%N by rewrite H0.
+    apply/(irreducible.cycleF_dvdP' pm' H q0)/eqP.
+    by rewrite -GRing.rmorphX /= exprnP -irreducible.XnE -H1.
 Qed.
 
 Lemma size_ord_enum q : size (ord_enum q) = q.

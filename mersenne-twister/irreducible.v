@@ -890,6 +890,40 @@ apply/(iffP idP).
   by rewrite [X in (_ == X %[mod _])%nat]H2 modnDl [X in (_ == X %[mod _])%nat]H3
              [X in (X == _ %[mod _])%nat]H4 eqn_modDr mod0n.
 Qed.
+
+Lemma cycleF_dvdP' p :
+  (0 < p)%nat ->
+  reflect ((\pi 'X : QphiI phi_gt1) ^+ p = \pi 'X)
+          (2 ^ m - 1 %| p - 1)%nat.
+Proof.
+move=> p1; case/andP: irreducibleP_inverse => _ H0.
+apply/(iffP idP).
+* case/dvdnP => q H1.
+  move/expandF/(_ (\pi 'X)) : H0 => H0.
+  case q0: (q == 0)%nat.
+   move/eqP: q0 H1 => ->.
+   by case: p p1 => []//[]//.
+  suff/(f_equal (fun y => (\pi 'X : QphiI phi_gt1) * y)):
+     (\pi 'X : QphiI phi_gt1) ^+ (p - 1) = 1
+   by rewrite -exprS mulr1 subn1 prednK.
+  rewrite H1 mulnC mulnBl mul1n (expfB (\pi 'X : QphiI_fieldType phi_gt1 ip))
+          ?ltn_Pmull ?lt0n ?q0 //.
+  rewrite expXpE in H0.
+  by rewrite exprM H0 divff // expf_neq0 // x0.
+* rewrite XnE in H0.
+  rewrite -(eqP H0) -rmorphX -exprM -!exprnP /= -!val_piX_expE => /val_inj/eqP.
+  rewrite cyclic.eq_expg_mod_order piX_order.
+  have H2: (2 ^ (size phi).-1 = ((2 ^ (size phi).-1) - 1) + 1)%nat
+   by rewrite addn1 subn1 prednK.
+  case p0: (p > 0)%nat; last first.
+   rewrite lt0n in p0.
+   by move/negP/negP/eqP: p0 ->.
+  have H3: (p - 1 + 1 = p)%nat by rewrite subn1 addn1 prednK.
+  by rewrite [X in (_ == X %[mod _])%nat]H2 modnDl
+            -[X in (_ == X %[mod _])%nat]add0n
+             [X in (X * _ == _ %[mod _])%nat]H2 mulnDl mulnC modnMDl mul1n -H3
+             eqn_modDr H3 mod0n.
+Qed.
 End Inverse.
 
 Lemma irreducibleP :
