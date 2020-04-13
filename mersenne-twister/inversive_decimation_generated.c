@@ -1,14 +1,13 @@
-static
 prod_N_random_state
-n2_next(N v0_a, random_state v1_rand)
+n2_next(N v1_a, random_state v0_rand)
 {
-  nat v2_i = n1_index(v1_rand);
+  nat v2_i = n1_index(v0_rand);
   nat v3_n = n0_O();
   nat v4_n = n1_S(v3_n);
   nat v5_n = n2_add(v2_i, v4_n);
   nat v6_n = n0_n();
   nat v7_i1 = n2_modulo(v5_n, v6_n);
-  list_N v8_s = n1_state(v1_rand);
+  list_N v8_s = n1_state(v0_rand);
   N v9_n = n2_nth_state_vector(v8_s, v2_i);
   N v10_n = n0_upper_mask();
   N v11_n = n2_land_0(v9_n, v10_n);
@@ -34,248 +33,248 @@ n2_next(N v0_a, random_state v1_rand)
   switch (sw_bool(v29_b))
   {
     case_true_bool: { v30_n = n0_N0(); break; }
-    case_false_bool: { v30_n = v0_a; break; }
+    case_false_bool: { v30_n = v1_a; break; }
   }
   N v31_xi = n2_lxor_0(v24_n, v30_n);
   list_N v32_l = n3_set_nth_state_vector(v8_s, v2_i, v31_xi);
   random_state v33_next_rand = n2_Build_random_state(v7_i1, v32_l);
   return n2_pair_N_random_state(v31_xi, v33_next_rand);
 }
-static
 list_N
-n4_generate_aux(N v0_a, list_N v1_words, random_state v2_rand, nat v3_times)
+n4_generate_aux(N v37_a,
+                list_N v36_words,
+                random_state v35_rand,
+                nat v34_times)
 {
   n4_generate_aux:;
-  switch (sw_nat(v3_times))
+  switch (sw_nat(v34_times))
   {
-    case_O_nat: { return v1_words; }
+    case_O_nat: { return v36_words; }
     case_S_nat: {
-      nat v4_m = field0_S_nat(v3_times);
-      prod_N_random_state v5_p = n2_next(v0_a, v2_rand);
-      N v6_nextValue = field0_pair_prod_N_random_state(v5_p);
-      random_state v7_nextRand = field1_pair_prod_N_random_state(v5_p);
-      nat v8_n = n0_n();
-      nat v9_n = n0_p2n();
-      nat v10_n = n2_subn(v9_n, v3_times);
-      nat v11_n = n2_add(v8_n, v10_n);
-      list_N v12_l = n3_set_nth_word_seq(v1_words, v11_n, v6_nextValue);
-      v1_words = v12_l;
-      v2_rand = v7_nextRand;
-      v3_times = v4_m;
+      nat v39_m = field0_S_nat(v34_times);
+      prod_N_random_state v40_p = n2_next(v37_a, v35_rand);
+      N v41_nextValue = field0_pair_prod_N_random_state(v40_p);
+      random_state v42_nextRand = field1_pair_prod_N_random_state(v40_p);
+      nat v43_n = n0_n();
+      nat v44_n = n0_p2n();
+      nat v45_n = n2_subn(v44_n, v34_times);
+      nat v46_n = n2_add(v43_n, v45_n);
+      list_N v47_l = n3_set_nth_word_seq(v36_words, v46_n, v41_nextValue);
+      v36_words = v47_l;
+      v35_rand = v42_nextRand;
+      v34_times = v39_m;
       goto n4_generate_aux;
     }
   }
 }
-static
 list_N
-n2_generate(N v0_a, list_N v1_state)
+n2_generate(N v49_a, list_N v48_state)
 {
-  random_state v2_rand = n1_make_mtRand(v1_state);
-  list_N v3_start_word_seq = n1_word_seq_of_state_vector(v1_state);
-  nat v4_n = n0_p2n();
-  return n4_generate_aux(v0_a, v3_start_word_seq, v2_rand, v4_n);
+  random_state v50_rand = n1_make_mtRand(v48_state);
+  list_N v51_start_word_seq = n1_word_seq_of_state_vector(v48_state);
+  nat v52_n = n0_p2n();
+  return n4_generate_aux(v49_a, v51_start_word_seq, v50_rand, v52_n);
 }
-static
 list_N
-n3_decimate_aux(list_N v0_words, list_N v1_acc, nat v2_times)
+n3_decimate_aux(list_N v55_words, list_N v54_acc, nat v53_times)
 {
   n3_decimate_aux:;
-  switch (sw_nat(v2_times))
+  switch (sw_nat(v53_times))
   {
-    case_O_nat: { return v1_acc; }
+    case_O_nat: { return v54_acc; }
     case_S_nat: {
-      nat v3_times_ = field0_S_nat(v2_times);
-      nat v4_n = n0_p();
-      nat v5_n = n2_sub(v4_n, v2_times);
-      nat v6_n = n0_O();
-      nat v7_n = n1_S(v6_n);
-      nat v8_j = n2_add(v5_n, v7_n);
-      nat v9_n = n0_O();
-      nat v10_n = n1_S(v9_n);
-      nat v11_n = n1_S(v10_n);
-      nat v12_n = n2_muln(v11_n, v8_j);
-      nat v13_n = n0_O();
-      nat v14_n = n1_S(v13_n);
-      nat v15_k = n2_sub(v12_n, v14_n);
-      N v16_n = n2_nth_word_seq(v0_words, v15_k);
-      list_N v17_l = n3_set_nth_word_seq(v1_acc, v8_j, v16_n);
-      v1_acc = v17_l;
-      v2_times = v3_times_;
+      nat v57_times_ = field0_S_nat(v53_times);
+      nat v58_n = n0_p();
+      nat v59_n = n2_sub(v58_n, v53_times);
+      nat v60_n = n0_O();
+      nat v61_n = n1_S(v60_n);
+      nat v62_j = n2_add(v59_n, v61_n);
+      nat v63_n = n0_O();
+      nat v64_n = n1_S(v63_n);
+      nat v65_n = n1_S(v64_n);
+      nat v66_n = n2_muln(v65_n, v62_j);
+      nat v67_n = n0_O();
+      nat v68_n = n1_S(v67_n);
+      nat v69_k = n2_sub(v66_n, v68_n);
+      N v70_n = n2_nth_word_seq(v55_words, v69_k);
+      list_N v71_l = n3_set_nth_word_seq(v54_acc, v62_j, v70_n);
+      v54_acc = v71_l;
+      v53_times = v57_times_;
       goto n3_decimate_aux;
     }
   }
 }
-static
 list_N
-n1_decimate(list_N v0_words)
+n1_decimate(list_N v72_words)
 {
-  nat v1_n = n0_p(); return n3_decimate_aux(v0_words, v0_words, v1_n);
+  nat v73_n = n0_p(); return n3_decimate_aux(v72_words, v72_words, v73_n);
 }
-static
 list_N
-n3_process_aux(N v0_a, list_N v1_words, nat v2_times)
+n3_process_aux(N v76_a, list_N v75_words, nat v74_times)
 {
   n3_process_aux:;
-  switch (sw_nat(v2_times))
+  switch (sw_nat(v74_times))
   {
-    case_O_nat: { return v1_words; }
+    case_O_nat: { return v75_words; }
     case_S_nat: {
-      nat v3_times_ = field0_S_nat(v2_times);
-      nat v4_n = n0_n();
-      nat v5_n = n0_O();
-      nat v6_n = n1_S(v5_n);
-      nat v7_n = n2_sub(v4_n, v6_n);
-      nat v8_k = n2_add(v2_times, v7_n);
-      N v9_xk = n2_nth_word_seq(v1_words, v8_k);
-      nat v10_n = n0_n();
-      nat v11_kn = n2_sub(v8_k, v10_n);
-      N v12_xkn = n2_nth_word_seq(v1_words, v11_kn);
-      nat v13_n = n0_m();
-      nat v14_knm = n2_add(v11_kn, v13_n);
-      N v15_xknm = n2_nth_word_seq(v1_words, v14_knm);
-      nat v16_n = n0_O();
-      nat v17_n = n1_S(v16_n);
-      nat v18_kn1 = n2_add(v11_kn, v17_n);
-      N v19_xkn1 = n2_nth_word_seq(v1_words, v18_kn1);
-      N v20_n = n2_lxor_0(v9_xk, v15_xknm);
-      positive v21_p = n0_xH();
-      N v22_n = n1_Npos(v21_p);
-      N v23_n = n2_land_0(v19_xkn1, v22_n);
-      N v24_n = n0_N0();
-      bool v25_b = n2_eqb_0(v23_n, v24_n);
-      N v26_n;
-      switch (sw_bool(v25_b))
+      nat v78_times_ = field0_S_nat(v74_times);
+      nat v79_n = n0_n();
+      nat v80_n = n0_O();
+      nat v81_n = n1_S(v80_n);
+      nat v82_n = n2_sub(v79_n, v81_n);
+      nat v83_k = n2_add(v74_times, v82_n);
+      N v84_xk = n2_nth_word_seq(v75_words, v83_k);
+      nat v85_n = n0_n();
+      nat v86_kn = n2_sub(v83_k, v85_n);
+      N v87_xkn = n2_nth_word_seq(v75_words, v86_kn);
+      nat v88_n = n0_m();
+      nat v89_knm = n2_add(v86_kn, v88_n);
+      N v90_xknm = n2_nth_word_seq(v75_words, v89_knm);
+      nat v91_n = n0_O();
+      nat v92_n = n1_S(v91_n);
+      nat v93_kn1 = n2_add(v86_kn, v92_n);
+      N v94_xkn1 = n2_nth_word_seq(v75_words, v93_kn1);
+      N v95_n = n2_lxor_0(v84_xk, v90_xknm);
+      positive v96_p = n0_xH();
+      N v97_n = n1_Npos(v96_p);
+      N v98_n = n2_land_0(v94_xkn1, v97_n);
+      N v99_n = n0_N0();
+      bool v100_b = n2_eqb_0(v98_n, v99_n);
+      N v101_n;
+      switch (sw_bool(v100_b))
       {
-        case_true_bool: { v26_n = n0_N0(); break; }
-        case_false_bool: { v26_n = v0_a; break; }
+        case_true_bool: { v101_n = n0_N0(); break; }
+        case_false_bool: { v101_n = v76_a; break; }
       }
-      N v27_y = n2_lxor_0(v20_n, v26_n);
-      positive v28_p = n0_xH();
-      N v29_n = n1_Npos(v28_p);
-      N v30_y1 = n2_shiftl_0(v27_y, v29_n);
-      positive v31_p = n0_xH();
-      N v32_n = n1_Npos(v31_p);
-      N v33_n = n2_land_0(v19_xkn1, v32_n);
-      N v34_n = n0_N0();
-      bool v35_b = n2_eqb_0(v33_n, v34_n);
-      N v36_y2;
-      switch (sw_bool(v35_b))
+      N v102_y = n2_lxor_0(v95_n, v101_n);
+      positive v103_p = n0_xH();
+      N v104_n = n1_Npos(v103_p);
+      N v105_y1 = n2_shiftl_0(v102_y, v104_n);
+      positive v106_p = n0_xH();
+      N v107_n = n1_Npos(v106_p);
+      N v108_n = n2_land_0(v94_xkn1, v107_n);
+      N v109_n = n0_N0();
+      bool v110_b = n2_eqb_0(v108_n, v109_n);
+      N v111_y2;
+      switch (sw_bool(v110_b))
       {
         case_true_bool: {
-          N v37_n = n0_bottom_zero_mask();
-          v36_y2 = n2_land_0(v30_y1, v37_n);
+          N v112_n = n0_bottom_zero_mask();
+          v111_y2 = n2_land_0(v105_y1, v112_n);
           break;
         }
         case_false_bool: {
-          N v38_n = n0_bottom_one_mask();
-          v36_y2 = n2_lor_0(v30_y1, v38_n);
+          N v113_n = n0_bottom_one_mask();
+          v111_y2 = n2_lor_0(v105_y1, v113_n);
           break;
         }
       }
-      N v39_n = n0_upper_mask();
-      N v40_n = n2_land_0(v39_n, v19_xkn1);
-      N v41_n = n0_lower_mask();
-      N v42_n = n2_land_0(v41_n, v36_y2);
-      N v43_newxkn1 = n2_lor_0(v40_n, v42_n);
-      N v44_n = n0_upper_mask();
-      N v45_n = n2_land_0(v44_n, v36_y2);
-      N v46_n = n0_lower_mask();
-      N v47_n = n2_land_0(v46_n, v12_xkn);
-      N v48_newxkn = n2_lor_0(v45_n, v47_n);
+      N v114_n = n0_upper_mask();
+      N v115_n = n2_land_0(v114_n, v94_xkn1);
+      N v116_n = n0_lower_mask();
+      N v117_n = n2_land_0(v116_n, v111_y2);
+      N v118_newxkn1 = n2_lor_0(v115_n, v117_n);
+      N v119_n = n0_upper_mask();
+      N v120_n = n2_land_0(v119_n, v111_y2);
+      N v121_n = n0_lower_mask();
+      N v122_n = n2_land_0(v121_n, v87_xkn);
+      N v123_newxkn = n2_lor_0(v120_n, v122_n);
       list_N
-      v49_words1
+      v124_words1
       =
-      n3_set_nth_word_seq(v1_words,
-      v18_kn1,
-      v43_newxkn1);
+      n3_set_nth_word_seq(v75_words,
+      v93_kn1,
+      v118_newxkn1);
       list_N
-      v50_words2
+      v125_words2
       =
-      n3_set_nth_word_seq(v49_words1,
-      v11_kn,
-      v48_newxkn);
-      v1_words = v50_words2;
-      v2_times = v3_times_;
+      n3_set_nth_word_seq(v124_words1,
+      v86_kn,
+      v123_newxkn);
+      v75_words = v125_words2;
+      v74_times = v78_times_;
       goto n3_process_aux;
     }
   }
 }
-static
 list_N
-n2_process(N v0_a, list_N v1_state)
+n2_process(N v127_a, list_N v126_state)
 {
-  list_N v2_expandedWords = n2_generate(v0_a, v1_state);
-  list_N v3_decimatedWords = n1_decimate(v2_expandedWords);
-  nat v4_n = n0_p();
-  nat v5_n = n0_n();
-  nat v6_n = n0_O();
-  nat v7_n = n1_S(v6_n);
-  nat v8_n = n2_sub(v5_n, v7_n);
-  nat v9_pn1 = n2_sub(v4_n, v8_n);
-  list_N v10_l = n3_process_aux(v0_a, v3_decimatedWords, v9_pn1);
-  return n1_state_vector_of_word_seq(v10_l);
+  list_N v128_expandedWords = n2_generate(v127_a, v126_state);
+  list_N v129_decimatedWords = n1_decimate(v128_expandedWords);
+  nat v130_n = n0_p();
+  nat v131_n = n0_n();
+  nat v132_n = n0_O();
+  nat v133_n = n1_S(v132_n);
+  nat v134_n = n2_sub(v131_n, v133_n);
+  nat v135_pn1 = n2_sub(v130_n, v134_n);
+  list_N v136_l = n3_process_aux(v127_a, v129_decimatedWords, v135_pn1);
+  return n1_state_vector_of_word_seq(v136_l);
 }
-static
 list_N
-n3_recursive_process(N v0_a, list_N v1_state, nat v2_times)
+n3_recursive_process(N v139_a, list_N v138_state, nat v137_times)
 {
   n3_recursive_process:;
-  switch (sw_nat(v2_times))
+  switch (sw_nat(v137_times))
   {
-    case_O_nat: { return v1_state; }
+    case_O_nat: { return v138_state; }
     case_S_nat: {
-      nat v3_times_ = field0_S_nat(v2_times);
-      list_N v4_l = n2_process(v0_a, v1_state);
-      v1_state = v4_l;
-      v2_times = v3_times_;
+      nat v141_times_ = field0_S_nat(v137_times);
+      list_N v142_l = n2_process(v139_a, v138_state);
+      v138_state = v142_l;
+      v137_times = v141_times_;
       goto n3_recursive_process;
     }
   }
 }
-static
 bool
-n3_check_aux(list_N v0_initial_state, list_N v1_last_state, nat v2_index)
+n3_check_aux(list_N v145_initial_state,
+             list_N v144_last_state,
+             nat v143_index)
 {
-  switch (sw_nat(v2_index))
+  switch (sw_nat(v143_index))
   {
     case_O_nat: { return n0_true(); }
     case_S_nat: {
-      nat v3_index_ = field0_S_nat(v2_index);
-      N v4_n = n2_nth_state_vector(v0_initial_state, v2_index);
-      N v5_n = n2_nth_state_vector(v1_last_state, v2_index);
-      bool v6_b = n2_eqb_0(v4_n, v5_n);
-      bool v7_b = n3_check_aux(v0_initial_state, v1_last_state, v3_index_);
-      return n2_andb(v6_b, v7_b);
+      nat v147_index_ = field0_S_nat(v143_index);
+      N v148_n = n2_nth_state_vector(v145_initial_state, v143_index);
+      N v149_n = n2_nth_state_vector(v144_last_state, v143_index);
+      bool v150_b = n2_eqb_0(v148_n, v149_n);
+      bool
+      v151_b
+      =
+      n3_check_aux(v145_initial_state,
+      v144_last_state,
+      v147_index_);
+      return n2_andb(v150_b, v151_b);
     }
   }
 }
-static
 bool
-n2_check(list_N v0_initial_state, list_N v1_last_state)
+n2_check(list_N v153_initial_state, list_N v152_last_state)
 {
-  N v2_n = n0_upper_mask();
-  nat v3_n = n0_O();
-  N v4_n = n2_nth_state_vector(v0_initial_state, v3_n);
-  N v5_n = n2_land_0(v2_n, v4_n);
-  N v6_n = n0_upper_mask();
-  nat v7_n = n0_O();
-  N v8_n = n2_nth_state_vector(v1_last_state, v7_n);
-  N v9_n = n2_land_0(v6_n, v8_n);
-  bool v10_b = n2_eqb_0(v5_n, v9_n);
-  nat v11_n = n0_n();
-  nat v12_n = n0_O();
-  nat v13_n = n1_S(v12_n);
-  nat v14_n = n2_sub(v11_n, v13_n);
-  bool v15_b = n3_check_aux(v0_initial_state, v1_last_state, v14_n);
-  return n2_andb(v10_b, v15_b);
+  N v154_n = n0_upper_mask();
+  nat v155_n = n0_O();
+  N v156_n = n2_nth_state_vector(v153_initial_state, v155_n);
+  N v157_n = n2_land_0(v154_n, v156_n);
+  N v158_n = n0_upper_mask();
+  nat v159_n = n0_O();
+  N v160_n = n2_nth_state_vector(v152_last_state, v159_n);
+  N v161_n = n2_land_0(v158_n, v160_n);
+  bool v162_b = n2_eqb_0(v157_n, v161_n);
+  nat v163_n = n0_n();
+  nat v164_n = n0_O();
+  nat v165_n = n1_S(v164_n);
+  nat v166_n = n2_sub(v163_n, v165_n);
+  bool v167_b = n3_check_aux(v153_initial_state, v152_last_state, v166_n);
+  return n2_andb(v162_b, v167_b);
 }
-static
 bool
-n1_test(N v0_a)
+n1_test(N v168_a)
 {
-  list_N v1_l = n0_initial_state();
-  list_N v2_l = n0_start_state();
-  nat v3_n = n0_p();
-  list_N v4_l = n3_recursive_process(v0_a, v2_l, v3_n);
-  return n2_check(v1_l, v4_l);
+  list_N v169_l = n0_initial_state();
+  list_N v170_l = n0_start_state();
+  nat v171_n = n0_p();
+  list_N v172_l = n3_recursive_process(v168_a, v170_l, v171_n);
+  return n2_check(v169_l, v172_l);
 }

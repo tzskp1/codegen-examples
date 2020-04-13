@@ -1,4 +1,4 @@
-# mersenne-twister
+# Formalization of Mersenne-Twister
 
 # Version
 ## codegen
