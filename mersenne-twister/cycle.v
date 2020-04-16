@@ -386,11 +386,10 @@ Lemma cycleB_dvdP :
 Proof.
   move=> H q q0.
   apply/eqP; case: ifP => H0; last first.
-  * move=> H1.
-    rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /= in H1.
-    move/(f_equal (mx_inv_horner (castmx (tecp, tecp) B))): H1.
+  * apply/eqP; move/negbT: H0; apply contra.
+    rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /=.
+    move/eqP/(f_equal (mx_inv_horner (castmx (tecp, tecp) B))).
     rewrite !horner_mxK -!phi_mxminpoly // => H1.
-    suff: (2 ^ (size phi).-1 - 1 %| q - 1)%N by rewrite H0.
     apply/(irreducible.cycleF_dvdP' pm' H q0)/eqP.
     by rewrite -GRing.rmorphX /= exprnP -irreducible.XnE -H1.
   * rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX
