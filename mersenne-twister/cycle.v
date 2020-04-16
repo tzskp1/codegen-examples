@@ -385,13 +385,7 @@ Lemma cycleB_dvdP :
         = (2 ^ (size phi).-1 - 1 %| q - 1)%nat.
 Proof.
   move=> H q q0.
-  apply/eqP; case: ifP => H0.
-  * rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX
-            (divp_eq 'X^q phi) GRing.rmorphD
-            GRing.rmorphM /= Cayley_Hamilton GRing.mulr0 GRing.add0r.
-    move/(irreducible.cycleF_dvdP' pm' H q0)/eqP : H0.
-    rewrite -GRing.rmorphX /= exprnP -irreducible.XnE => /eqP ->.
-    by rewrite modp_small // size_polyX size_char_poly prednK ltnW // ltnW.
+  apply/eqP; case: ifP => H0; last first.
   * move=> H1.
     rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX /= in H1.
     move/(f_equal (mx_inv_horner (castmx (tecp, tecp) B))): H1.
@@ -399,6 +393,12 @@ Proof.
     suff: (2 ^ (size phi).-1 - 1 %| q - 1)%N by rewrite H0.
     apply/(irreducible.cycleF_dvdP' pm' H q0)/eqP.
     by rewrite -GRing.rmorphX /= exprnP -irreducible.XnE -H1.
+  * rewrite -(horner_mx_X (castmx _ _)) -GRing.rmorphX
+            (divp_eq 'X^q phi) GRing.rmorphD
+            GRing.rmorphM /= Cayley_Hamilton GRing.mulr0 GRing.add0r.
+    move/(irreducible.cycleF_dvdP' pm' H q0)/eqP : H0.
+    rewrite -GRing.rmorphX /= exprnP -irreducible.XnE => /eqP ->.
+    by rewrite modp_small // size_polyX size_char_poly prednK ltnW // ltnW.
 Qed.
 
 Lemma size_ord_enum q : size (ord_enum q) = q.
