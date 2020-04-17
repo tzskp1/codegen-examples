@@ -1,5 +1,4 @@
 From mathcomp Require Import all_ssreflect all_algebra all_field all_fingroup.
-From codegen Require Import codegen.
 Require Import mt cycle BinNat BinPos.
 
 Set Implicit Arguments.
