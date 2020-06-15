@@ -207,8 +207,156 @@ Proof.
   by rewrite array_incompleteK.
 Qed.
 
-Lemma pm : prime (2 ^ (n * w - r) - 1).
+From Coqprime Require Import PocklingtonRefl.
+
+Lemma ZposE p : Z.pos p = Z.of_nat (Pos.to_nat p).
+Proof.
+  elim: p => // p H.
+  + by rewrite Pos2Nat.inj_xI Nat2Z.inj_succ Nat2Z.inj_mul /= -H.
+  + by rewrite Pos2Nat.inj_xO Nat2Z.inj_mul /= -H.
+Qed.
+
+Lemma NposE p : N.pos p = Pos.to_nat p :> nat.
+Proof.
+  elim: p => // p H.
+  + by rewrite Pos2Nat.inj_xI /= natTrecE Nat.add_0_r -addnn -plusE -!H.
+  + by rewrite Pos2Nat.inj_xO /= natTrecE Nat.add_0_r -addnn -plusE -!H.
+Qed.
+
+Lemma primeP' p : reflect (prime (Zpos p)) (prime.prime (Pos.to_nat p)).
+Proof.
+  rewrite ZposE; set n := (Pos.to_nat p).
+  apply/(iffP idP).
+  + case/primeP => H1 H2.
+    case: (prime_dec (Z.of_nat n)) => //.
+    have/not_prime_divide: 1 < Z.of_nat n.
+     case: n H1 {H2} => []// []// n _.
+     rewrite !Nat2Z.inj_succ !Z.lt_succ_r.
+     elim: n => // n H; apply (Z.le_trans _ _ _ H).
+     by apply/Zsucc_le_compat/inj_le/leP.
+    move=> H {}/H; case => [] x [] H3 H4.
+    case: x H3 H4 => [[] //| |+ []//] x H3 H4.
+    have/H2 /orP[]: Pos.to_nat x %| n.
+     apply/dvdnP.
+     case: H4 => [][]; last by move=> ? H4; rewrite H4 in H3; case: H3.
+      by rewrite Z.mul_0_l => H4; rewrite H4 in H3; case: H3.
+     move=> k H4.
+     exists (Npos k).
+     apply/Nat2Z.inj_iff.
+     by rewrite H4 Nat2Z.inj_mul -ZposE ZposE NposE.
+    - by move=> /eqP H5; rewrite !ZposE H5 in H3; case: H3.
+    - move=> /eqP H5; rewrite !ZposE H5 in H3; case: H3 => _ H3.
+      suff: False by [].
+      elim: n {H5 H1 H2 H4} H3 => //= n.
+      compute.
+
+      rewrite /=.
+      Search (Z.pos _ < Z.pos _).
+      move/Pos2Z.pos_lt_pos.
+
+      rewrite /=.
+      inj_lt
+      rewrite /=.
+
+      Search (_ < _).
+      done.
+      rewrite
+      Check NposE.
+      rewrite
+      Nat2Z.inj_mul
+      Search (Z.pos _).
+      Check ZposE.
+      rewrite
+      move/eqP => H5.
+
+
+    case.
+    rewrite -NposE.
+     done.
+     Search (Z.of_nat _).
+
+     rewrite -Pos2Z.inj_mul in H4.
+     rewrite -Pos2Z.inj_mul.
+     rewrite -!Z2N.inj_pos.
+     Search (N.pos _).
+     rewrite /=.
+     rewrite
+
+     Focus 2.
+      rewrite /=.
+
+
+     Search (0 * _).
+      rewrite
+     Nat2Z.inj
+     Search Z.of_nat.
+     case: H4 => [] [].
+     -
+     exists (Z.pos k).
+    Check H2 (Pos.to_nat x).
+    rewrite !ZposE.
+     by case.
+     rewrite
+    Check Z.of_nat x.
+
+    - move=> n0 H.
+      prime_dec
+      apply/Zgcd_1_rel_prime.
+      Search (Z.gcd _ _ = 1).
+      Search (gcdn _ _).
+      Search (prime.prime _).
+      rewrite /=.
+      apply/bezout_rel_prime/Bezout_intro.
+      apply: Zis_gcd_intro; try apply/Z.divide_1_l.
+      move=> x.
+      case => //.
+      case => ?.
+      Set Printing All.
+      Search (0 | _).
+      Print Bezout.
+      constructor.
+      rewrite /=.
+
+    rewrite /leq.
+    apply/Z.leb_le; rewrite /= Pos.add_1_r.
+    rewrite Pos2Z.inj_succ /=.
+    SearchAbout "inj_succ".
+    rewrite /= addn1.
+    rewrite /=.
+    SearchAbout "lt_trans".
+    apply/
+    rewrite /Z.of_nat.
+    Set Printing All.
+    rewrite
+    Search Z.of_nat _.+1.
+    rewrite
+    rewrite !ltnS.
+    rewrite /=.
+    succ_of_nat
+    rewrite -of_nat_succ.
+    rewrite /=.
+     case: p H1 {H2} => //= p.
+    rewrite /prime.
+  rewrite /prime.prime.
+  elim: p.
+
+Lemma pm : prime.prime (2 ^ (n * w - r) - 1).
 Admitted.
+
+Local Open Scope positive_scope.
+Check prime.
+Print prime.
+
+Lemma myPrime : prime 1234567891.
+Proof.
+ apply (Pocklington_refl
+         (Pock_certif 1234567891 2 ((3607, 1)::(2,1)::nil) 12426)
+        ((Proof_certif 3607 prime3607) ::
+         (Proof_certif 2 prime2) ::
+          nil)).
+ native_cast_no_check (refl_equal true).
+Qed.
+
 
 Local Notation B := (@B w n (n - m) r (rev_tuple (word_of_N a)) erefl erefl erefl erefl).
 
