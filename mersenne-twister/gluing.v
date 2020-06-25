@@ -223,125 +223,144 @@ Proof.
   + by rewrite Pos2Nat.inj_xO /= natTrecE Nat.add_0_r -addnn -plusE -!H.
 Qed.
 
-Lemma primeP' p : reflect (prime (Zpos p)) (prime.prime (Pos.to_nat p)).
+Local Lemma trivial x0 : Z.of_nat x0.+1 = Z.of_nat x0 + 1.
 Proof.
-  rewrite ZposE; set n := (Pos.to_nat p).
-  apply/(iffP idP).
-  + case/primeP => H1 H2.
-    case: (prime_dec (Z.of_nat n)) => //.
-    have/not_prime_divide: 1 < Z.of_nat n.
-     case: n H1 {H2} => []// []// n _.
-     rewrite !Nat2Z.inj_succ !Z.lt_succ_r.
-     elim: n => // n H; apply (Z.le_trans _ _ _ H).
-     by apply/Zsucc_le_compat/inj_le/leP.
-    move=> H {}/H; case => [] x [] H3 H4.
-    case: x H3 H4 => [[] //| |+ []//] x H3 H4.
-    have/H2 /orP[]: Pos.to_nat x %| n.
-     apply/dvdnP.
-     case: H4 => [][]; last by move=> ? H4; rewrite H4 in H3; case: H3.
-      by rewrite Z.mul_0_l => H4; rewrite H4 in H3; case: H3.
-     move=> k H4.
-     exists (Npos k).
-     apply/Nat2Z.inj_iff.
-     by rewrite H4 Nat2Z.inj_mul -ZposE ZposE NposE.
-    - by move=> /eqP H5; rewrite !ZposE H5 in H3; case: H3.
-    - move=> /eqP H5; rewrite !ZposE H5 in H3; case: H3 => _ H3.
-      suff: False by [].
-      elim: n {H5 H1 H2 H4} H3 => //= n.
-      compute.
+  rewrite /Z.of_nat.
+  case: x0 => // x0.
+  by rewrite /= Pos2Z.inj_add /= Pos.add_1_r.
+Qed.
 
-      rewrite /=.
-      Search (Z.pos _ < Z.pos _).
-      move/Pos2Z.pos_lt_pos.
+Lemma of_nat_hom' x0 x : Z.of_nat (x0 + x) = Z.of_nat x0 + Z.of_nat x.
+Proof.
+  elim: x0 x => // x0 IHx0 x.
+  by rewrite trivial addSn -addnS IHx0 -[in RHS]Z.add_assoc [X in _ = _ + X]Z.add_comm -trivial.
+Qed.
 
-      rewrite /=.
-      inj_lt
-      rewrite /=.
+Lemma of_nat_hom x0 x : Z.of_nat (x0 * x) = Z.of_nat x0 * Z.of_nat x.
+Proof.
+  elim: x0 x => // x0 IHx0 x.
+  by rewrite trivial Z.mul_add_distr_r -IHx0 mulSn addnC of_nat_hom' Z.mul_1_l.
+Qed.
 
-      Search (_ < _).
-      done.
-      rewrite
-      Check NposE.
-      rewrite
-      Nat2Z.inj_mul
-      Search (Z.pos _).
-      Check ZposE.
-      rewrite
-      move/eqP => H5.
+Lemma of_nat_inj x0 x : Z.of_nat x0 = Z.of_nat x -> x0 = x.
+Proof.
+  elim: x0 x => [[]//|] x0 IHx0 []// x.
+  by rewrite !trivial !Z.add_1_r => /Z.succ_inj/IHx0 ->.
+Qed.
 
+Lemma dvdnP' x m : reflect (Z.of_nat x | Z.of_nat m) (dvdn x m).
+Proof.
+  apply/(iffP idP) => H.
+  + case/dvdnP: H => x0 p.
+    exists (Z.of_nat x0); by rewrite -of_nat_hom p.
+  + case: H => x0 p.
+    apply/dvdnP.
+    case: x0 p.
+    * rewrite Z.mul_0_l.
+      case: m => // _.
+      by exists 0%nat; rewrite mul0n.
+    * move=> x0 p.
+      exists (N.pos x0).
+      rewrite ZposE -of_nat_hom in p.
+      by rewrite NposE (of_nat_inj p).
+    * case: x.
+      - case: m => // *.
+        by exists 0%nat; rewrite muln0.
+      - move=> x p /(f_equal Z.sgn).
+        by case: m.
+Qed.
 
-    case.
-    rewrite -NposE.
-     done.
-     Search (Z.of_nat _).
+Lemma to_nat_pos m : (0 < Pos.to_nat m)%nat.
+Proof.
+  elim: m => // m IHm.
+  apply (leq_trans IHm) => {IHm}.
+  by rewrite -!NposE /= natTrecE -addnn leq_addr.
+Qed.
 
-     rewrite -Pos2Z.inj_mul in H4.
-     rewrite -Pos2Z.inj_mul.
-     rewrite -!Z2N.inj_pos.
-     Search (N.pos _).
-     rewrite /=.
-     rewrite
+Lemma of_nat_lt m n : reflect (Z.of_nat m < Z.of_nat n) (m < n)%nat.
+Proof.
+  apply/(iffP idP) => H.
+  + elim: m n H => [[]//|] m IH []// n.
+    rewrite ltnS => {}/IH H.
+    rewrite -addn1 -[X in _ < _ X]addn1 !of_nat_hom' /= !Z.add_1_r.
+    case: (Z.succ_lt_mono (Z.of_nat m) (Z.of_nat n)) => H0 _.
+    apply/H0/H.
+  + elim: m n H => [[]//|] m IH []// n.
+    rewrite !ltnS => H.
+    apply/IH; move: H.
+    rewrite -addn1 -[X in _ < _ X]addn1 !of_nat_hom' /= !Z.add_1_r.
+    case: (Z.succ_lt_mono (Z.of_nat m) (Z.of_nat n)) => _ H0.
+    apply/H0.
+Qed.
 
-     Focus 2.
-      rewrite /=.
-
-
-     Search (0 * _).
-      rewrite
-     Nat2Z.inj
-     Search Z.of_nat.
-     case: H4 => [] [].
-     -
-     exists (Z.pos k).
-    Check H2 (Pos.to_nat x).
-    rewrite !ZposE.
-     by case.
-     rewrite
-    Check Z.of_nat x.
-
-    - move=> n0 H.
-      prime_dec
-      apply/Zgcd_1_rel_prime.
-      Search (Z.gcd _ _ = 1).
-      Search (gcdn _ _).
-      Search (prime.prime _).
-      rewrite /=.
-      apply/bezout_rel_prime/Bezout_intro.
-      apply: Zis_gcd_intro; try apply/Z.divide_1_l.
-      move=> x.
-      case => //.
-      case => ?.
-      Set Printing All.
-      Search (0 | _).
-      Print Bezout.
+Lemma primeP' n : reflect (prime (Z.of_nat n)) (prime.prime n).
+Proof.
+  apply/(iffP idP) => H.
+  + constructor.
+    - case: n H => []//[]// n _.
+      apply Pos.lt_1_succ.
+    - move=> m H1mn.
       constructor.
-      rewrite /=.
+      * exists m; by rewrite Z.mul_1_r.
+      * exists (Z.of_nat n); by rewrite Z.mul_1_r.
+      * case => [[]// ?|x |x ].
+        + rewrite Z.mul_0_r => m0.
+          by move: m0 H1mn => -> [].
+        + case: m H1mn => [[]//|m H1mn|?[]//].
+          rewrite !ZposE => /dvdnP' H1 /dvdnP' H2.
+          apply/dvdnP'; rewrite dvdn1.
+          case/primeP: H => n1 H.
+          case/orP: (H _ H2) => // /eqP xn.
+          move: xn H1 => -> /dvdn_leq H0.
+          case: H1mn => m1 mn.
+          have/H0: (0 < Pos.to_nat m)%nat by apply to_nat_pos.
+          have: (Pos.to_nat m < n)%nat.
+           rewrite /= ZposE in mn.
+           by move/of_nat_lt : mn.
+          by rewrite ltnNge => /negP H3 {}/H3.
+        + case: m H1mn => [[]//|m H1mn|?[]//].
+          rewrite -!Z.divide_Zpos_Zneg_l !ZposE => /dvdnP' H1 /dvdnP' H2.
+          apply/dvdnP'; rewrite dvdn1.
+          case/primeP: H => n1 H.
+          case/orP: (H _ H2) => // /eqP xn.
+          move: xn H1 => -> /dvdn_leq H0.
+          case: H1mn => m1 mn.
+          have/H0: (0 < Pos.to_nat m)%nat by apply to_nat_pos.
+          have: (Pos.to_nat m < n)%nat.
+           rewrite /= ZposE in mn.
+           by move/of_nat_lt : mn.
+          by rewrite ltnNge => /negP H3 {}/H3.
+  + apply/primeP; split.
+    - case: H => H1 H2.
+      by apply/of_nat_lt/H1.
+    - move=> d dn.
+      case: H => H1 H2.
+      case d1: (d == 1)%nat => //.
+      case: d d1 dn => [_|[]// d _ dn].
+      * by rewrite dvd0n eq_sym.
+        rewrite /rel_prime in H2.
+      * case d2: (d.+2 == n)%nat => //.
+        have/H2 :1 <= Z.of_nat d.+2 < Z.of_nat n.
+         split.
+         - rewrite -addn1 !of_nat_hom'.
+           have->: 1 = 0 + 1 by rewrite Z.add_0_l.
+           apply Zplus_le_compat_r, Zle_0_nat.
+         - have/dvdn_leq: (0 < n)%nat by case: n H1 {dn H2 d2}.
+           by move=> /(_ _ dn); rewrite leq_eqVlt d2 => /of_nat_lt.
+        case => _ _ /(_ (Z.of_nat d.+2)) H.
+        have/dvdn_leq: (d.+2 %| 1)%nat by apply/dvdnP'/H; apply/dvdnP'.
+        rewrite ltnS leqnn ltnS ltn0.
+        by apply.
+Qed.
 
-    rewrite /leq.
-    apply/Z.leb_le; rewrite /= Pos.add_1_r.
-    rewrite Pos2Z.inj_succ /=.
-    SearchAbout "inj_succ".
-    rewrite /= addn1.
-    rewrite /=.
-    SearchAbout "lt_trans".
-    apply/
-    rewrite /Z.of_nat.
-    Set Printing All.
-    rewrite
-    Search Z.of_nat _.+1.
-    rewrite
-    rewrite !ltnS.
-    rewrite /=.
-    succ_of_nat
-    rewrite -of_nat_succ.
-    rewrite /=.
-     case: p H1 {H2} => //= p.
-    rewrite /prime.
-  rewrite /prime.prime.
-  elim: p.
+Check LucasLehmer.LucasTest.
+(* From Coqprime Require Import LucasLehmer. *)
 
-Lemma pm : prime.prime (2 ^ (n * w - r) - 1).
-Admitted.
+Lemma pm : prime.prime (2 ^ (n * w - r)- 1)%nat.
+Proof.
+  apply/primeP'.
+  suff: (LucasLehmer.lucas_test 19937).
+   suff->: (Z.of_nat (2 ^ (n * w - r) - 1)) = 2 ^ 19937 - 1 by apply LucasLehmer.LucasTest.
 
 Local Open Scope positive_scope.
 Check prime.
