@@ -694,4 +694,26 @@ suff: (p < p)%nat by rewrite ltnn.
 suff: (p + s < p)%nat; first by apply/leq_trans; rewrite ltnS leq_addr.
 by rewrite -Ts.
 Qed.
+
+Lemma iw (i : 'I_(n * w - r)) : (i - w < n * w - r)%nat.
+Proof.
+  case: i => i H.
+  apply: (leq_trans _ H).
+  by rewrite /= ltnS leq_subr.
+Qed.
+
+Lemma computeBE (v : 'rV_(n * w - r)) (i : 'I_(n * w - r)) :
+  (i >= w)%nat ->
+  (v *m B)%R ord0 i = v ord0 (Ordinal (iw i)).
+Proof.
+  rewrite /computeB mulBE /computeB => wi.
+  rewrite !castmxE !mxE.
+  set R := cast_ord _ _.
+  case: (splitP R) => q.
+   case: q => //= q C iq.
+   by rewrite leqNgt iq C in wi.
+  rewrite ?(mxE, castmxE) => /= Rwq.
+  congr (v _ _); apply/val_inj => //.
+  by rewrite /= Rwq addnC addnK.
+Qed.
 End Main.
