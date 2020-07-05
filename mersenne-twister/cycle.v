@@ -717,18 +717,34 @@ Proof.
   by rewrite /= Rwq addnC addnK.
 Qed.
 
-(* Lemma computeBE' (v : 'rV_(n * w - r)) (i : 'I_(n * w - r)) : *)
-(*   (i < w)%nat -> *)
-(*   (v *m B)%R ord0 i = (v *m B)%R ord0 i. *)
-(* Proof. *)
-(*   rewrite /computeB mulBE /computeB => wi. *)
-(*   rewrite !castmxE !mxE. *)
-(*   set R := cast_ord _ _. *)
-(*   case: (splitP R) => q. *)
-(*    case: q => //= q C iq. *)
-(*    by rewrite leqNgt iq C in wi. *)
-(*   rewrite ?(mxE, castmxE) => /= Rwq. *)
-(*   congr (v _ _); apply/val_inj => //. *)
-(*   by rewrite /= Rwq addnC addnK. *)
-(* Qed. *)
+Lemma mwi (i : 'I_(n * w - r)) :
+  (i < w)%nat ->
+  (m.-1 * w + i < n * w - r)%nat.
+Proof.
+  case: i => i H wi.
+  by rewrite /= -choose_m -addnA ltn_add2l ltn_addr.
+Qed.
+
+Lemma computeBE' (v : 'rV_(n * w - r)) (i : 'I_(n * w - r)) (wi : (i < w)%nat) :
+  (v *m B)%R ord0 i =
+  v ord0 (Ordinal (mwi wi))
++ (shiftr (z' v) + ra *+ (castmx (erefl, esym tecw') (z' v) ord0 ord_max == 1))
+    ord0 (cast_ord (esym tecw'') (Ordinal wi)).
+Proof.
+  rewrite /computeB mulBE /computeB.
+  rewrite !castmxE !mxE.
+  set R := cast_ord _ _.
+  case: (splitP R) => q.
+   case: q => //= q C iq.
+   rewrite ?(mxE, castmxE).
+   congr (v _ _ + _) => //; try apply/ord_inj => //.
+    by rewrite /= iq.
+   set A := cast_ord _ _.
+   set B := cast_ord (esym tecw'') _.
+   have->: A = B by apply/ord_inj.
+   by rewrite !cast_ord_id.
+  move=> /= iq.
+  suff: false by [].
+  by rewrite iq ltnNge leq_addr in wi.
+Qed.
 End Main.
