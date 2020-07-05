@@ -284,19 +284,71 @@ Proof. by do 32!(case: i => // i). Qed.
 Theorem next_random_stateE v :
   (array_of_state \o snd \o next_random_state \o state_of_array) v = (v *m B)%R.
 Proof.
-  rewrite /computeB mulBE /cycle.computeB.
   apply/rowP => i.
-  rewrite !mxE ?castmxE ?mxE (nth_map 0)
+  case wi: (i >= w)%nat.
+  rewrite computeBE // !mxE ?castmxE ?mxE (nth_map 0)
           ?nth_rev ?size_tuple ?size_rot ?ltn_pmod //
           ?size_rev ?size_rot ?size_next_random_state //.
   set R := row_ind _ _ _.
   have<-: (rev_ord R = w - R.+1 :> nat)%nat by [].
-  set I := (cast_ord _ i); subst R.
   rewrite nth_word_of_N /cycle.B index_next_random_state
           ?size_rot ?size_next_random_state ?nth_drop //
           nth_cat size_drop ?size_next_random_state.
+  set B := (n - _ < _)%nat.
+  case: (ifP B) => Bt.
+   rewrite nth_drop add1n nth_next_random_state tns.
+    by case: (rev_ord R).
+    intros Hyp0.
+   rewrite break_if mxE.
+   congr (v _ _); apply/val_inj => //.
+   rewrite /= /arr_ind /=.
+   set A := cast_ord _ _.
+   have vA: (val A = i - 32)%nat.
+    rewrite /= 3!subnS -!subn1 -!subnDA !addn1 subnDA subKn ?col_ind_prf.
+    rewrite [X in (w - X.+1)%nat]subnS prednK ?subKn.
+     rewrite subSS mulnBl [in RHS](divn_eq i w) addnBAC ?mul1n //.
+    have: (i %/ w >= 1)%nat.
+     apply/neq0_lt0n/negP => /eqP wi0.
+     by rewrite (divn_eq i w) wi0 mul0n add0n leqNgt ltn_mod in wi.
+    by case: (i %/ w) => //.
+   by apply/ltnW/ltn_mod.
+   rewrite /leq subnBA.
+    by rewrite subn_eq0 add1n ltn_mod.
+   by apply/ltnW/ltn_mod.
+   (* *)
+     subst A B.
+     rewrite /= in Bt.
+     apply: (leq_trans _ (@pwn w n 1 r erefl erefl erefl erefl)).
+     rewrite ltnS leq_div2r //.
+     case: i {R Hyp0 Bt wi} => *; by apply /ltnW.
+   (* *)
+   case: (splitP A) => j.
+    by move=> <-; rewrite vA.
+   rewrite vA => C3.
+   have C1: (i < n * w - r + j)%nat by rewrite ltn_addr.
+   have : (i - w < n * w - r + j)%nat.
+    apply: (leq_trans _ C1).
+    by rewrite ltnS leq_subr.
+   by rewrite C3 ltnn.
+   subst B.
+   rewrite /= in Bt.
+   rewrite (divn_eq i w) in wi.
+   have wi': i %/ w = 0.
+    have: (n > i %/ w)%nat.
+     apply: (leq_trans _ (@pwn w n 1 r erefl erefl erefl erefl)).
+     rewrite ltnS leq_div2r //.
+     case: i {R Bt wi} => *; by apply /ltnW.
+    case: (i %/ w) Bt wi => // m.
+    rewrite subnS -subn1 subnAC.
+    by rewrite ltn_subrL.
+   by rewrite wi' mul0n add0n leqNgt ltn_mod in wi.
+
+  rewrite /computeB mulBE /cycle.computeB.
+  rewrite !mxE ?castmxE ?mxE (nth_map 0)
+          ?nth_rev ?size_tuple ?size_rot ?ltn_pmod //
+          ?size_rev ?size_rot ?size_next_random_state //.
   set I' := col_ind _ _ _ _ _.
-  case: (splitP I) => j Ij; rewrite /= in Ij; last first.
+  case: (splitP _) => j Ij; rewrite /= in Ij; last first.
    have I'0: (I' > 0)%nat.
     by rewrite /= Ij divnDl.
    have->: (n - I'.+1 < n - 1%N)%nat.
