@@ -20,15 +20,16 @@ RUN eval $(opam env) \
     && opam pin add -y coq 8.10.2 \
     && opam install -y coq-mathcomp-algebra coq-coqprime coq-mathcomp-field
 
-VOLUME /workdir
-COPY --chown=coq:coq . /workdir
-WORKDIR /workdir/
-
+WORKDIR /tmp
 RUN eval $(opam env) \
     && git clone https://github.com/akr/codegen \
     && cd codegen \
     && git checkout coq-8.10 \
     && make && make install
+
+VOLUME /workdir
+COPY --chown=coq:coq . /workdir
+WORKDIR /workdir/
 
 RUN eval $(opam env) \
     && coq_makefile -f ./_CoqProject -o Makefile \
