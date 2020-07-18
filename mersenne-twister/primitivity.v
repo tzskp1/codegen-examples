@@ -150,11 +150,28 @@ Proof.
         by apply.
 Qed.
 
-Lemma pm : prime.prime (2 ^ 19937 - 1)%nat.
+Lemma of_nat_sub x0 x : (x0 > x)%nat -> Z.of_nat (x0 - x) = Z.of_nat x0 - Z.of_nat x.
 Proof.
-  Admitted.
-(*
+  elim: x0 x => // x0 IHx0 x xx0.
+  rewrite trivial subSn // -addn1 of_nat_hom'.
+  rewrite ltnS leq_eqVlt in xx0.
+  case/orP: xx0 => [/eqP -> | H].
+   by rewrite subnn Z.add_0_l Z.add_comm -Z.add_sub_assoc -Zminus_diag_reverse Z.add_0_r.
+  by rewrite IHx0 // -[in RHS]Z.add_opp_r -[in RHS]Z.add_assoc [X in (Z.of_nat x0 + X)%Z]Z.add_comm Z.add_assoc.
+Qed.
+
+Lemma of_nat_exp x0 x : Z.of_nat (expn x0 x)%nat = Z.of_nat x0 ^ Z.of_nat x.
+Proof.
+  elim: x x0 => // x IHx x0.
+  rewrite expnS of_nat_hom IHx trivial Z.mul_comm Zpower_exp ?Z.pow_1_r //.
+  by elim: x {IHx}.
+Qed.
+
+Lemma pm : prime.prime (expn 2 19937 - 1)%nat.
+Proof.
   apply/primeP'.
-  suff: (LucasLehmer.lucas_test 19937).
-   suff->: (Z.of_nat (2 ^ (n * w - r) - 1)) = 2 ^ 19937 - 1 by apply LucasLehmer.LucasTest.
-*)
+  rewrite of_nat_sub ?of_nat_exp; last by apply/ltn_trans/ltn_expl.
+  set ln := Init.Nat.of_uint _.
+  have ->: Z.of_nat ln = Zpos 19937 by [].
+  apply Lucas.lucas_prime; by native_compute.
+Qed.
