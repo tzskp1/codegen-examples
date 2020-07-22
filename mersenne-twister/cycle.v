@@ -929,6 +929,14 @@ Proof.
   by rewrite (nth_word_of_N (N_of_word a) 0%R) N_of_wordK.
 Qed.
 
+Lemma mod_small x y : x < y -> x mod y = x.
+Proof.
+  move=> xy.
+  apply N.Private_NZDiv.mod_small.
+  split => //.
+  by elim: x {xy}.
+Qed.
+
 Lemma next_random_stateE v :
   (array_of_state \o snd \o next_random_state \o state_of_array) v = (v *m B)%R.
 Proof.
@@ -1015,6 +1023,24 @@ Proof.
     congr (_ + _)%R; first congr (v _ _); apply/ord_inj.
     - have->: Ordinal Hyp1 = rev_ord R by apply/val_inj.
       rewrite rev_ordK /= /arr_ind /=.
+
+      set C := cast_ord _ _.
+      case: (splitP C) => j.
+       rewrite /=.
+      have vC: (val C = m.-1 * w + i)%nat.
+       rewrite /= mod_small. 3!subnS -!subn1 -!subnDA !addn1 subnDA subKn ?col_ind_prf //.
+       rewrite subSS mulnBl addnBAC.
+        by rewrite -divn_eq  mul1n.
+       apply leq_mul => //; apply/leq_trans/leq_div2r/wi.
+       rewrite divnn; by case: w rw.
+      case: (splitP A) => j.
+       by move=> <-; rewrite vA.
+      rewrite vA => C3.
+      have C1: (i < n * w - r + j)%nat by rewrite ltn_addr.
+      have : (i - w < n * w - r + j)%nat.
+       apply: (leq_trans _ C1).
+       by rewrite ltnS leq_subr.
+      by rewrite C3 ltnn.
     Search (Nat.modulo _ _ < _)%nat.
   ?(rev_ord_proof (Ordinal (@ltn_pmod i w erefl))) // => Hp.
    Focus 2.
