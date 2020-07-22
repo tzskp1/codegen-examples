@@ -1,8 +1,5 @@
 (* Implementation of MT19937 *)
-From mathcomp Require Import all_ssreflect.
-From mathcomp Require Import all_algebra.
-
-Require Import BinNat.
+Require Import nat_word BinNat.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -10,16 +7,8 @@ Unset Printing Implicit Defensive.
 
 Open Scope N_scope.
 
-Definition len : nat := 624. (* 'n' in tgfsr3.pdf, p.4 is 623*)
-Definition m : nat := 397. (* 'm' in  tgfsr3.pdf, p.4 *)
-Definition r := 31.
-Definition u := 11.
-Definition s := 7.
-Definition t := 15.
-Definition l := 18.
-Definition a := 2567483615.
-Definition b := 2636928640.
-Definition c := 4022730752.
+Section mt_impl.
+Variables len m r u s t l a b c : N.
 
 Definition upper_mask := 2147483648.
 Definition whole_mask := upper_mask * 2 - 1.
@@ -77,3 +66,5 @@ Fixpoint nth_random_value_with_random_state (nth : nat) (rand : random_state) : 
 Definition nth_random_value (seed : N) (nth : nat) :=
   let rand := initialize_random_state seed in
   nth_random_value_with_random_state nth rand.
+
+End mt_impl.

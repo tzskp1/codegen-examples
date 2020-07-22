@@ -1,9 +1,10 @@
 -arg -w -arg -notation-overridden
 
-mt.v
-generate.v
 irreducible.v
 cycle.v
 inversive_decimation.v
+nat_word.v
+mt.v
+generate.v
 gluing.v
 -R . mt
