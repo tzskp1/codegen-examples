@@ -867,6 +867,16 @@ rewrite (tnth_nth 0%R) -[in RHS](N_of_wordK v) nth_word_of_N.
 by case: ifP.
 Qed.
 
+Lemma testbit_N_of_word' v a' : (a' < w)%nat ->
+  N.testbit (@N_of_word w v) (bin_of_nat a') = (nth 1%R v a' == 1%R).
+Proof.
+move=> aw.
+rewrite -[in RHS](N_of_wordK v).
+have -> : a' = Ordinal aw by [].
+rewrite nth_word_of_N.
+by case: ifP.
+Qed.
+
 Local Lemma tns v b a' (Ha : (a' < w)%nat) (Hb : (b < n)%nat) :
   N.testbit (nth 0 (state_vector (state_of_array v)) b) [Num of a']
 = (ai v (rev_ord (Ordinal Hb)) (rev_ord (Ordinal Ha)) == 1%R).
@@ -919,12 +929,11 @@ Proof.
 Qed.
 
 Lemma testbita i :
-  (i < r)%nat ->
+  (i < w)%nat ->
   (if N.testbit (N_of_word a) [Num of i] then 1%R else 0%R) = nth 0%R a i.
 Proof.
-  move=> ir.
+  move=> iw.
   rewrite -[a]N_of_wordK.
-  have iw : (i < w)%nat by apply/ltn_trans/rw.
   have ->: i = Ordinal iw by [].
   by rewrite (nth_word_of_N (N_of_word a) 0%R) N_of_wordK.
 Qed.
@@ -1019,20 +1028,75 @@ Proof.
     by case: n mn.
   + by case: (rev_ord R).
   + move=> Hyp0 Hyp1.
-    rewrite !break_if mxE -!GRing.addrA.
+    rewrite !break_if ?(cast_mxE, mxE) -!GRing.addrA.
+    have->: Ordinal Hyp1 = rev_ord R by apply/val_inj.
+    have ord0n: (0 < n)%nat by case: n mn.
+    have <-: val (Ordinal ord0n) = index (state_of_array v) by [].
+    have ord1n: (1 < n)%nat by case: n mn => []//[].
+    have <-: val (Ordinal ord1n) = N.succ (index (state_of_array v)) mod bin_of_nat n.
+     rewrite /= mod_1_l //.
+     apply/N.gt_lt_iff.
+     apply/ltP': ord1n.
+    rewrite ?rev_ordK !nth_state_vector ?(mxE, castmxE).
+    congr (_ + _)%R; first congr (v _ _); apply/ord_inj => //.
+    - rewrite /= /arr_ind.
+      case: (splitP _) => j.
+      rewrite /=.
+      rewrite
+      rewrite
+      apply/val_inj.
+    have-> : N.testbit (N_of_word (rev_tuple (mktuple (ai v (rev_ord (Ordinal ord1n)))))) 0 =
+    N.testbit (N_of_word (rev_tuple (mktuple (ai v (rev_ord (Ordinal ord1n)))))) [Num of (val (Ordinal w0))] by [].
+    rewrite testbit_N_of_word (tnth_nth 0%R) nth_rev size_tuple //.
+    have <-: val (rev_ord (Ordinal w0)) = (w - (Ordinal w0).+1)%nat by [].
+    have ->: N.testbit upper_mask 0 = false.
+     have ->: 0 = [Num of val (Ordinal w0)] by [].
+     by rewrite upper_maskF.
+    have ->: N.testbit lower_mask 0 = true.
+     have ->: 0 = [Num of val (Ordinal w0)] by [].
+     by rewrite lower_maskT.
+    rewrite nth_mktuple mxE andbF andbT orFb.
+    set C := cast_ord _ _.
+    case: (splitP C) => [[]//[]//|j].
+    - rewrite Num_succ => ? vC.
+      rewrite /= in vC.
+      have->: (val (rev_ord R)).+1 = w by rewrite /= vC mod0n subn1 prednK.
+      rewrite !N_of_word_last //= !mxE !GRing.add0r.
+      rewrite mxE.
+      Search (0 _ _ + _)%R.
+      rewrite add0mx.
+      rewrite /=.
+     rewrite /=.
+     case: j => //.
+N_of_word_last
+    rewrite /ra.
+    rewrite /ai.
+    rewrite -tnth_nth.
+    Check (nth_mktuple _ 0%R). (w - (Ordinal w0).+1)).
+    done.
+    have tmp: (0 = Ordinal w0)%nat by [].
+    rewrite ?[X in N.testbit (N_of_word (rev_tuple (mktuple (ai v (rev_ord (Ordinal ord0n)))))) X]tmp.
+    done.
+    have: ord0 = 0.
+    Check tns.
+    rewrite /ai.
+     apply/ltP.
+    index (state_of_array v) by [].
+    have ord1n: { x : 'I_n | val x = (N.succ (index (state_of_array v)) mod bin_of_nat n) }.
+     apply: exist => //.
+     rewrite /=.
+     Check sig.
+     apply: ex_intro.
     congr (_ + _)%R; first congr (v _ _); apply/ord_inj.
-    - have->: Ordinal Hyp1 = rev_ord R by apply/val_inj.
-      rewrite rev_ordK /= /arr_ind /=.
-
+      /arr_ind /=.
       set C := cast_ord _ _.
-      case: (splitP C) => j.
-       rewrite /=.
       have vC: (val C = m.-1 * w + i)%nat.
        rewrite /= mod_small. 3!subnS -!subn1 -!subnDA !addn1 subnDA subKn ?col_ind_prf //.
        rewrite subSS mulnBl addnBAC.
         by rewrite -divn_eq  mul1n.
        apply leq_mul => //; apply/leq_trans/leq_div2r/wi.
        rewrite divnn; by case: w rw.
+      case: (splitP C) => j.
       case: (splitP A) => j.
        by move=> <-; rewrite vA.
       rewrite vA => C3.
