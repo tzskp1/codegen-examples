@@ -900,14 +900,6 @@ Proof.
   by rewrite nth_enum_ord ?rev_ord_proof.
 Qed.
 
-Local Lemma tnsw v b (Hb : (b < n)%nat) :
-  N.testbit (nth 0 (state_vector (state_of_array v)) b) [Num of w] = false.
-Proof.
-  by rewrite /state_of_array /= nth_rev ?(size_enum_ord, size_map) //
-          (nth_map (word_of_N w 0%N)) ?(size_enum_ord, size_map)
-          ?(rev_ord_proof (Ordinal Hb)) // N_of_word_last.
-Qed.
-
 Lemma testbita i x :
   (i < w)%nat ->
   (if N.testbit (@N_of_word w x) [Num of i] then 1%R else 0%R) = nth 0%R x i.
