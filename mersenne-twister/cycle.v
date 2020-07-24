@@ -894,7 +894,7 @@ Proof.
   have H: b = val (Ordinal Hb) by [].
   rewrite [in LHS]H nth_state_vector.
   have {H} H : a' = val (Ordinal Ha) by [].
-  rewrite [in LHS]H testbit_N_of_word (tnth_nth ord0) nth_rev ?size_tuple //
+  rewrite [in LHS]H testbit_N_of_word' //  nth_rev ?size_tuple //
           (nth_map ord0w) ?size_tuple ?rev_ord_proof //.
   congr (_ == _); congr (ai _ _); apply/ord_inj.
   by rewrite nth_enum_ord ?rev_ord_proof.
@@ -1037,29 +1037,12 @@ Proof.
        case: n mn => []//[]//= n' mn'.
        by apply/leq_trans/leqW/mn'/leqW.
       by rewrite -[n]prednK // mulSn prednK // addnC -addnBA // leq_addr.
-    - have-> : N.testbit (N_of_word (rev_tuple (mktuple (ai v (rev_ord (Ordinal ord1n)))))) 0 =
-      N.testbit (N_of_word (rev_tuple (mktuple (ai v (rev_ord (Ordinal ord1n)))))) [Num of (val (Ordinal w0))] by [].
-      rewrite testbit_N_of_word (tnth_nth 0%R) nth_rev size_tuple //.
+    - have ->: 0 = [Num of (val (Ordinal w0))] by [].
+      rewrite ?testbit_N_of_word' ?nth_rev ?size_tuple ?nth_cat ?size_rep //; try by (apply/ltP'; rewrite bin_of_natK; apply/ltP').
       have <-: val (rev_ord (Ordinal w0)) = (w - (Ordinal w0).+1)%nat by [].
-      set upper_mask := (N_of_word (make_upper_mask rw'')).
-      set lower_mask := (N_of_word (make_lower_mask rw'')).
-      have ->: N.testbit upper_mask 0 = false.
-       have ->: 0 = [Num of val (Ordinal w0)] by [].
-       rewrite testbit_N_of_word' ?nth_cat ?size_rep; last
+      have c: (val (Ordinal w0) < bin_of_nat r)%nat
        by apply/ltP'; rewrite bin_of_natK; apply/ltP'.
-       case: ifP => [?|/ltP'].
-        by rewrite nth_rep.
-       rewrite bin_of_natK => /ltP'.
-       by rewrite /= r0.
-      have ->: N.testbit lower_mask 0 = true.
-       have ->: 0 = [Num of val (Ordinal w0)] by [].
-       rewrite testbit_N_of_word' ?nth_cat ?size_rep; last
-       by apply/ltP'; rewrite bin_of_natK; apply/ltP'.
-       case: ifP => [?|/ltP'].
-        by rewrite nth_rep.
-       rewrite bin_of_natK => /ltP'.
-       by rewrite /= r0.
-      rewrite nth_mktuple mxE andbF andbT orFb.
+      rewrite !c !nth_rep // nth_mktuple mxE andbF andbT orFb.
       set X := (ra *+ _) _ _.
       set Y := (if N.testbit _ [Num of val _] then 1 else 0)%R.
     - have->: X = Y.
@@ -1067,7 +1050,8 @@ Proof.
       case: (splitP _) => j /= C.
        suff: (w - 1 < w - r)%nat by rewrite ltnNge leq_sub2l.
        by rewrite subn1 C.
-      rewrite ?(mxE, castmxE).
+      rewrite (nth_map (Ordinal wi) (1%R : 'F_2)) ?(mxE, castmxE)
+              ?size_enum_ord; last by (rewrite subn1; case: w w0).
       set X := v _ _.
       set Y := v _ _.
       have->: X = Y.
@@ -1077,10 +1061,11 @@ Proof.
        rewrite mulSn [(w + _)%nat]addnC -addnBA // -addnA -C.
        rewrite /arr_ind /=.
        case: (splitP _) => [k <-|k].
-        by rewrite /= subn2 subn1.
+        rewrite /= nth_enum_ord ?subn1 ?subn2 //.
+        by case: w w0.
        rewrite /= subn2 subn1 => {C} C.
        suff: (p + k < p)%nat by rewrite ltnNge leq_addr.
-       rewrite -C.
+       rewrite -C nth_enum_ord; last by case: w w0.
        case: n mn => []//[]// n' mn'.
        rewrite mulSn [(w + _)%nat]addnC -addnBA //= mulSn.
        apply/leq_trans/leq_addr.
@@ -1092,13 +1077,12 @@ Proof.
        by rewrite /= modn_small.
       have ->: (rev_tuple a)`_(rev_ord (Ordinal wi)) = a`_i.
        rewrite nth_rev size_tuple /= subnS ?subKn //.
-       case: i {R Hyp1 B Bt iw0 A} wi.
+       case: i {R Hyp1 B Bt iw0 A Y} wi.
        case: w rw => //= *.
        by rewrite ltnS subSn //= leq_subr.
-      case: (splitP _) => k.
+      case: (splitP _) => [k|k /= ->].
        case: k => []//[]// k /= ->.
        case: a => [][]//= *; by rewrite mxE.
-      move=> /= ->.
       rewrite mxE add1n.
       case: a => [][]//= *; by rewrite mxE.
     - case: (splitP _) => [[][]//= ? ->|k C].
