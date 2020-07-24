@@ -908,75 +908,6 @@ Proof.
           ?(rev_ord_proof (Ordinal Hb)) // N_of_word_last.
 Qed.
 
-Notation upper_mask := (N_of_word (make_upper_mask rw'')).
-Notation lower_mask := (N_of_word (make_lower_mask rw'')).
-
-Lemma upper_maskF i : (i < r)%nat -> N.testbit upper_mask [Num of i] = false.
-Proof.
-  move=> ir.
-  rewrite testbit_N_of_word'; last first.
-   apply/ltP'; rewrite bin_of_natK; apply/ltP'.
-   by apply/ltn_trans/rw.
-  rewrite nth_cat size_rep.
-  case: ifP => ir'.
-   by rewrite nth_rep.
-  move/ltP': ir'.
-  rewrite bin_of_natK => /ltP'.
-  by rewrite ir.
-Qed.
-
-Lemma lower_maskT i : (i < r)%nat -> N.testbit lower_mask [Num of i] = true.
-Proof.
-  move=> ir.
-  rewrite testbit_N_of_word'; last first.
-   apply/ltP'; rewrite bin_of_natK; apply/ltP'.
-   by apply/ltn_trans/rw.
-  rewrite nth_cat size_rep.
-  case: ifP => ir'.
-   by rewrite nth_rep.
-  move/ltP': ir'.
-  rewrite bin_of_natK => /ltP'.
-  by rewrite ir.
-Qed.
-
-Lemma upper_maskT i : (r <= i < w)%nat -> N.testbit upper_mask [Num of i] = true.
-Proof.
-  move=> ir.
-  rewrite testbit_N_of_word'; last first.
-   apply/ltP'; rewrite bin_of_natK; apply/ltP'.
-   by case/andP: ir.
-  rewrite nth_cat size_rep.
-  case: ifP => ir'.
-   move/ltP': ir'.
-   rewrite bin_of_natK => /ltP'.
-   rewrite ltnNge.
-   by case/andP: ir => ->.
-  rewrite nth_rep //.
-  case/andP: ir => ri iw.
-  apply/ltn_sub2r; apply/ltP'; rewrite bin_of_natK; apply/ltP' => //.
-  apply/leq_ltn_trans; first apply/ri.
-  by apply/ltP'; rewrite bin_of_natK; apply/ltP'.
-Qed.
-
-Lemma lower_maskF i : (r <= i < w)%nat -> N.testbit lower_mask [Num of i] = false.
-Proof.
-  move=> ir.
-  rewrite testbit_N_of_word'; last first.
-   apply/ltP'; rewrite bin_of_natK; apply/ltP'.
-   by case/andP: ir.
-  rewrite nth_cat size_rep.
-  case: ifP => ir'.
-   move/ltP': ir'.
-   rewrite bin_of_natK => /ltP'.
-   rewrite ltnNge.
-   by case/andP: ir => ->.
-  rewrite nth_rep //.
-  case/andP: ir => ri iw.
-  apply/ltn_sub2r; apply/ltP'; rewrite bin_of_natK; apply/ltP' => //.
-  apply/leq_ltn_trans; first apply/ri.
-  by apply/ltP'; rewrite bin_of_natK; apply/ltP'.
-Qed.
-
 Lemma testbita i x :
   (i < w)%nat ->
   (if N.testbit (@N_of_word w x) [Num of i] then 1%R else 0%R) = nth 0%R x i.
@@ -1118,12 +1049,24 @@ Proof.
       N.testbit (N_of_word (rev_tuple (mktuple (ai v (rev_ord (Ordinal ord1n)))))) [Num of (val (Ordinal w0))] by [].
       rewrite testbit_N_of_word (tnth_nth 0%R) nth_rev size_tuple //.
       have <-: val (rev_ord (Ordinal w0)) = (w - (Ordinal w0).+1)%nat by [].
+      set upper_mask := (N_of_word (make_upper_mask rw'')).
+      set lower_mask := (N_of_word (make_lower_mask rw'')).
       have ->: N.testbit upper_mask 0 = false.
        have ->: 0 = [Num of val (Ordinal w0)] by [].
-       by rewrite upper_maskF.
+       rewrite testbit_N_of_word' ?nth_cat ?size_rep; last
+       by apply/ltP'; rewrite bin_of_natK; apply/ltP'.
+       case: ifP => [?|/ltP'].
+        by rewrite nth_rep.
+       rewrite bin_of_natK => /ltP'.
+       by rewrite /= r0.
       have ->: N.testbit lower_mask 0 = true.
        have ->: 0 = [Num of val (Ordinal w0)] by [].
-       by rewrite lower_maskT.
+       rewrite testbit_N_of_word' ?nth_cat ?size_rep; last
+       by apply/ltP'; rewrite bin_of_natK; apply/ltP'.
+       case: ifP => [?|/ltP'].
+        by rewrite nth_rep.
+       rewrite bin_of_natK => /ltP'.
+       by rewrite /= r0.
       rewrite nth_mktuple mxE andbF andbT orFb.
       set X := (ra *+ _) _ _.
       set Y := (if N.testbit _ [Num of val _] then 1 else 0)%R.
