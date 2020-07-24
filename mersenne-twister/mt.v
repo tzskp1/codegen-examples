@@ -1,7 +1,7 @@
 (* Implementation of MT19937 *)
 From mathcomp Require Import all_ssreflect.
 
-Require Import BinNat.
+Require Import BinNat nat_word.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -10,11 +10,12 @@ Unset Printing Implicit Defensive.
 Open Scope N_scope.
 
 Section Implementation.
-Variables len m r a : N.
+Variables len m r a w : N.
 Variables u s t l b c : N.
+Hypothesis rw : (r <= w)%nat.
 
-Notation upper_mask := (N.shiftl 1 r).
-Notation lower_mask := (upper_mask - 1).
+Notation upper_mask := (N_of_word (make_upper_mask rw)).
+Notation lower_mask := (N_of_word (make_lower_mask rw)).
 
 Record random_state := {index : N; state_vector : seq N}.
 

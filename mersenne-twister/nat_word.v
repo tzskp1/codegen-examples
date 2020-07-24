@@ -166,4 +166,27 @@ Proof.
   apply/rowP => i.
   by rewrite mxE tnth_mktuple.
 Qed.
+
+Fixpoint rep T (n : nat) (v : T) :=
+  match n with
+  | n'.+1 =>
+    v :: rep n' v
+  | 0%nat => [::]
+  end.
+
+Lemma nth_rep T (v d: T) (n i : nat) : (i < n)%nat ->  nth d (rep n v) i = v.
+Proof. by elim: n i => // n IH []. Qed.
+
+Lemma size_rep T (v: T) n : size (rep n v) = n.
+Proof. by elim: n => //= + ->. Qed.
+
+Lemma size_rep_cat T (v v': T) r :
+  (r <= w)%nat -> size (rep r v ++ rep (w - r) v') == w.
+Proof. move=> *; by rewrite size_cat !size_rep addnC subnK. Qed.
+
+Definition make_upper_mask r (rw : (r <= w)%nat) :=
+  Tuple (@size_rep_cat _ (0%R: 'F_2) (1%R: 'F_2) r rw).
+
+Definition make_lower_mask r (rw : (r <= w)%nat) :=
+  Tuple (@size_rep_cat _ (1%R: 'F_2) (0%R: 'F_2) r rw).
 End nat_word.
