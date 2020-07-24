@@ -34,7 +34,7 @@ Definition next_random_state (rand : random_state) : (N * random_state) :=
   let next := nth 0 state_vec next_ind in
   let far_ind := N.modulo (ind + m) len in
   (* x_{k+m} in (2.1), p.5 *)
-  let far := nth 0 state_vec far_ind in
+  let far := nth 0 state_vec (len - far_ind) in
   (* (x^u_k | x^l_{k+1}) in (2.1), p.5 *)
   let z := N.lor (N.land current upper_mask)
                  (N.land next lower_mask) in
