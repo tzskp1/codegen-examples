@@ -867,14 +867,7 @@ rewrite !(tnth_nth ord0) !nth_rev ?size_tuple //
 by congr (ai _ _); apply/ord_inj; rewrite /= nth_enum_ord ?rev_ord_proof.
 Qed.
 
-Lemma testbit_N_of_word v a' :
-  N.testbit (@N_of_word w v) [Num of val a'] = (tnth v a' == 1%R).
-Proof.
-rewrite (tnth_nth 0%R) -[in RHS](N_of_wordK v) nth_word_of_N.
-by case: ifP.
-Qed.
-
-Lemma testbit_N_of_word' a' w' v : (a' < w')%nat ->
+Lemma testbit_N_of_word a' w' v : (a' < w')%nat ->
   N.testbit (@N_of_word w' v) (bin_of_nat a') = (nth 1%R v a' == 1%R).
 Proof.
 move=> aw.
@@ -894,7 +887,7 @@ Proof.
   have H: b = val (Ordinal Hb) by [].
   rewrite [in LHS]H nth_state_vector.
   have {H} H : a' = val (Ordinal Ha) by [].
-  rewrite [in LHS]H testbit_N_of_word' //  nth_rev ?size_tuple //
+  rewrite [in LHS]H testbit_N_of_word //  nth_rev ?size_tuple //
           (nth_map ord0w) ?size_tuple ?rev_ord_proof //.
   congr (_ == _); congr (ai _ _); apply/ord_inj.
   by rewrite nth_enum_ord ?rev_ord_proof.
@@ -1038,7 +1031,7 @@ Proof.
        by apply/leq_trans/leqW/mn'/leqW.
       by rewrite -[n]prednK // mulSn prednK // addnC -addnBA // leq_addr.
     - have ->: 0 = [Num of (val (Ordinal w0))] by [].
-      rewrite ?testbit_N_of_word' ?nth_rev ?size_tuple ?nth_cat ?size_rep //; try by (apply/ltP'; rewrite bin_of_natK; apply/ltP').
+      rewrite ?testbit_N_of_word ?nth_rev ?size_tuple ?nth_cat ?size_rep //; try by (apply/ltP'; rewrite bin_of_natK; apply/ltP').
       have <-: val (rev_ord (Ordinal w0)) = (w - (Ordinal w0).+1)%nat by [].
       have c: (val (Ordinal w0) < bin_of_nat r)%nat
        by apply/ltP'; rewrite bin_of_natK; apply/ltP'.
@@ -1093,7 +1086,7 @@ Proof.
        case: k {C} => /= k.
        case: w rw => // w'.
        by rewrite subSS !ltnS leq_subr.
-      rewrite Num_succ ?(mxE, castmxE) !testbit_N_of_word' ?nth_rev ?size_tuple ?nth_cat //;
+      rewrite Num_succ ?(mxE, castmxE) !testbit_N_of_word ?nth_rev ?size_tuple ?nth_cat //;
               try by apply/ltP'; rewrite !bin_of_natK; apply/ltP'.
       rewrite !size_rep.
       have->: (w - (val (rev_ord R)).+2 = rev_ord (Ordinal x))%nat by [].
