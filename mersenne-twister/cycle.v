@@ -1,5 +1,6 @@
 From mathcomp
 Require Import all_ssreflect all_algebra all_field all_fingroup.
+Require Import mt nat_word.
 Require irreducible.
 
 Set Implicit Arguments.
@@ -42,7 +43,7 @@ set T := cast_ord _ i; case: (splitP T) => j Tj.
   congr (_ + _); apply/eq_bigr => k _.
   * by rewrite cast_ord_id col_mxEu !mxE !eqE /= eq_sym.
   * rewrite cast_ord_id col_mxEd !mxE !eqE /=.
-    case jrk: (val j == r + k)%N => //.
+    case jrk: (val j == r + k)%nat => //.
     case: j jrk {Tj} => j + /= /eqP jrk.
     by rewrite jrk ltnNge leq_addr.
 Qed.
@@ -748,8 +749,6 @@ Proof.
   by rewrite iq ltnNge leq_addr in wi.
 Qed.
 
-Require Import mt BinNat BinPos nat_word.
-
 Lemma break_if (T : 'F_2) :
   (if T == 1%R then 1%R else 0%R) = T.
 Proof.
@@ -769,6 +768,7 @@ Qed.
 
 Local Notation ai := array_incomplete.
 Local Notation ia := incomplete_array.
+Import BinNat.
 
 Definition array_of_state (y : random_state) :=
   ia (\matrix_(i, j) nth 0%R (nth (word_of_N w 0)
@@ -785,13 +785,13 @@ Proof.
   rewrite /array_of_state /state_of_array rot0.
   set T := (\matrix_(_, _) _)%R; have->: T = (ai x)%R.
    apply/matrixP => i j; subst T.
-   rewrite !mxE !revK (nth_map 0) /=; last by rewrite 2!size_map size_enum_ord.
+   rewrite !mxE !revK (nth_map 0%N) /=; last by rewrite 2!size_map size_enum_ord.
    rewrite (nth_map (word_of_N w 0)) /=; last by rewrite size_tuple card_ord.
    by rewrite N_of_wordK ?revK ?nth_mktuple ?(castmxE, mxE).
   by rewrite array_incompleteK.
 Qed.
 
-Lemma ltP' i p : reflect ([Num of i] < [Num of p]) (i < p)%nat.
+Lemma ltP' i p : reflect ([Num of i] < [Num of p])%N (i < p)%nat.
 Proof.
   apply/(iffP idP).
    elim: p i => // p IH []// i.
@@ -817,16 +817,13 @@ rewrite /next_random_state size_set_nth size_tuple.
 by case: n mn => []//[].
 Qed.
 
-Lemma mod_1_l x : x > 1 -> 1 mod x = 1.
-Proof.
-  case: x => //.
-  by elim.
-Qed.
+Lemma mod_1_l x : (x > 1)%N -> 1 mod x = 1%N.
+Proof. case: x => //. by elim. Qed.
 
 Lemma index_next_random_state v :
-index (next_random_state (state_of_array v)).2 = 1.
+index (next_random_state (state_of_array v)).2 = 1%N.
 Proof.
-  have: n != 1.
+  have: n != 1%N.
    apply/eqP => n1.
    move: n1 mn => ->.
    by rewrite ltn0.
@@ -842,12 +839,12 @@ Proof.
 Qed.
 
 Lemma nth_next_random_state v i :
-  nth 0 (state_vector (next_random_state (state_of_array v)).2) i.+1%N
-= nth 0 (state_vector (state_of_array v)) i.+1.
+  nth 0%N (state_vector (next_random_state (state_of_array v)).2) i.+1%N
+= nth 0%N (state_vector (state_of_array v)) i.+1.
 Proof. by rewrite nth_set_nth. Qed.
 
 Lemma nth_state_vector v (i : 'I_n) :
-  nth 0 (state_vector (state_of_array v)) i =
+  nth 0%N (state_vector (state_of_array v)) i =
   N_of_word (rev_tuple (mktuple (ai v (rev_ord i)))).
 Proof.
 rewrite nth_rev; last by rewrite 2!size_map size_enum_ord.
@@ -867,6 +864,7 @@ rewrite !(tnth_nth ord0) !nth_rev ?size_tuple //
 by congr (ai _ _); apply/ord_inj; rewrite /= nth_enum_ord ?rev_ord_proof.
 Qed.
 
+
 Lemma testbit_N_of_word a' w' v : (a' < w')%nat ->
   N.testbit (@N_of_word w' v) (bin_of_nat a') = (nth 1%R v a' == 1%R).
 Proof.
@@ -878,7 +876,7 @@ by case: ifP.
 Qed.
 
 Local Lemma tns v b a' (Ha : (a' < w)%nat) (Hb : (b < n)%nat) :
-  N.testbit (nth 0 (state_vector (state_of_array v)) b) [Num of a']
+  N.testbit (nth 0%N (state_vector (state_of_array v)) b) [Num of a']
 = (ai v (rev_ord (Ordinal Hb)) (rev_ord (Ordinal Ha)) == 1%R).
 Proof.
   have ord0w: 'I_w.
@@ -903,7 +901,7 @@ Proof.
   by rewrite (nth_word_of_N (N_of_word x) 0%R) N_of_wordK.
 Qed.
 
-Lemma mod_small x y : x < y -> x mod y = x.
+Lemma mod_small x y : (x < y)%N -> x mod y = x.
 Proof.
   move=> xy.
   apply N.Private_NZDiv.mod_small.
@@ -916,7 +914,7 @@ Lemma next_random_stateE v :
 Proof.
   apply/rowP => i.
 * case wi: (i >= w)%nat.
-  rewrite computeBE_large // !mxE ?castmxE ?mxE (nth_map 0)
+  rewrite computeBE_large // !mxE ?castmxE ?mxE (nth_map 0%N)
           ?nth_rev ?size_tuple ?size_rot ?ltn_pmod //
           ?size_rev ?size_rot ?size_next_random_state //.
   set R := row_ind _.
@@ -968,7 +966,7 @@ Proof.
     suff: false by []. by case: w wi rw.
 
 * move/negP/negP: wi; rewrite -ltnNge => wi.
-  rewrite computeBE_small // !mxE ?castmxE ?mxE (nth_map 0)
+  rewrite computeBE_small // !mxE ?castmxE ?mxE (nth_map 0%N)
           ?nth_rev ?size_tuple ?size_rot ?ltn_pmod //
           ?size_rev ?size_rot ?size_next_random_state //.
   set R := row_ind _.
@@ -1030,7 +1028,7 @@ Proof.
        case: n mn => []//[]//= n' mn'.
        by apply/leq_trans/leqW/mn'/leqW.
       by rewrite -[n]prednK // mulSn prednK // addnC -addnBA // leq_addr.
-    - have ->: 0 = [Num of (val (Ordinal w0))] by [].
+    - have ->: 0%N = [Num of (val (Ordinal w0))] by [].
       rewrite ?testbit_N_of_word ?nth_rev ?size_tuple ?nth_cat ?size_rep //; try by (apply/ltP'; rewrite bin_of_natK; apply/ltP').
       have <-: val (rev_ord (Ordinal w0)) = (w - (Ordinal w0).+1)%nat by [].
       have c: (val (Ordinal w0) < bin_of_nat r)%nat
