@@ -14,8 +14,8 @@ Variables len m r a w : N.
 Variables u s t l b c : N.
 Hypothesis rw : (r <= w)%nat.
 
-Notation upper_mask := (N_of_word (make_upper_mask rw)).
-Notation lower_mask := (N_of_word (make_lower_mask rw)).
+Definition upper_mask := (N_of_word (make_upper_mask rw)).
+Definition lower_mask := (N_of_word (make_lower_mask rw)).
 
 Record random_state := {index : N; state_vector : seq N}.
 

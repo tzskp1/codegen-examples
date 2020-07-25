@@ -4,4 +4,5 @@ irreducible.v
 nat_word.v
 mt.v
 cycle.v
+primitivity.v
 -R . mt
