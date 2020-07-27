@@ -53,33 +53,6 @@ Definition tempering xi :=
   y4.
 Lemma temperingE : tempering =1 mt.tempering u s t l b c.
 Proof. by []. Qed.
-
-Fixpoint generate_state_vector (rest : nat) (acc : seq N) : seq N :=
-  match rest with
-  | 0%nat | 1%nat => acc
-  | S rest' =>
-    generate_state_vector rest'
-    ((N.land (1812433253 * (N.lxor (head 0 acc) (N.shiftr (head 0 acc) 30)) + N.of_nat(len - rest) + 1) whole_mask) :: acc)
-  end.
-
-Definition initialize_random_state (seed : N) : mt.random_state :=
-{|
-  mt.index := 0;
-  mt.state_vector :=
-    rev (generate_state_vector len (N.land seed whole_mask :: nil));
-|}.
-
-Fixpoint nth_random_value_with_random_state (nth : nat) (rand : mt.random_state) : N :=
-  let (r, next_rand) := next_random_state rand in
-  match nth with
-  | 0%nat => tempering r
-  | S nth' => nth_random_value_with_random_state nth' next_rand
-  end.
-
-Definition nth_random_value (seed : N) (nth : nat) :=
-  let rand := initialize_random_state seed in
-  nth_random_value_with_random_state nth rand.
-
 End gluing.
 
 CodeGen Snippet "#include <stdbool.h> /* for bool, true and false */".
@@ -92,37 +65,120 @@ CodeGen Constant true => "true".
 CodeGen Constant false => "false".
 
 CodeGen Snippet "#include <stdint.h>".
+CodeGen Snippet "#include <stdio.h>".
 CodeGen Snippet "typedef uint64_t nat;".
 CodeGen Snippet "typedef uint32_t positive;".
 CodeGen Snippet "typedef uint32_t N;".
+CodeGen Snippet "#define succ(n) ((n)+1)".
 CodeGen Snippet "#define succn(n) ((n)+1)".
 CodeGen Snippet "#define predn(n) ((n)-1)".
 CodeGen Snippet "#define xH() (1)".
 CodeGen Snippet "#define xO(n) (2*(n))".
 CodeGen Snippet "#define xI(n) (2*(n)+1)".
+CodeGen Snippet "#define add(n, m) ((n) + (m))".
+CodeGen Snippet "#define subn(n, m) ((n) - (m))".
 CodeGen Snippet "#define modulo(n, m) ((n) % (m))".
+CodeGen Snippet "#define lxor(n, m) ((n) ^ (m))".
+CodeGen Snippet "#define lor(n, m) ((n) | (m))".
+CodeGen Snippet "#define land(n, m) ((n) & (m))".
+CodeGen Snippet "#define testbit(n1,n2) ((n1)&(1<<(n2)))".
 CodeGen Snippet "#define nat_of_bin(n) ((nat)(n))".
 CodeGen Snippet "#define N0() (0)".
 CodeGen Snippet "#define Npos(n) ((nat)(n))".
+CodeGen Snippet "#define shiftl(n1,n2) ((n1)<<(n2))".
+CodeGen Snippet "#define shiftr(n1,n2) ((n1)>>(n2))".
 
 CodeGen Inductive Type nat => "nat".
 CodeGen Inductive Match nat => ""
 | O => "case 0"
 | S => "default" "predn".
 CodeGen Primitive S => "succn".
-(* CodeGen Primitive addn => "addn". *)
-(* CodeGen Primitive subn => "subn". *)
-(* CodeGen Primitive muln => "muln". *)
-(* CodeGen Primitive divn => "divn". *)
-(* CodeGen Primitive modn => "modn". *)
-(* CodeGen Primitive eqb => "eqb". *)
-(* CodeGen Primitive negb => "negb". *)
-(* CodeGen Primitive eqn => "eqn". *)
+
+CodeGen Snippet "#define LARGE_NUM 1000".
+CodeGen Snippet "
+typedef struct {
+  N list[LARGE_NUM];
+  int index;
+} list_N;
+".
+
+CodeGen Snippet "
+typedef struct {
+  N index;
+  list_N state_vector;
+} rand_state;
+".
+
+CodeGen Snippet "
+rand_state Build_random_state(N index, list_N list) {
+  rand_state r = {index,list};
+  return r;
+}
+".
+
+CodeGen Snippet "#define INDEX(x)        ((x).index)".
+CodeGen Snippet "#define STATE_VECTOR(x) ((x).state_vector)".
+
+CodeGen Inductive Type mt.random_state => "rand_state".
+CodeGen Primitive mt.index => "INDEX".
+CodeGen Primitive mt.state_vector => "STATE_VECTOR".
+
+CodeGen Snippet "
+typedef struct {
+  nat fst;
+  rand_state snd;
+} prodNrnd;
+".
+CodeGen Snippet "#define make_prodNrnd(x, y) ((prodNrnd){ (x), (y) })".
+
+CodeGen Inductive Type N * mt.random_state => "prodNrnd".
+CodeGen Primitive pair N mt.random_state => "make_prodNrnd".
+
+CodeGen Snippet "
+N nth(N default_value, list_N l, N index) {
+  return l.list[index];
+}
+".
+
+CodeGen Snippet "
+list_N set_nth(N default_value, list_N l, N index, N value) {
+  l.list[index] = value;
+  return l;
+}
+".
 
 CodeGen Function lower_mask.
 CodeGen Function upper_mask.
-CodeGen Function set_nth.
-CodeGen Function nth.
 CodeGen Function next_random_state.
+CodeGen Function tempering.
+
+CodeGen Snippet "
+rand_state initialize_random_state(int s)
+{
+    static list_N mt;
+    int mti;
+    mt.list[0]= s & 0xffffffffUL;
+    for (mti=1; mti<LARGE_NUM; mti++) {
+        mt.list[mti] =
+	    (1812433253UL * (mt.list[mti-1] ^ (mt.list[mti-1] >> 30)) + mti);
+        mt.list[mti] &= 0xffffffffUL;
+    }
+    return Build_random_state(0, mt);
+}
+".
+
+CodeGen Snippet "
+int main(void) {
+  int seed = 20190820;
+  rand_state r = initialize_random_state(seed);
+  int i;
+  for (i = 0; i < 2048; ++i) {
+    prodNrnd p = next_random_state(r);
+    printf(""%d:%u\n"", i, tempering(p.fst));
+    r = p.snd;
+  }
+  return 0;
+}
+".
 
 CodeGen GenerateFile "./mt19937_proved.c".
