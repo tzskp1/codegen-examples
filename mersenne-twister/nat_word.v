@@ -189,4 +189,81 @@ Definition make_upper_mask r (rw : (r <= w)%nat) :=
 
 Definition make_lower_mask r (rw : (r <= w)%nat) :=
   Tuple (@size_rep_cat _ (1%R: 'F_2) (0%R: 'F_2) r rw).
+
+Local Lemma lem (n : nat) :
+  foldr (fun x y => 2*y + x)%N 0
+  [seq (if x == (1 : 'F_2)%R then 1 else 0) | x <- [seq 0%R | _ <- iota 0 n]] = 0.
+Proof.
+  elim: n => // n IH.
+  by rewrite -[n.+1]addn1 iota_add !map_cat foldr_cat /= IH.
+Qed.
+
+Lemma N_of_word_zero : N_of_word zero = 0.
+Proof. by rewrite /N_of_word /zero /= lem. Qed.
+
+Lemma word_of_N_iter1 (w' : nat) : (w' > 0)%nat ->
+  word_of_N_iter w' 1 = 1%R :: map (fun _ => 0%R) (iota 0 w'.-1).
+ Proof. by case: w'. Qed.
+
+Lemma word_of_N_iterwO p:
+   word_of_N_iter w p~0 = 0%R :: word_of_N_iter w.-1 p.
+Proof. by case: w w0. Qed.
+
+Lemma posxO p : N.pos (xO p) = 2 * N.pos p.
+Proof. by elim: p. Qed.
+
+Lemma posxI p : N.pos (xI p) = 2 * N.pos p + 1.
+Proof. by elim: p. Qed.
+
+Lemma word_of_NK (x : N) :
+(x <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+N_of_word (word_of_N x) = x.
+Proof.
+  case: x => [|p] /=.
+   by rewrite N_of_word_zero.
+  rewrite /N_of_word /=.
+  elim: w w0 p => // w' IH _ []//= => [| | *]; last by rewrite lem N.add_0_l.
+  + move=> p H.
+    rewrite !natTrecE nat_of_add_bin addn1 ltnS in H.
+    case w'0: (0 < w')%nat.
+     rewrite IH // -leq_double.
+     apply/(leq_trans H).
+     case: (foldr _ _ _) => // ?.
+     by rewrite posxO /= natTrecE.
+    case: w' w'0 H {IH} => //= _ H.
+    suff: false by [].
+    rewrite leqNgt in H.
+    move/negPf: H <-.
+    elim: p => // p H.
+    apply/(leq_trans H).
+    by rewrite /= natTrecE -!addnn leq_addr.
+  + move=> p H.
+    rewrite !natTrecE nat_of_add_bin addn1 in H.
+    case w'0: (0 < w')%nat.
+     rewrite IH //.
+     move: (leq_div2r 2 H).
+     rewrite -muln2 mulnK // => H'.
+     apply/(leq_trans H').
+     rewrite -addn1 divnD //.
+     set R := foldr _ _ _.
+     set Q := match R with
+              | _ => _
+              end %% 2.
+     have->: Q = 0.
+      subst Q R.
+      case: w' w'0 {IH H H'} => // w' _.
+      rewrite /= N.add_1_r.
+      case: (match foldr _ _ _ with | 0 => 0 | N.pos q => _ end) => //= ?.
+      by rewrite natTrecE -muln2 modnMl.
+     rewrite modn_small // add0n ltnn [1 %/ 2]divn_small // !addn0.
+     case: R {Q} => //= *.
+     by rewrite natTrecE -muln2 mulnK.
+    case: w' w'0 H {IH} => //= _ H.
+    suff: false by [].
+    rewrite leqNgt in H.
+    move/negPf: H <-.
+    elim: p => // p H.
+    apply/(leq_trans H).
+    by rewrite /= natTrecE -!addnn leq_addr.
+Qed.
 End nat_word.
