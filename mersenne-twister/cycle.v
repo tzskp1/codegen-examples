@@ -845,6 +845,16 @@ rewrite /next_random_state size_set_nth size_tuple.
 by case: n mn => []//[].
 Qed.
 
+Lemma size_next_random_state' v :
+(index v < size (state_vector v))%nat ->
+size (state_vector (next_random_state v).2) = size (state_vector v).
+Proof.
+move=> H.
+rewrite /next_random_state size_set_nth /maxn.
+case: ifP => //.
+by rewrite ltnNge leq_eqVlt ltnNge H orbF => /negP/negP/eqP ->.
+Qed.
+
 Lemma mod_1_l x : (x > 1)%N -> 1 mod x = 1%N.
 Proof. case: x => //. by elim. Qed.
 
@@ -1348,107 +1358,107 @@ Qed.
 
 Hint Resolve nmn : core.
 
-Lemma array_of_stateK x :
-size (state_vector x) = n ->
-(index x < size (state_vector x))%nat ->
-array_of_state (snd (next_random_state (state_of_array (array_of_state x)))) =
-array_of_state (snd (next_random_state x)).
-Proof.
-  case: x => y z H1 H2.
-  apply/rowP => i.
-  rewrite ?mxE index_next_random_state.
-  congr (nth _ _ _).
-  set A := rev _; set B := rev _.
-  suff->: A = B by []; congr (rev _).
-  set T := index _.
-  change T with (N.succ y mod bin_of_nat n).
-  rewrite -[X in N.succ y mod bin_of_nat X]H1.
-  have->: size z = size (state_vector (next_random_state {| index := y; state_vector := z |}).2).
-   rewrite size_set_nth /= /maxn.
-   case: ifP => // /negP/negP.
-   rewrite -ltnNge ltnS leq_eqVlt => /orP [/eqP //| ].
-   by rewrite ltnS leqNgt H2.
-  rewrite rot_succ; last first.
-   rewrite size_set_nth /= /maxn.
-   case: ifP => // H.
-   by apply/leq_trans/H/ltnW.
-  congr (rot 1%N _).
-  rewrite rot_set_nth //.
-  apply/(@eq_from_nth _ 0%N).
-   rewrite size_next_random_state size_set_nth size_rot H1.
-   rewrite /maxn.
-   by case: n mn => []//[].
-  case=> [H|i0 H].
-  rewrite nth_set_nth /=.
-  set P := rev _.
-  case HP: P.
-   subst P.
-   move: (f_equal size HP).
-   rewrite size_rev 2!size_map size_enum_ord => n0.
-   move: mn.
-   by rewrite n0.
-  rewrite -HP /P.
-  congr (N.lxor _).
-   congr (N.lxor _).
-    rewrite nth_rev 2!size_map size_enum_ord mod_small //.
-    rewrite (nth_map (word_of_N w 0%N)); last first.
-     rewrite size_map size_enum_ord.
-     case: n mn => // n' ?.
-     by rewrite subSS ltnS leq_subr.
-    rewrite (nth_map (Ordinal n0)) ?size_enum_ord; last first.
-     case: n mn => // n' ?.
-     by rewrite subSS ltnS leq_subr.
-    rewrite
+(* Lemma array_of_stateK x : *)
+(* size (state_vector x) = n -> *)
+(* (index x < size (state_vector x))%nat -> *)
+(* array_of_state (snd (next_random_state (state_of_array (array_of_state x)))) = *)
+(* array_of_state (snd (next_random_state x)). *)
+(* Proof. *)
+(*   case: x => y z H1 H2. *)
+(*   apply/rowP => i. *)
+(*   rewrite ?mxE index_next_random_state. *)
+(*   congr (nth _ _ _). *)
+(*   set A := rev _; set B := rev _. *)
+(*   suff->: A = B by []; congr (rev _). *)
+(*   set T := index _. *)
+(*   change T with (N.succ y mod bin_of_nat n). *)
+(*   rewrite -[X in N.succ y mod bin_of_nat X]H1. *)
+(*   have->: size z = size (state_vector (next_random_state {| index := y; state_vector := z |}).2). *)
+(*    rewrite size_set_nth /= /maxn. *)
+(*    case: ifP => // /negP/negP. *)
+(*    rewrite -ltnNge ltnS leq_eqVlt => /orP [/eqP //| ]. *)
+(*    by rewrite ltnS leqNgt H2. *)
+(*   rewrite rot_succ; last first. *)
+(*    rewrite size_set_nth /= /maxn. *)
+(*    case: ifP => // H. *)
+(*    by apply/leq_trans/H/ltnW. *)
+(*   congr (rot 1%N _). *)
+(*   rewrite rot_set_nth //. *)
+(*   apply/(@eq_from_nth _ 0%N). *)
+(*    rewrite size_next_random_state size_set_nth size_rot H1. *)
+(*    rewrite /maxn. *)
+(*    by case: n mn => []//[]. *)
+(*   case=> [H|i0 H]. *)
+(*   rewrite nth_set_nth /=. *)
+(*   set P := rev _. *)
+(*   case HP: P. *)
+(*    subst P. *)
+(*    move: (f_equal size HP). *)
+(*    rewrite size_rev 2!size_map size_enum_ord => n0. *)
+(*    move: mn. *)
+(*    by rewrite n0. *)
+(*   rewrite -HP /P. *)
+(*   congr (N.lxor _). *)
+(*    congr (N.lxor _). *)
+(*     rewrite nth_rev 2!size_map size_enum_ord mod_small //. *)
+(*     rewrite (nth_map (word_of_N w 0%N)); last first. *)
+(*      rewrite size_map size_enum_ord. *)
+(*      case: n mn => // n' ?. *)
+(*      by rewrite subSS ltnS leq_subr. *)
+(*     rewrite (nth_map (Ordinal n0)) ?size_enum_ord; last first. *)
+(*      case: n mn => // n' ?. *)
+(*      by rewrite subSS ltnS leq_subr. *)
+(*     rewrite *)
 
 
-  move=> i0 H.
-  case: i0 H => //.
+(*   move=> i0 H. *)
+(*   case: i0 H => //. *)
 
-  nth_next_random_state
-  rewrite /=.
-  rewrite /=.
+(*   nth_next_random_state *)
+(*   rewrite /=. *)
+(*   rewrite /=. *)
 
 
-  rewrite /=.
-   rewrite !size_rot !size_state_vector_random_state //=.
-    by rewrite size_rev 2!size_map size_enum_ord.
-   by rewrite size
-  rewrite !nth_cat drop1 size_behead size_drop nth_behead
-          !size_state_vector_random_state //; last
-   by rewrite size_rev 2!size_map size_enum_ord.
-  case: ifP => H4; case: ifP => H5.
-  + rewrite ?nth_drop ?nth_take nth_next_random_state.
-case: x => y z H1 H2.
-apply/rowP => k; rewrite !mxE.
-rewrite /state_of_array /array_of_state.
-rewrite !(nth_map 0%N) // ?size_rev ?size_rot ?size_state_vector_random_state ?H2 // ?size_rev.
-rewrite /=.
-rewrite /= !map_rev !nth_rev /=.
+(*   rewrite /=. *)
+(*    rewrite !size_rot !size_state_vector_random_state //=. *)
+(*     by rewrite size_rev 2!size_map size_enum_ord. *)
+(*    by rewrite size *)
+(*   rewrite !nth_cat drop1 size_behead size_drop nth_behead *)
+(*           !size_state_vector_random_state //; last *)
+(*    by rewrite size_rev 2!size_map size_enum_ord. *)
+(*   case: ifP => H4; case: ifP => H5. *)
+(*   + rewrite ?nth_drop ?nth_take nth_next_random_state. *)
+(* case: x => y z H1 H2. *)
+(* apply/rowP => k; rewrite !mxE. *)
+(* rewrite /state_of_array /array_of_state. *)
+(* rewrite !(nth_map 0%N) // ?size_rev ?size_rot ?size_state_vector_random_state ?H2 // ?size_rev. *)
+(* rewrite /=. *)
+(* rewrite /= !map_rev !nth_rev /=. *)
 
-rewrite 2!size_map size_enum_ord mod1n.
-rewrite rot.
-rewrite 2!size_map size_enum_ord.
- !size_rot !size_set_nth.
-; last first.
- rewrite 2!size_map size_enum_ord mod_small //.
- case: m m0 mn => // m' _ mn'.
- case: n mn'=> []//[]// n' mn'.
- rewrite ltnS.
- rewrite /leq.
-  subSS.
- case: n m mn => []//[]// n'.
- rewrite ltnS .
- rewrite /leq.
-  subSS.
- rewrite /=.
- rewrite /=.
- Check (rev_ord_proof (Ordinal mn)).
- rewrite ?(size_map, size_ord_enum).
+(* rewrite 2!size_map size_enum_ord mod1n. *)
+(* rewrite rot. *)
+(* rewrite 2!size_map size_enum_ord. *)
+(*  !size_rot !size_set_nth. *)
+(* ; last first. *)
+(*  rewrite 2!size_map size_enum_ord mod_small //. *)
+(*  case: m m0 mn => // m' _ mn'. *)
+(*  case: n mn'=> []//[]// n' mn'. *)
+(*  rewrite ltnS. *)
+(*  rewrite /leq. *)
+(*   subSS. *)
+(*  case: n m mn => []//[]// n'. *)
+(*  rewrite ltnS . *)
+(*  rewrite /leq. *)
+(*   subSS. *)
+(*  rewrite /=. *)
+(*  rewrite /=. *)
+(*  Check (rev_ord_proof (Ordinal mn)). *)
+(*  rewrite ?(size_map, size_ord_enum). *)
 
-congr (nth _ _).
-congr (nth _ _).
-rewrite /array_of_state /ia;
-rewrite /=.
+(* congr (nth _ _). *)
+(* congr (nth _ _). *)
+(* rewrite /array_of_state /ia; *)
+(* rewrite /=. *)
 
 Definition eq_random_state x y :=
 rot (index x) (state_vector x) == rot (index y) (state_vector y).
@@ -1461,11 +1471,48 @@ Proof.
 Qed.
 
 Lemma test2 x y :
+(index x < size (state_vector x))%nat ->
+(index y < size (state_vector y))%nat ->
+size (state_vector y) = n ->
+size (state_vector x) = n ->
 eq_random_state x y ->
 eq_random_state ((snd \o next_random_state) x) ((snd \o next_random_state) y).
 Proof.
-  move=> /eqP H.
+  move=> Hx Hy H0 H2 /eqP H1.
   apply/eqP.
+  set T := index _.
+  change T with (N.succ (index x) mod bin_of_nat n).
+  set L := state_vector _.
+  rewrite -H2.
+  have->: size (state_vector x) = size L. by rewrite size_next_random_state'.
+  subst T L.
+  rewrite rot_succ ?size_next_random_state' //; last by apply ltnW.
+  rewrite H2.
+  set T := index (_ y).
+  change T with (N.succ (index y) mod bin_of_nat n).
+  apply/esym.
+  set L := state_vector _.
+  rewrite -H0.
+  have->: size (state_vector y) = size L by rewrite size_next_random_state'.
+  subst T L.
+  rewrite rot_succ ?size_next_random_state' //; last by apply ltnW.
+  apply/esym.
+  rewrite !rot_set_nth // H0.
+  congr (rot 1 (set_nth _ _ _ _)) => //.
+  do !congr N.lxor.
+  + move: (f_equal (rot m) H1).
+    rewrite !rot_add_mod; last first.
+    - by rewrite H2 ltnW.
+    - by rewrite ltnW.
+    - by rewrite H0 ltnW.
+    - by rewrite ltnW.
+    Check nth_rev.
+
+    Check nth_rev.
+  + move: (f_equal rev H1).
+    move/(f_equal (fun x y => nth 0 x y)).
+  have ->:
+  rewrite
   rewrite /=.
 
 Lemma array_of_stateK x :
