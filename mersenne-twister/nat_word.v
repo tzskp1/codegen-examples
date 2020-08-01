@@ -267,8 +267,16 @@ Proof.
     by rewrite /= natTrecE -!addnn leq_addr.
 Qed.
 
+Lemma bin_succ y :
+(nat_of_bin y).+1 = nat_of_bin (N.succ y).
+Proof.
+case: y => //.
+elim => //= ? <-.
+by rewrite !natTrecE -[in RHS]addn1 -[in RHS]muln2 mulnDl mul1n muln2 addn2.
+Qed.
+
 Lemma bound_N_of_word x :
-N_of_word x <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))).
+(N_of_word x <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat.
 Proof.
   rewrite /N_of_word.
   elim: w x.
@@ -276,11 +284,18 @@ Proof.
   move=> w' IH x.
   case: x => [][]// ? l i; move: (i) => i'.
   rewrite eqSS in i.
-  apply: N.le_trans.
-   apply: (_ : _ <= 2 * foldr (fun x0 y : N => 2 * y + x0) 0 [seq (if x == 1%R then 1 else 0) | x <- l] + 1).
-    apply N.add_le_mono; first by apply N.le_refl.
-    by case: ifP.
-  apply N.add_le_mono => //.
-  by apply/N.mul_le_mono_l/(IH (Tuple i)).
+  apply/leq_trans.
+   apply: (_ : _ <= (2 * foldr (fun x0 y : N => 2 * y + x0) 0 [seq (if x == 1%R then 1 else 0) | x <- l] + 1)%N)%nat.
+    rewrite /=; case: ifP => // ?.
+    rewrite N.add_0_r N.add_1_r -bin_succ.
+    by apply/ltnW.
+  rewrite !N.add_1_r -!bin_succ nat_of_mul_bin.
+  set T := foldr _ _ _.
+  set T' := foldr _ _ _.
+  have->: T' = 2 * foldr (fun x0 y : N => (2 * y + x0)%N) 0%N [seq (if x == 1%R then 1 else 0) | x <- rep w' (1 : 'F_2)%R] + 1
+   by [].
+  rewrite N.add_1_r -bin_succ ltnS nat_of_mul_bin.
+  apply/leq_mul => //.
+  by apply(IH (Tuple i)).
 Qed.
 End nat_word.
