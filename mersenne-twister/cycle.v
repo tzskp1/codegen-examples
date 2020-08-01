@@ -828,6 +828,26 @@ Qed.
 
 Definition upto_rot x y := canonical_random_state x = canonical_random_state y.
 
+Lemma test x y :
+size (state_vector x) = n ->
+(index x < size (state_vector x))%nat ->
+(forall i, i < size (state_vector x) ->
+ nth 0%N (state_vector x) i <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+upto_rot x y ->
+array_of_state x = array_of_state y.
+Proof.
+  case: x y => ? x [] ? y H1 H2 H3 H.
+  apply/rowP => i.
+  rewrite !mxE !(nth_map 0%N) ?size_rev ?size_rot //.
+  rewrite (nth_map (word_of_N w 0%N)); last
+   by rewrite size_map size_enum_ord ?(rev_ord_proof (Ordinal H)).
+  rewrite (nth_map (Ordinal n0)); last
+   by rewrite size_enum_ord (rev_ord_proof (Ordinal H)).
+
+  rewrite (nth_map .
+  rewrite /=.
+  rewrite /up
+
 Lemma array_of_stateK x :
 size (state_vector x) = n ->
 (index x < size (state_vector x))%nat ->
