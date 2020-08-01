@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect all_algebra.
 Require Import codegen.codegen primitivity nat_word BinNat.
-Require mt.
+Require mt cycle.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -34,7 +34,7 @@ let current := nth 0 state_vec ind in
 let next_ind := N.succ ind mod len in
 let next := nth 0 state_vec next_ind in
 let far_ind := (ind + m) mod len in
-let far := nth 0 state_vec (len - far_ind) in
+let far := nth 0 state_vec far_ind in
 let z := N.lor (N.land current upper_mask) (N.land next lower_mask) in
 let xi := N.lxor (N.lxor far (N.shiftr z 1)) (if N.testbit z 0 then a else 0) in
 let next_rand :=
@@ -53,6 +53,9 @@ Definition tempering xi :=
   y4.
 Lemma temperingE : tempering =1 mt.tempering u s t l b c.
 Proof. by []. Qed.
+
+Definition cycleB_dvdP :=
+  @cycle.cycleB_dvdP w len m r (word_of_N w a) pm erefl erefl erefl erefl erefl.
 End gluing.
 
 CodeGen Snippet "#include <stdbool.h> /* for bool, true and false */".
