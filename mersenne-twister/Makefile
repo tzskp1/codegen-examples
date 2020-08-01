@@ -5,7 +5,7 @@ Makefile.coq: _CoqProject
 
 # all:mt
 
-mt: mt.c mt_generated.c
+mt: mt19937_proved.c
 	gcc -g -Wall $< -o $@
 
 inv: inversive_decimation.c inversive_decimation_generated.c

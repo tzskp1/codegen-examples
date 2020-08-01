@@ -1,4 +1,3 @@
-(* Implementation of MT19937 *)
 From mathcomp Require Import all_ssreflect.
 
 Require Import BinNat nat_word.
