@@ -266,4 +266,21 @@ Proof.
     apply/(leq_trans H).
     by rewrite /= natTrecE -!addnn leq_addr.
 Qed.
+
+Lemma bound_N_of_word x :
+N_of_word x <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))).
+Proof.
+  rewrite /N_of_word.
+  elim: w x.
+   by case=> []//[]//.
+  move=> w' IH x.
+  case: x => [][]// ? l i; move: (i) => i'.
+  rewrite eqSS in i.
+  apply: N.le_trans.
+   apply: (_ : _ <= 2 * foldr (fun x0 y : N => 2 * y + x0) 0 [seq (if x == 1%R then 1 else 0) | x <- l] + 1).
+    apply N.add_le_mono; first by apply N.le_refl.
+    by case: ifP.
+  apply N.add_le_mono => //.
+  by apply/N.mul_le_mono_l/(IH (Tuple i)).
+Qed.
 End nat_word.
