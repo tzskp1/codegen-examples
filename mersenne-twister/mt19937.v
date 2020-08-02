@@ -189,4 +189,4 @@ int main(void) {
 }
 ".
 
-CodeGen GenerateFile "./mt19937_proved.c".
+CodeGen GenerateFile "./mt19937_generated.c".
