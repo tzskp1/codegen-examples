@@ -141,22 +141,22 @@ Fixpoint recursive_process a state times {struct times} :=
   | S times' => recursive_process a (process a state) times'
   end.
 
-Fixpoint check_aux initial_state last_state index :=
+Fixpoint check_last_condition_aux initial_state last_state index :=
   match index with
   | 0%nat => true
   | S index' => (N.eqb (nth_state_vector initial_state index)
                        (nth_state_vector last_state index))
                 &&
-                check_aux initial_state last_state index'
+                check_last_condition_aux initial_state last_state index'
   end.
 
-Definition check initial_state last_state :=
+Definition check_last_condition initial_state last_state :=
   (N.eqb (N.land upper_mask (nth_state_vector initial_state 0))
          (N.land upper_mask (nth_state_vector last_state 0)))
   &&
-  check_aux initial_state last_state (minus n 1%nat).
+  check_last_condition_aux initial_state last_state (minus n 1%nat).
 
-Definition test a := check initial_state (recursive_process a start_state p).
+Definition inversive_decimation_test a := check_last_condition initial_state (recursive_process a start_state p).
 
 CodeGen Terminate Monomorphization start_state.
 CodeGen Terminate Monomorphization initial_state.
@@ -172,9 +172,9 @@ CodeGen Monomorphization decimate.
 CodeGen Monomorphization process_aux.
 CodeGen Monomorphization process.
 CodeGen Monomorphization recursive_process.
-CodeGen Monomorphization check_aux.
-CodeGen Monomorphization check.
-CodeGen Monomorphization test.
+CodeGen Monomorphization check_last_condition_aux.
+CodeGen Monomorphization check_last_condition.
+CodeGen Monomorphization inversive_decimation_test.
 Print _next.
 Print _generate_aux.
 Print _generate.
@@ -183,9 +183,9 @@ Print _decimate.
 Print _process_aux.
 Print _process.
 Print _recursive_process.
-Print _check_aux.
-Print _check.
-Print _test.
+Print _check_last_condition_aux.
+Print _check_last_condition.
+Print _inversive_decimation_test.
 
 CodeGen GenCFile "inversive_decimation_generated.c"
         _next
@@ -196,6 +196,6 @@ CodeGen GenCFile "inversive_decimation_generated.c"
         _process_aux
         _process
         _recursive_process
-        _check_aux
-        _check
-        _test.
+        _check_last_condition_aux
+        _check_last_condition
+        _inversive_decimation_test.
