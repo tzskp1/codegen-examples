@@ -188,6 +188,9 @@ Qed.
 Lemma n0 : 0 < n.
 Proof. by case: n n2. Qed.
 
+Lemma npn : n.-1 < n.
+Proof. by case: n n0. Qed.
+  
 Lemma p0 : 0 < p.
 Proof. by case: p p3. Qed.
 
@@ -674,55 +677,93 @@ Qed.
 Definition arr_ind_large (x : 'I_n) (y : 'I_w) := Ordinal (arr_ind_prf x y).
 Definition arr_ind (x : 'I_n) (y : 'I_w) :=
 match split (cast_ord (esym tecpr) (arr_ind_large x y)) with
-| inl l => l
-| inr r => cast_ord (esym tecp) ord0
+| inl l => Some l
+| inr r => None
 end.
 
-Definition incomplete_array (x : 'M['F_2]_(n, w)) :=
+Record incomplete_matrix :=
+  {
+    matrix :> 'M['F_2]_(n, w);
+    _ : [forall i, (w - r <= (i : 'I_w))%nat ==>  (matrix (Ordinal npn) i == 0%R)];
+  }.
+
+Lemma incomplete_matrix_eqP : Equality.axiom (fun a b => matrix a == matrix b).
+Proof.
+  case=> [] x Hx [] y Hy.
+  apply/(iffP idP) => [|->//].
+  move=> /eqP /= H; move: H Hx Hy => -> Hx Hy.
+  congr Build_incomplete_matrix.
+  apply bool_irrelevance.
+Qed.
+
+Canonical incomplete_matrix_eqMixin := EqMixin incomplete_matrix_eqP.
+Canonical incomplete_matrix_eqType :=
+   Eval hnf in EqType incomplete_matrix incomplete_matrix_eqMixin.
+
+Definition incomplete_array (x :incomplete_matrix) :=
   \row_i x (col_ind i) (row_ind i).
 
-Definition array_incomplete (y : 'rV['F_2]_p) : 'M_(n, w) :=
-  \matrix_(i, j) y ord0 (arr_ind i j).
+Definition array_incomplete (y : 'rV['F_2]_p) : incomplete_matrix.
+apply (@Build_incomplete_matrix (\matrix_(i, j) match arr_ind i j with
+                                                | Some i => y ord0 i
+                                                | None => 0%R
+                                                end)).
+apply/forallP => x; apply/implyP => rx.
+rewrite mxE /arr_ind.
+case: (splitP _) => k K //.
+rewrite /= in K.
+suff: (p <= k)%nat.
+ by rewrite leqNgt; case: k K => //= ? H; rewrite H.
+rewrite -K.
+apply/leq_trans.
+ apply: (_ : _ <= n.-1 * w + (w - r))%nat.
+  by rewrite addnBA // addnC -mulSn prednK.
+ by rewrite leq_add2l.
+Defined.
 
 Lemma array_incompleteK : cancel array_incomplete incomplete_array.
 Proof.
 move=> y; rewrite /incomplete_array /array_incomplete; apply/rowP => j.
-rewrite !mxE; congr (y _ _); apply/ord_inj.
-rewrite /arr_ind; set T := cast_ord _ _.
-case: (splitP T) => s Ts; rewrite /= -divn_eq in Ts.
- by rewrite Ts.
-suff: (p < p)%nat by rewrite ltnn.
-suff: (p + s < p)%nat; first by apply/leq_trans; rewrite ltnS leq_addr.
-by rewrite -Ts.
+rewrite !mxE /arr_ind.
+case: (splitP _) => s /esym S; rewrite /= -divn_eq in S.
+ by congr (y _ _); apply/val_inj.
+suff: (p + s < p)%nat by rewrite ltnNge leq_addr.
+by rewrite S.
 Qed.
 
-Lemma col_arr i j :
-  (val i * w + val j < p)%nat ->
-  col_ind (arr_ind i j) = i.
+Lemma incomplete_arrayK : cancel incomplete_array array_incomplete.
 Proof.
-move=> H.
-apply/val_inj.
-rewrite /col_ind /arr_ind /=.
-case: (splitP _) => [k <-|k C].
- by rewrite divnDl ?dvdn_mull // mulnK // divn_small // addn0.
-suff: (p > p + k)%nat by rewrite ltnNge leq_addr.
-by rewrite -C /= H.
+move=> y; apply/eqP; rewrite eqE /=; apply/eqP.
+apply/matrixP => i j.
+rewrite !mxE /arr_ind.
+case: (splitP _) => k K.
+ rewrite !mxE; congr (y _ _); apply/val_inj.
+  by rewrite /= -K /= divnMDl // divn_small // addn0.
+ by rewrite /= -K /= modnMDl modn_small.
+case: y => y /= /forallP Hy.
+case inpn : (i == Ordinal npn).
+ move/eqP: inpn => inpn.
+ have: (w - r <= j)%nat.
+  rewrite /= inpn /= -[n]prednK // mulSn [(w + _)%nat in RHS]addnC /= -addnBA // -!addnA in K.
+  move/eqP: K; rewrite eqn_add2l => /eqP ->.
+  by rewrite leq_addr.
+ move/implyP: (Hy j) => Hy' /Hy' /eqP <-.
+ by congr (y _ _).
+suff: (p + k < p)%nat by rewrite ltnNge leq_addr.
+rewrite -K /= => {K y Hy}.
+case: i inpn => i /= i0.
+rewrite eqE /=; move: i0.
+rewrite -[n]prednK // ltnS leq_eqVlt /= => + ni; move: ni => -> /= ni.
+apply/leq_ltn_trans.
+ apply: (_ : _ <= n.-2 * w + w)%nat.
+  rewrite leq_add // ?leq_mul //; last by apply/ltnW.
+  rewrite -[n.-1]prednK // in ni.
+  case: (n.-1) mn => //.
+ rewrite mulSn [(w + _)%nat]addnC -addnBA // addnC -mulSn prednK;
+  last by case: (n.-1) mn.
+ by rewrite -[X in (X < _)%nat]addn0 ltn_add2l leqNgt /leq subSS
+            subn0 subn_eq0 -ltnNge.
 Qed.
-
-(* Lemma incomplete_arrayK : cancel incomplete_array array_incomplete. *)
-(* Proof. *)
-(*   move=> y. *)
-(* move=> y; rewrite /incomplete_array /array_incomplete; apply/matrixP => i j. *)
-(* rewrite !mxE; congr (y _ _). *)
-(* rewrite /col_ind. *)
-(* apply/val_inj. *)
-(* rewrite /= /arr_ind /=. *)
-(* case: (splitP _) => [k <-|]. *)
-(*  by rewrite divnDl ?dvdn_mull // mulnK // divn_small // addn0. *)
-(* rewrite /=. *)
-(*      rewrite /= -subSn // subSS subKn; last by apply/ltnW. *)
-(*      rewrite modnMDl modn_small ?(rev_ord_proof j) //. *)
-(*      by rewrite /= -subSn // subSS subKn; last by apply/ltnW. *)
 
 Lemma iw (i : 'I_(n * w - r)) : (i - w < n * w - r)%nat.
 Proof.
@@ -794,39 +835,131 @@ Proof.
   by rewrite GRing.addr0.
 Qed.
 
+Lemma nth_rot T y i z (d : T) :
+  (y + i < size z)%nat ->
+  nth d (rot y z) i = nth d z (y + i).
+Proof.
+  move=> H.
+  rewrite nth_cat size_drop.
+  case: ifP.
+   by rewrite nth_drop.
+  by rewrite ltnNge /leq -subnDA subn_eq0 -ltnNge H.
+Qed.
+
 Local Notation ai := array_incomplete.
 Local Notation ia := incomplete_array.
 Import BinNat.
+Record valid_random_state :=
+  {
+    state :> random_state;
+    _ : size (state_vector state) == n;
+    _ : ((index state) < n)%nat;
+    _ : [forall i, (((i : 'I_n) < size (state_vector state)) ==>
+                        (nth 0%N (state_vector state) i <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w)))))%nat];
+    _ : [forall x, ((w - r <= (x : 'I_w))%nat ==>  ((rev (word_of_N w (nth 0%N (state_vector state) (index state))))`_x == 0))];
+  }.
 
-Definition array_of_state (y : random_state) :=
-  ia (\matrix_(i, j) nth 0%R (nth (word_of_N w 0)
-      [seq (@rev_tuple _ _ \o word_of_N w) i | i <- rev (rot (index y) (state_vector y))] i) j)%R.
+Record vector_with_counter :=
+  {
+    vector :> 'rV['F_2]_p;
+    counter : nat;
+    _ : (counter < n)%nat;
+  }.
 
-Definition state_of_array (y : 'rV['F_2]_(n * w - r)) :=
-  {| index:=0;
-     state_vector:=rev (map (@N_of_word w \o (@rev_tuple _ _))
-      (mktuple (fun j => mktuple (fun x => ai y j x))));|}.
+(* Definition with_count (cv : (nat * ) * 'rV['F_2]_p) := *)
+(*    ((cv.1.1.+1 %% n)%nat, (cv.2 *m B)%R). *)
 
-Definition ignore_rem (x : seq N) :=
-  let l := N.land (nth 0%N x 0) (N_of_word (make_lower_mask (ltnW wrw))) in
-  set_nth 0%N x 0 l.
+Definition array_of_state (y : valid_random_state) : vector_with_counter.
+  apply: (@Build_vector_with_counter (ia _) (nat_of_bin (index y)));
+   last by case: y.
+  apply: (@Build_incomplete_matrix 
+  (\matrix_(i, j) nth 0%R (nth (word_of_N w 0)
+      [seq (@rev_tuple _ _ \o word_of_N w) i 
+           | i <- rev (rot (index y) (state_vector y))] i) j)%R).
+  apply/forallP => x; apply/implyP => H.
+  case: y => state0 /= /eqP i i0 i1 /forallP /(_ x) /implyP /(_ H) i2.
+  rewrite mxE (nth_map 0%N) ?size_rev ?size_rot; last
+   by rewrite i npn.
+  rewrite nth_rev ?size_rot; last
+   by rewrite i npn.
+  by rewrite /= prednK // i subnn nth_rot ?i addn0.
+Defined.
 
-Definition canonical_random_state x :=
-  {| index:=0; state_vector:=ignore_rem (rot (index x) (state_vector x)) |}.
+Definition state_of_array (cy : vector_with_counter) : valid_random_state.
+  apply: (@Build_valid_random_state 
+  {| index:=bin_of_nat (counter cy);
+     state_vector:=rev (rot (counter cy) (map (@N_of_word w \o (@rev_tuple _ _))
+      (mktuple (fun j => mktuple (fun x => ai cy j x))))); |}).
+  + by rewrite /= size_rev size_rot 2!size_map size_enum_ord.
+  + case: cy => /= *.
+    by rewrite bin_of_natK.
+  + apply/forallP => x; apply/implyP => H.
+    rewrite /= nth_rev size_rot 2!size_map size_enum_ord; last first.
+     by rewrite /= size_rev size_rot 2!size_map size_enum_ord in H.
+  + rewrite nth_cat.
+    case: ifP.
+     rewrite nth_drop.
+     case cyn: (counter cy + (n - x.+1) < n)%nat.
+      rewrite (nth_map (word_of_N w 0)); last 
+       by rewrite size_map size_enum_ord.
+      by rewrite bound_N_of_word.
+     by rewrite nth_default // 2!size_map size_enum_ord leqNgt cyn.
+    case cyx: (n - x.+1 - (n - counter cy) < counter cy)%nat.
+     rewrite nth_take size_drop 2!size_map size_enum_ord //.
+     rewrite (nth_map (word_of_N w 0)); last first.
+      rewrite size_map size_enum_ord.
+      by apply/(leq_trans cyx); case: cy {cyx H} => /= *; apply/ltnW.
+     by rewrite bound_N_of_word.
+    rewrite nth_default // size_take size_drop 2!size_map size_enum_ord.
+    case: ifP => H0.
+     by rewrite leqNgt cyx.
+    rewrite ltnNge leq_eqVlt negb_or -ltnNge ltnS ltnW ?andbT in H0;
+      last by case: cy {cyx H}.
+    move/negP/negP: H0 => /eqP cny.
+    by rewrite leqNgt [X in (_ < X)%nat]cny cyx.
+  + apply/forallP => x; apply/implyP => wrx.
+    case: cy => vector0 counter0 i.
+    rewrite /=.
+    rewrite /= rev_rot.
+    rewrite 
+    rewrite 
+     rewrite 
+      rewrite 
+     rewrite subKn.
+     rewrite 
+     rewrite 
+      rewrite /=.
+     Search (_ - _  + _)%nat.
+      rewrite addnBA.
+      -addnBA. subKn.
+    Check rev_ord_
+     
+    rewrite nth_rot; last first.
+     rewrite 2!size_map size_enum_ord.
+    
 
 Lemma state_of_arrayK : cancel state_of_array array_of_state.
 Proof.
-  move=> x.
-  rewrite /array_of_state /state_of_array rot0.
+  case=> c x.
+  rewrite /array_of_state /state_of_array.
+  rewrite /= rev_rot revK bin_of_natK rotK.
   set T := (\matrix_(_, _) _)%R; have->: T = (ai x)%R.
    apply/matrixP => i j; subst T.
-   rewrite !mxE !revK (nth_map 0%N) /=; last by rewrite 2!size_map size_enum_ord.
+   rewrite !mxE !revK (nth_map 0%N) /=.
+   ; last
+    by rewrite 2!size_map size_enum_ord.
    rewrite (nth_map (word_of_N w 0)) /=; last by rewrite size_tuple card_ord.
    by rewrite N_of_wordK ?revK ?nth_mktuple ?(castmxE, mxE).
-  by rewrite array_incompleteK.
+  by rewrite array_incompleteK /= bin_of_natK.
 Qed.
 
-Definition upto_rot x y := canonical_random_state x = canonical_random_state y.
+Lemma array_of_stateK : cancel array_of_state state_of_array.
+Proof.
+
+size (state_vector x) = n ->
+(index x < size (state_vector x))%nat ->
+(forall i, i < size (state_vector x) ->
+ nth 0%N (state_vector x) i <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
 
 Lemma ltP' i p : reflect ([Num of i] < [Num of p])%N (i < p)%nat.
 Proof.
