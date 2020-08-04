@@ -46,4 +46,17 @@ Definition next_random_state (rand : random_state) : (N * random_state) :=
         state_vector := set_nth 0 state_vec ind xi;
       |} in
   (xi, next_rand).
+
+Lemma random_state_eqP :
+  Equality.axiom
+  (fun a b => (state_vector a == state_vector b) && (index a == index b)).
+Proof.
+  case=> [] cx x [] cy y.
+  apply/(iffP idP) => [/andP [] /= /eqP -> /eqP -> //|-> /=].
+  by rewrite !eqxx.
+Qed.
+
+Canonical random_state_eqMixin := EqMixin random_state_eqP.
+Canonical random_state_eqType :=
+   Eval hnf in EqType random_state random_state_eqMixin.
 End Implementation.

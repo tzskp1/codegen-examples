@@ -190,7 +190,7 @@ Proof. by case: n n2. Qed.
 
 Lemma npn : n.-1 < n.
 Proof. by case: n n0. Qed.
-  
+
 Lemma p0 : 0 < p.
 Proof. by case: p p3. Qed.
 
@@ -859,6 +859,18 @@ Record valid_random_state :=
     _ : [forall x, ((w - r <= (x : 'I_w))%nat ==>  ((rev (word_of_N w (nth 0%N (state_vector state) (index state))))`_x == 0))];
   }.
 
+Lemma valid_random_state_eqP : Equality.axiom (fun a b => state a == state b).
+Proof.
+  case=> [] x Hx1 Hx2 Hx3 Hx4 [] y Hy1 Hy2 Hy3 Hy4.
+  apply/(iffP idP) => [/eqP /= H|->//].
+  move: H Hx1 Hx2 Hx3 Hx4 Hy1 Hy2 Hy3 Hy4 => -> *.
+  by congr Build_valid_random_state; apply bool_irrelevance.
+Qed.
+
+Canonical valid_random_state_eqMixin := EqMixin valid_random_state_eqP.
+Canonical valid_random_state_eqType :=
+   Eval hnf in EqType valid_random_state valid_random_state_eqMixin.
+
 Record vector_with_counter :=
   {
     vector :> 'rV['F_2]_p;
@@ -866,15 +878,30 @@ Record vector_with_counter :=
     _ : (counter < n)%nat;
   }.
 
+Lemma vector_with_counter_eqP :
+  Equality.axiom
+  (fun a b => (vector a == vector b) && (counter a == counter b)).
+Proof.
+  case=> [] x cx Hx [] y cy Hy.
+  apply/(iffP idP) => [/andP [] /= /eqP -> /eqP H|->].
+   move: H Hx Hy => -> *.
+   by congr Build_vector_with_counter; apply bool_irrelevance.
+  by rewrite !eqxx.
+Qed.
+
+Canonical vector_with_counter_eqMixin := EqMixin vector_with_counter_eqP.
+Canonical vector_with_counter_eqType :=
+   Eval hnf in EqType vector_with_counter vector_with_counter_eqMixin.
+
 (* Definition with_count (cv : (nat * ) * 'rV['F_2]_p) := *)
 (*    ((cv.1.1.+1 %% n)%nat, (cv.2 *m B)%R). *)
 
 Definition array_of_state (y : valid_random_state) : vector_with_counter.
   apply: (@Build_vector_with_counter (ia _) (nat_of_bin (index y)));
    last by case: y.
-  apply: (@Build_incomplete_matrix 
+  apply: (@Build_incomplete_matrix
   (\matrix_(i, j) nth 0%R (nth (word_of_N w 0)
-      [seq (@rev_tuple _ _ \o word_of_N w) i 
+      [seq (@rev_tuple _ _ \o word_of_N w) i
            | i <- rev (rot (index y) (state_vector y))] i) j)%R).
   apply/forallP => x; apply/implyP => H.
   case: y => state0 /= /eqP i i0 i1 /forallP /(_ x) /implyP /(_ H) i2.
@@ -886,7 +913,7 @@ Definition array_of_state (y : valid_random_state) : vector_with_counter.
 Defined.
 
 Definition state_of_array (cy : vector_with_counter) : valid_random_state.
-  apply: (@Build_valid_random_state 
+  apply: (@Build_valid_random_state
   {| index:=bin_of_nat (counter cy);
      state_vector:=rev (rot (counter cy) (map (@N_of_word w \o (@rev_tuple _ _))
       (mktuple (fun j => mktuple (fun x => ai cy j x))))); |}).
@@ -900,7 +927,7 @@ Definition state_of_array (cy : vector_with_counter) : valid_random_state.
     case: ifP.
      rewrite nth_drop.
      case cyn: (counter cy + (n - x.+1) < n)%nat.
-      rewrite (nth_map (word_of_N w 0)); last 
+      rewrite (nth_map (word_of_N w 0)); last
        by rewrite size_map size_enum_ord.
       by rewrite bound_N_of_word.
      by rewrite nth_default // 2!size_map size_enum_ord leqNgt cyn.
@@ -919,42 +946,198 @@ Definition state_of_array (cy : vector_with_counter) : valid_random_state.
     by rewrite leqNgt [X in (_ < X)%nat]cny cyx.
   + apply/forallP => x; apply/implyP => wrx.
     case: cy => vector0 counter0 i.
-    rewrite /=.
-    rewrite /= rev_rot.
-    rewrite 
-    rewrite 
-     rewrite 
-      rewrite 
-     rewrite subKn.
-     rewrite 
-     rewrite 
-      rewrite /=.
-     Search (_ - _  + _)%nat.
-      rewrite addnBA.
-      -addnBA. subKn.
-    Check rev_ord_
-     
-    rewrite nth_rot; last first.
-     rewrite 2!size_map size_enum_ord.
-    
+    rewrite /= rev_rot nth_cat size_drop size_rev 2!size_map subKn;
+      last by rewrite size_enum_ord ltnW.
+    rewrite bin_of_natK ltnn take_rev 2!size_map subnn subKn;
+      last by rewrite size_enum_ord ltnW.
+    rewrite !nth_rev; last first.
+     by rewrite size_drop 2!size_map size_enum_ord leqNgt /leq subSS subn0 subn_eq0 -ltnNge i.
+     by rewrite size_tuple.
+     by rewrite size_drop 2!size_map size_enum_ord leqNgt /leq subSS subn0 subn_eq0 -ltnNge i.
+    rewrite size_drop 2!size_map size_enum_ord.
+    rewrite size_tuple.
+    have->: (w - x.+1 = rev_ord x)%nat by [].
+    rewrite nth_drop addnBA; last
+     by rewrite leqNgt /leq subSS subn0 subn_eq0 -ltnNge i.
+    rewrite addnC subnK; last by apply/ltnW.
+    rewrite subn1 (nth_map (word_of_N w 0)); last
+     by rewrite size_map size_enum_ord npn.
+    rewrite N_of_wordK nth_rev size_tuple //.
+    rewrite (nth_map (Ordinal n0)) ?size_enum_ord ?npn //.
+    have ->: (w - (rev_ord x).+1  = (rev_ord (rev_ord x)))%nat by [].
+    rewrite rev_ordK nth_mktuple mxE.
+    have <-: Ordinal npn = (nth (Ordinal n0) (enum 'I_n) n.-1).
+     apply/ord_inj.
+     by rewrite nth_enum_ord // npn.
+    rewrite /arr_ind.
+    case: (splitP _) => k K //.
+    suff: (k >= p)%nat
+     by rewrite leqNgt; case: k {K} => /= ? k; rewrite k.
+    rewrite -K /=.
+    apply/leq_trans.
+     apply: (_ : _ <= n.-1 * w + (w - r))%nat.
+     by rewrite addnBA // addnC -mulSn prednK.
+    by rewrite leq_add2l.
+Defined.
 
 Lemma state_of_arrayK : cancel state_of_array array_of_state.
 Proof.
-  case=> c x.
-  rewrite /array_of_state /state_of_array.
+  move=> x.
+  apply/eqP; rewrite eqE /=.
+  apply/andP; split; last
+   by rewrite bin_of_natK eqxx.
+  apply/eqP/matrixP => i j.
+  rewrite !mxE.
   rewrite /= rev_rot revK bin_of_natK rotK.
-  set T := (\matrix_(_, _) _)%R; have->: T = (ai x)%R.
-   apply/matrixP => i j; subst T.
-   rewrite !mxE !revK (nth_map 0%N) /=.
-   ; last
-    by rewrite 2!size_map size_enum_ord.
-   rewrite (nth_map (word_of_N w 0)) /=; last by rewrite size_tuple card_ord.
-   by rewrite N_of_wordK ?revK ?nth_mktuple ?(castmxE, mxE).
-  by rewrite array_incompleteK /= bin_of_natK.
+  have ?: (j %/ w < n)%nat.
+   apply/leq_ltn_trans.
+    by apply/leq_div2r/(_ : _ <= p)%nat/ltnW.
+   by rewrite divnMBl // divn_small // subn0 /dvdn modn_small
+              // lt0n_neq0 // subn1 npn.
+  rewrite -2!map_comp (nth_map (Ordinal n0))
+          ?size_enum_ord //= N_of_wordK revK.
+  have ->: (j %% w)%nat = Ordinal (ltn_pmod j w0) by [].
+  rewrite nth_mktuple mxE /arr_ind.
+  case: (splitP _) => k K.
+   congr (x _ _); apply/ord_inj.
+   + by case: i => [][]//.
+   + by rewrite -K /= nth_enum_ord // -divn_eq.
+  rewrite /= nth_enum_ord // -divn_eq in K.
+  suff: (p > p + k)%nat by rewrite ltnNge leq_addr.
+  by rewrite -K.
+Qed.
+
+Lemma size_enum_ord' x : size (Finite.enum (ordinal_finType x)) = x.
+Proof.
+  move: (size_enum_ord x).
+  by rewrite size_map.
 Qed.
 
 Lemma array_of_stateK : cancel array_of_state state_of_array.
 Proof.
+  move=> x.
+  apply/eqP; rewrite eqE.
+  case: x => x i i0 i1 i2.
+  apply/andP; split; last
+   by rewrite /= nat_of_binK eqxx.
+  apply/eqP/(@eq_from_nth _ 0%N).
+   rewrite /= size_rev size_rot 2!size_map size_enum_ord.
+   by apply/esym/eqP.
+  move=> i3 H.
+  rewrite /= rev_rot nth_cat size_rev.
+  rewrite 2!size_map size_drop size_rev 2!size_map.
+  rewrite size_enum_ord subKn; last by apply/ltnW.
+  case: ifP => ix.
+   rewrite nth_drop nth_rev; last first.
+    rewrite 2!size_map size_enum_ord addnC addnBA; last by apply/ltnW.
+    rewrite addnC -subnBA; last by apply/ltnW.
+    rewrite ltnNge /leq in ix.
+    case: (index x - i3)%nat ix => // q _.
+    case: n n0 => // n' _.
+    by rewrite subSS ltnS leq_subr.
+  have xi3: ((index x - i3).-1 < index x)%nat.
+   rewrite ltnNge /leq in ix.
+   apply/leq_trans.
+    apply: (_ : _ < (index x - i3))%nat.
+     by case: (index x - i3)%nat ix.
+   by apply/leq_subr.
+  have nnn : (n - (n - index x + i3).+1 < n)%nat.
+   rewrite subnS subnDA subKn; last by apply/ltnW.
+   by apply/(leq_trans xi3)/ltnW.
+  rewrite -!map_comp size_map (nth_map (Ordinal n0)) !size_enum_ord' //.
+  rewrite /= -[RHS](word_of_NK w0); last first.
+   rewrite /= size_rev size_rot 2!size_map size_enum_ord in H.
+   move/forallP: (i1) => /(_ (Ordinal H)) /implyP /=; apply.
+   by rewrite (eqP i).
+  congr N_of_word.
+  apply/eq_from_tnth => k.
+  rewrite (tnth_nth 0%R) /= nth_rev; last by rewrite size_map size_enum_ord.
+  rewrite size_map size_enum_ord (nth_map (Ordinal w0)); last
+   by rewrite size_enum_ord (rev_ord_proof k).
+  rewrite !mxE /arr_ind.
+  case: (splitP _) => l L.
+   rewrite !mxE /= rev_rot.
+   rewrite (nth_map 0%N); last first.
+    rewrite /rotr size_rev size_rot -L /=.
+    have ->: (n - (n - index x + i3).+1)%nat = Ordinal nnn by [].
+    by rewrite -enumT !nth_enum_ord ?(rev_ord_proof k) // size_rev (eqP i)
+               divnMDl // divn_small ?(rev_ord_proof k) // addn0.
+   rewrite /= nth_cat size_drop size_rev -L.
+   have ->: (n - (n - index x + i3).+1)%nat = Ordinal nnn by [].
+   rewrite -!enumT /= !nth_enum_ord ?(rev_ord_proof k) //
+           divnMDl // divn_small ?(rev_ord_proof k) // addn0.
+   rewrite subnS subnDA subKn; last by apply/ltnW.
+   rewrite subKn (eqP i); last by apply/ltnW.
+   rewrite xi3 modnMDl modn_small ?(rev_ord_proof k) //.
+   rewrite /= size_rev size_rot 2!size_map size_enum_ord in H.
+   rewrite nth_drop -subnS addnBA // subnK; last by apply/ltnW.
+   rewrite !nth_rev ?(eqP i) ?size_tuple
+           ?(rev_ord_proof k) ?(rev_ord_proof (Ordinal H)) //.
+   rewrite -!subSn // !subSS !subKn; try by apply/ltnW.
+   by rewrite -tnth_nth.
+  move: L.
+  have ->: (n - (n - index x + i3).+1)%nat = Ordinal nnn by [].
+  rewrite -!enumT /= !nth_enum_ord ?(rev_ord_proof k) //.
+  rewrite subnS subnDA subKn; last by apply/ltnW.
+  rewrite addnBA // addnC -mulSn prednK; last
+   by rewrite ltnNge leqn0 subn_eq0 -ltnNge.
+  rewrite
+           divnMDl // divn_small ?(rev_ord_proof k) // addn0.
+  rewrite /= -!enumT.
+   i3
+   rewrite !subnS subnDA subKn; last by apply/ltnW.
+
+   Search ((_ * _ + _) %% _)%nat.
+   rewrite ltnNge /leq in ix.
+   apply/leq_trans.
+    apply: (_ : _ < (index x - i3))%nat.
+     by case: (index x - i3)%nat ix.
+   by apply/(leq_trans (leq_subr _ _))/ltnW.
+    ?(rev_ord_proof k) // size_rev (eqP i).
+               divnMDl // divn_small ?(rev_ord_proof k) // addn0.
+    Search ((_ * _ + _) %/ _)%nat.
+    have ->: (Finite.enum (ordinal_finType n)) = enum 'I_n.
+     rewrite unlock /=.
+     rewrite /enum.
+     apply/val_inj.
+    rewrite /=.
+     done.
+    rewrite _map
+    done.
+    doen.
+   rewrite nth_cat.
+   rewrite size_drop size_rev.
+    rewrite /ia.
+  apply (@eq_from_nth _ (0%R : 'F_2)).
+
+  rewrite tnth_rev.
+
+
+  rewrite
+  rewrite
+   addnBAC;
+  rewrite -addnBA.
+  rewrite addnBA.
+  rewrite -addnBA.
+  rewrite addnC.
+   addnBA.
+
+
+
+    rewrite addnBAC.
+    rewrite -subnBA.
+
+  rewrite
+   rewrite h
+  rewrite/=.
+  rewrite nth_map.
+  rewrite
+  apply/rowP => k.
+  rewrite /=.
+  r
+  rewrite rev_rot.
+  rewrite eqE /=.
+  congr
 
 size (state_vector x) = n ->
 (index x < size (state_vector x))%nat ->
