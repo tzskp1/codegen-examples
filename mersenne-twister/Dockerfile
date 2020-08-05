@@ -27,7 +27,7 @@ RUN eval $(opam env) \
     && git checkout 2a7ebe6b26233b0947e6e93e2940f4598e737e1a \
     && make && make install
 
-VOLUME /workdir
+# VOLUME /workdir
 COPY --chown=coq:coq . /workdir
 WORKDIR /workdir/
 
