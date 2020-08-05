@@ -256,6 +256,20 @@ Proof.
   by apply/leq_trans/leq_addr/rw''.
 Qed.
 
+Lemma rnw : r < n * w.
+Proof.
+  case: n n0 => // n' _.
+  rewrite mulSn.
+  by apply/leq_trans/leq_addr.
+Qed.
+
+Lemma wnw : w < n * w.
+Proof.
+  case: n n2 => []//[]//[]// n' _.
+  rewrite mulSn -[X in (X < _)%nat]addn0 ltn_add2l.
+  by rewrite mulSn ltn_addr // w0.
+Qed.
+
 Lemma tecnw : w + (n.-1 * w - r) = p.
 Proof. by rewrite addnBA ?rnpw // -mulSn prednK ?n0. Qed.
 
@@ -316,8 +330,28 @@ Proof.
   by case: n n0.
 Qed.
 
-Hint Resolve p0 n2' n0 w0 rw' rnwp rnpw rnmw wnpwr mn' wr0 : core.
+Lemma eqn_sub2r x y z : x > y -> x > z -> x - y == x - z = (y == z).
+Proof.
+  move=> yx zx.
+  apply/eqP.
+  case: ifP => [/eqP -> //|C C0].
+  suff: false by []; rewrite -{}C.
+  elim: x y z yx zx C0 => // x IH y z.
+  rewrite ltnS leq_eqVlt => /orP [/eqP ->|yx].
+   rewrite subSn // subnn ltnS leq_eqVlt => /orP [/eqP ->//|zx].
+   rewrite subSn; last by apply/ltnW.
+   by move/eqP; rewrite eqSS eq_sym subn_eq0 leqNgt zx.
+  rewrite ltnS leq_eqVlt => /orP [/eqP ->|zx /eqP].
+   rewrite subSn; last by apply/ltnW.
+   rewrite subSn // subnn // => /eqP.
+   by rewrite eqSS subn_eq0 leqNgt yx.
+  rewrite !subSn // ?eqSS; try by apply/ltnW.
+  by move=> /eqP /IH ->.
+Qed.
+
+Hint Resolve p0 n2' n0 w0 rw' rnwp rnpw rnmw wnpwr mn' wr0 rnw : core.
 Local Open Scope ring_scope.
+
 
 Definition A :=
   castmx (tecw', tecw')
@@ -1081,68 +1115,117 @@ Proof.
   rewrite subnS subnDA subKn; last by apply/ltnW.
   rewrite addnBA // addnC -mulSn prednK; last
    by rewrite ltnNge leqn0 subn_eq0 -ltnNge.
-  rewrite
-           divnMDl // divn_small ?(rev_ord_proof k) // addn0.
-  rewrite /= -!enumT.
-   i3
-   rewrite !subnS subnDA subKn; last by apply/ltnW.
-
-   Search ((_ * _ + _) %% _)%nat.
-   rewrite ltnNge /leq in ix.
-   apply/leq_trans.
-    apply: (_ : _ < (index x - i3))%nat.
-     by case: (index x - i3)%nat ix.
-   by apply/(leq_trans (leq_subr _ _))/ltnW.
-    ?(rev_ord_proof k) // size_rev (eqP i).
-               divnMDl // divn_small ?(rev_ord_proof k) // addn0.
-    Search ((_ * _ + _) %/ _)%nat.
-    have ->: (Finite.enum (ordinal_finType n)) = enum 'I_n.
-     rewrite unlock /=.
-     rewrite /enum.
-     apply/val_inj.
-    rewrite /=.
-     done.
-    rewrite _map
-    done.
-    doen.
-   rewrite nth_cat.
-   rewrite size_drop size_rev.
-    rewrite /ia.
-  apply (@eq_from_nth _ (0%R : 'F_2)).
-
-  rewrite tnth_rev.
+  rewrite -[n]prednK // mulSn [(w + _)%nat]addnC -addnBA // => C.
+  suff: (n.-1 * w > n.-1 * w + (w - r) + l)%nat.
+   by rewrite ltnNge -addnA leq_addr.
+  rewrite -C.
+  apply/leq_trans.
+   apply: (_: _ < (index x - i3) * w)%nat.
+    rewrite subnS.
+    apply/leq_trans.
+     apply: (_ : (_ <= (index x - i3) * w - k)%nat).
+      have: (((index x - i3) * w - k) > 0)%nat.
+       rewrite ltnNge /leq in ix.
+       case: (index x - i3)%nat ix => // ? _.
+       rewrite mulSn addnC -addnBA; last by apply/ltnW.
+       by rewrite ltn_addl // ltnNge leqn0 subn_eq0 -ltnNge.
+      by case: ((index x - i3) * w - k)%nat.
+     by apply/leq_subr.
+  apply/leq_mul => //.
+  apply/(leq_trans (leq_subr _ _)).
+  by case: n i0 n0 {H}.
 
 
-  rewrite
-  rewrite
-   addnBAC;
-  rewrite -addnBA.
-  rewrite addnBA.
-  rewrite -addnBA.
-  rewrite addnC.
-   addnBA.
-
-
-
-    rewrite addnBAC.
-    rewrite -subnBA.
-
-  rewrite
-   rewrite h
-  rewrite/=.
-  rewrite nth_map.
-  rewrite
-  apply/rowP => k.
-  rewrite /=.
-  r
-  rewrite rev_rot.
-  rewrite eqE /=.
-  congr
-
-size (state_vector x) = n ->
-(index x < size (state_vector x))%nat ->
-(forall i, i < size (state_vector x) ->
- nth 0%N (state_vector x) i <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+ rewrite /= size_rev size_rot 2!size_map size_enum_ord in H.
+ have i3x : (i3 - index x < n)%nat.
+  by apply/leq_trans/(leq_subr (index x))/ltn_sub2r.
+ rewrite nth_take; last first.
+  by rewrite ltn_sub2r.
+ rewrite nth_rev;last first.
+  by rewrite 2!size_map size_enum_ord.
+ rewrite !size_map size_enum_ord' -!map_comp.
+ rewrite (nth_map (Ordinal n0)) ?size_enum_ord'; last first.
+  case: n n0 => // n' _.
+  by rewrite subSS ltnS leq_subr.
+ rewrite /= -[RHS](word_of_NK w0); last first.
+  move/forallP: (i1) => /(_ (Ordinal H)) /implyP /=; apply.
+  by rewrite (eqP i).
+ congr N_of_word.
+ apply/eq_from_tnth => k.
+ rewrite (tnth_nth 0%R) /= nth_rev; last by rewrite size_map size_enum_ord.
+ rewrite size_map size_enum_ord (nth_map (Ordinal w0)); last
+  by rewrite size_enum_ord (rev_ord_proof k).
+ rewrite !mxE /arr_ind.
+ case: (splitP _) => l L.
+  rewrite !mxE /= rev_rot.
+  rewrite (nth_map 0%N); last first.
+   rewrite /rotr size_rev size_rot -L /=.
+   have ->: (n - (i3 - index x).+1)%nat = rev_ord (Ordinal i3x) by [].
+   by rewrite -enumT !nth_enum_ord ?(rev_ord_proof k) // size_rev (eqP i)
+              divnMDl // divn_small ?(rev_ord_proof k) // addn0.
+  rewrite /= nth_cat size_drop size_rev -L.
+  have ->: (n - (i3 - index x).+1)%nat = rev_ord (Ordinal i3x) by [].
+  rewrite -!enumT /= !nth_enum_ord ?(rev_ord_proof (Ordinal i3x))
+          ?(rev_ord_proof k) // divnMDl // divn_small ?(rev_ord_proof k)
+          // addn0.
+  rewrite subnS subKn; last by rewrite (eqP i) ltnW.
+  rewrite subnBA; last by rewrite leqNgt ix.
+  have->: ((n + index x - i3).-1 < index x)%nat = false.
+   rewrite addnC -addnBA; last by apply/ltnW.
+   rewrite ltnNge /leq in H.
+   case: (n - i3)%nat H => // n' _.
+   by rewrite addnS /= ltnNge leq_addr.
+  rewrite modnMDl modn_small ?(rev_ord_proof k) //.
+  rewrite nth_take //; last first.
+   rewrite ltn_sub2r ?(eqP i) // -subnBA; last by rewrite leqNgt ix.
+   rewrite -subnS.
+   case: n n0 => // n' _ //.
+   by rewrite subSS ltnS leq_subr.
+  have ?: ((n + index x - i3).-1 - index x < n)%nat.
+   rewrite -subnS subnAC addnK.
+   case: n n0 => // n' _ //.
+   by rewrite subSS ltnS leq_subr.
+  rewrite !nth_rev ?(eqP i) ?size_tuple
+          ?(rev_ord_proof k) ?(rev_ord_proof (Ordinal H)) //.
+  rewrite -subnS subnAC addnK -!subSn // !subSS !subKn; try by apply/ltnW.
+  by rewrite -tnth_nth.
+ move: L.
+ have ->: (n - (i3 - index x).+1)%nat = rev_ord (Ordinal i3x) by [].
+ rewrite -!enumT /= !nth_enum_ord ?(rev_ord_proof k) ?(rev_ord_proof (Ordinal i3x)) //.
+ rewrite addnBA // addnC -mulSn -subSn // subSS => C.
+ case xi0: ((i3 - index x) == 0)%nat.
+  rewrite (eqP xi0) subn0 addnBAC in C; try by apply/ltnW.
+  rewrite -subnBA in C; try by apply/ltnW.
+  rewrite subn_eq0 leq_eqVlt ix orbF in xi0.
+  move/eqP: C.
+  rewrite eqn_sub2r; last first.
+   + apply/leq_trans/rnw.
+     by rewrite ltnS leq_subr.
+   + apply/leq_trans/wnw.
+     by rewrite ltnS.
+  move=> krl.
+  have wrlw: (w - (r - l) < w)%nat by rewrite -(eqP krl) (rev_ord_proof k).
+  move/forallP: i2 => /(_ (Ordinal wrlw)).
+  rewrite /= subnBA; last by apply/ltnW.
+  rewrite addnC -addnBA // leq_addl nth_rev ?size_tuple; last
+   by rewrite addnBA // addnC -subnBA; last by apply/ltnW.
+  rewrite /= subnS addnC subnDA subKn // (tnth_nth 0%R) -(eqP krl) /= => /eqP.
+  by rewrite (eqP xi0) => ->.
+ suff: (p > p + l)%nat by rewrite ltnNge leq_addr.
+ rewrite -C; apply/leq_trans.
+ apply: (_ : _ < (n - (i3 - index x)) * w)%nat.
+  have C1: (0 < (n - (i3 - index x)))%nat.
+   by rewrite ltnNge leqn0 subn_eq0 -ltnNge i3x.
+  have : (0 < (n - (i3 - index x)) * w)%nat.
+   case: (n - (i3 - index x))%nat C1 => // ? _.
+   by rewrite mulSn ltn_addr.
+  case: ((n - (i3 - index x)) * w)%nat => // ? _.
+  by rewrite subSS ltnS leq_subr.
+ rewrite -[n]prednK // mulSn addnC -addnBA //.
+ apply/leq_trans/leq_addr.
+ case: (i3 - index x)%nat xi0 => // ? _.
+ by rewrite subSS leq_mul // leq_subr.
+Qed.
 
 Lemma ltP' i p : reflect ([Num of i] < [Num of p])%N (i < p)%nat.
 Proof.
