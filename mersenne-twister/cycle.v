@@ -1252,7 +1252,8 @@ Lemma size_next_random_state v :
 size (state_vector (next_random_state (state_of_array v)).2) = n.
 Proof.
 rewrite /next_random_state size_set_nth size_tuple.
-by case: n mn => []//[].
+case: v => v c cn.
+by rewrite maxnE addnBA /= bin_of_natK // addnC addnK.
 Qed.
 
 Lemma size_next_random_state' v :
@@ -1269,27 +1270,49 @@ Lemma mod_1_l x : (x > 1)%N -> 1 mod x = 1%N.
 Proof. case: x => //. by elim. Qed.
 
 Lemma index_next_random_state v :
-index (next_random_state (state_of_array v)).2 = 1%N.
-Proof.
-  have: n != 1%N.
-   apply/eqP => n1.
-   move: n1 mn => ->.
-   by rewrite ltn0.
-  move=> n1.
-  rewrite /= mod_1_l //.
-  case: n n1 mn => []//[]// n' _ _.
-  rewrite ?succ_nat /=.
-  apply/N.gt_lt_iff.
-  elim: n' => // n' IH.
-  apply/N.lt_trans; first by apply IH.
-  rewrite -!N.add_1_r -!N.add_lt_mono_r succ_nat.
-  apply N.lt_succ_diag_r.
-Qed.
+  index (next_random_state (state_of_array v)).2
+= bin_of_nat (counter v).+1 mod bin_of_nat n.
+Proof. by rewrite /= -succ_nat. Qed.
 
-Lemma nth_next_random_state v i :
-  nth 0%N (state_vector (next_random_state (state_of_array v)).2) i.+1%N
-= nth 0%N (state_vector (state_of_array v)) i.+1.
-Proof. by rewrite nth_set_nth. Qed.
+Definition next_random_state' : valid_random_state -> N * valid_random_state.
+  move=> v.
+  apply: ((next_random_state v).1,
+          @Build_valid_random_state (next_random_state v).2 _ _ _ _).
+  + case: v => v i i0 i1 i2.
+    by rewrite /= size_set_nth (eqP i) maxnE addnBA // addnC addnK.
+  + apply/ltP'.
+    rewrite nat_of_binK; apply N.mod_lt.
+    by case: n n0.
+  + case: v => v i i0 i1 i2.
+    apply/forallP => x.
+    rewrite /= size_set_nth (eqP i) maxnE addnBA // addnC addnK.
+    apply/implyP => xn.
+    rewrite nth_set_nth /=.
+    case: ifP => H; last first.
+     move/forallP: i1 => /(_ (Ordinal xn)).
+     by rewrite (eqP i) xn.
+   Focus 2.
+  + case: v => v i i0 i1 i2.
+    apply/forallP => x.
+    rewrite /=.
+    rewrite nth_set_nth /=.
+    case: ifP => H; last first.
+     move/forallP: i2 => /(_ x).
+     rewrite
+
+    have->: (N.succ (index v) mod bin_of_nat n == index v) = false.
+
+
+     rewrite /=.
+
+    rewrite -[X in (_ < X)%nat](eqP i) in xn.
+     rewrite i1.
+     apply
+
+  +
+
+
+
 
 Lemma nth_state_vector v (i : 'I_n) :
   nth 0%N (state_vector (state_of_array v)) i =
