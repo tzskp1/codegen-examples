@@ -47,6 +47,13 @@ Definition next_random_state (rand : random_state) : (N * random_state) :=
       |} in
   (xi, next_rand).
 
+Definition fil0 (y : random_state) :=
+  let z := N.land (nth 0%N (state_vector y) (index y)) upper_mask in
+  {|
+    index := index y;
+    state_vector := set_nth 0%N (state_vector y) (index y) z;
+  |}.
+
 Lemma random_state_eqP :
   Equality.axiom
   (fun a b => (state_vector a == state_vector b) && (index a == index b)).
@@ -59,4 +66,24 @@ Qed.
 Canonical random_state_eqMixin := EqMixin random_state_eqP.
 Canonical random_state_eqType :=
    Eval hnf in EqType random_state random_state_eqMixin.
+
+Lemma next_random_state_fil0 x : next_random_state x = next_random_state (fil0 x).
+Proof.
+  case: x => // i x.
+  rewrite /fil0.
+  rewrite /=.
+  rewrite /next_random_state.
+  rewrite !nth_set_nth /=.
+  rewrite set_set_nth eqxx.
+  set T := _ == _.
+  have->: T = false.
+   subst T.
+   apply/negP => /eqP.
+   Search (_ mod  _ = _ mod _)%N.
+   rewrite
+  have ->: (i + m) mod len == i = false.
+  rewrite set_nth
+  congr (_, _).
+  rewrite /=.
+
 End Implementation.
