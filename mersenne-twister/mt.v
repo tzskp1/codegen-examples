@@ -12,6 +12,7 @@ Section Implementation.
 Variables len m r a w : N.
 Variables u s t l b c : N.
 Hypothesis rw : (r <= w)%nat.
+Hypothesis len0 : len <> 0.
 
 Definition upper_mask := (N_of_word (make_upper_mask rw)).
 Definition lower_mask := (N_of_word (make_lower_mask rw)).
@@ -78,8 +79,15 @@ Proof.
   set T := _ == _.
   have->: T = false.
    subst T.
-   apply/negP => /eqP.
+   apply/negP => /eqP /(f_equal bin_of_nat).
+   rewrite !nat_of_binK => /(f_equal (fun x => x mod len)%N).
+   rewrite N.mod_mod // N.add_mod //.
+   
    Search (_ mod  _ = _ mod _)%N.
+   rewrite 
+   
+   Set Printing Coercions.
+   move=> H.
    rewrite
   have ->: (i + m) mod len == i = false.
   rewrite set_nth
