@@ -15,4 +15,4 @@ docker run mt19937 /workdir/mt
 ```
 
 # For Mac
-If you are usisg Mac OS, you may need to increase memory size of VM.
+If you are using Mac OS, you may need to increase memory size of VM.
