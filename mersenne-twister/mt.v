@@ -73,7 +73,14 @@ Canonical random_state_eqMixin := EqMixin random_state_eqP.
 Canonical random_state_eqType :=
    Eval hnf in EqType random_state random_state_eqMixin.
 
-Lemma next_random_state_fil0 x : next_random_state x = next_random_state (fil0 x).
+Lemma landnn x : N.land x x = x.
+Proof.
+  case: x => //.
+  by elim => //= x ->.
+Qed.
+
+Lemma next_random_state_fil0 x :
+  next_random_state x = next_random_state (fil0 x).
 Proof.
   case: x => // i x.
   rewrite /fil0 /= /next_random_state !nth_set_nth /= set_set_nth eqxx.
@@ -106,13 +113,9 @@ Proof.
    rewrite N.add_comm N.add_assoc.
    rewrite N.add_mod // -[((len - I) mod len + I mod len) mod len]N.add_mod //.
    rewrite N.sub_add; last by apply/N.lt_le_incl/N.mod_lt.
-   rewrite N.mod_same // N.add_0_l !N.mod_mod //.
-   
-   
-   Search (1 mod _).
-  
-  rewrite set_nth
-  congr (_, _).
-  rewrite /=.
-
+   by rewrite N.mod_same // N.add_0_l !N.mod_mod // N.mod_1_l //.
+  suff->: (N.land (N.land (nth 0 x i) upper_mask) upper_mask) =
+          (N.land (nth 0 x i) upper_mask) by [].
+  by rewrite -N.land_assoc landnn.
+Qed.
 End Implementation.
