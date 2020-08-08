@@ -1,7 +1,8 @@
 FROM ubuntu:20.04
 
-RUN apt update \
-  && apt install -y --no-install-recommends \
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     m4 \
@@ -9,6 +10,7 @@ RUN apt update \
     git \
     ocaml \
     opam \
+    emacs-nox \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 RUN groupadd coq \
@@ -27,9 +29,9 @@ RUN eval $(opam env) \
     && git checkout 2a7ebe6b26233b0947e6e93e2940f4598e737e1a \
     && make && make install
 
-# VOLUME /workdir
 COPY --chown=coq:coq . /workdir
 WORKDIR /workdir/
 
-RUN eval $(opam env) && make && make mt
-CMD /workdir/mt
+RUN eval $(opam env) && make clean && make && make mt
+RUN mkdir ~/.emacs.d && mv init.el ~/.emacs.d/ && emacs --script ~/.emacs.d/init.el
+CMD eval $(opam env) && emacs
