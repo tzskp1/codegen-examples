@@ -12,7 +12,12 @@ Section Implementation.
 Variables len m r a w : N.
 Variables u s t l b c : N.
 Hypothesis rw : (r <= w)%nat.
-Hypothesis len0 : len <> 0.
+Hypothesis len1 : 1 < len.
+Lemma len0 : len <> 0.
+Proof. by case: len len1. Qed.
+Hypothesis m0 : m mod len <> 0.
+
+Hint Resolve len0 : core.
 
 Definition upper_mask := (N_of_word (make_upper_mask rw)).
 Definition lower_mask := (N_of_word (make_lower_mask rw)).
@@ -71,25 +76,41 @@ Canonical random_state_eqType :=
 Lemma next_random_state_fil0 x : next_random_state x = next_random_state (fil0 x).
 Proof.
   case: x => // i x.
-  rewrite /fil0.
-  rewrite /=.
-  rewrite /next_random_state.
-  rewrite !nth_set_nth /=.
-  rewrite set_set_nth eqxx.
+  rewrite /fil0 /= /next_random_state !nth_set_nth /= set_set_nth eqxx.
   set T := _ == _.
   have->: T = false.
    subst T.
    apply/negP => /eqP /(f_equal bin_of_nat).
    rewrite !nat_of_binK => /(f_equal (fun x => x mod len)%N).
-   rewrite N.mod_mod // N.add_mod //.
+   rewrite N.mod_mod // N.add_mod // -[(i mod len)]N.mod_mod //.
+   set I := i mod len.
+   move/(f_equal (fun x => (x mod len + (len - I) mod len mod len) mod len)%N).
+   rewrite N.mod_mod // -!N.add_mod // N.add_sub_assoc; last
+    by apply/N.lt_le_incl/N.mod_lt.
+   rewrite [in RHS]N.add_comm N.add_sub N.mod_same //.
+   rewrite N.add_comm N.add_assoc.
+   rewrite N.add_mod // -[((len - I) mod len + I mod len) mod len]N.add_mod //.
+   rewrite N.sub_add; last by apply/N.lt_le_incl/N.mod_lt.
+   by rewrite N.mod_same // N.add_0_l !N.mod_mod.
+  subst T; set T := _ == _.
+  have ->: T = false.
+   subst T.
+   apply/negP => /eqP /(f_equal bin_of_nat).
+   rewrite !nat_of_binK => /(f_equal (fun x => x mod len)%N).
+   rewrite -N.add_1_r N.mod_mod // N.add_mod // -[(i mod len)]N.mod_mod //.
+   set I := i mod len.
+   move/(f_equal (fun x => (x mod len + (len - I) mod len mod len) mod len)%N).
+   rewrite N.mod_mod // -!N.add_mod // N.add_sub_assoc; last
+    by apply/N.lt_le_incl/N.mod_lt.
+   rewrite [in RHS]N.add_comm N.add_sub N.mod_same //.
+   rewrite N.add_comm N.add_assoc.
+   rewrite N.add_mod // -[((len - I) mod len + I mod len) mod len]N.add_mod //.
+   rewrite N.sub_add; last by apply/N.lt_le_incl/N.mod_lt.
+   rewrite N.mod_same // N.add_0_l !N.mod_mod //.
    
-   Search (_ mod  _ = _ mod _)%N.
-   rewrite 
    
-   Set Printing Coercions.
-   move=> H.
-   rewrite
-  have ->: (i + m) mod len == i = false.
+   Search (1 mod _).
+  
   rewrite set_nth
   congr (_, _).
   rewrite /=.
