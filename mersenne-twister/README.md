@@ -4,5 +4,12 @@
 ```
 cd /path/to/codegen-examples/mersenne-twister
 docker build . -t mt19937
-docker run mt19937
+docker run -it mt19937
+```
+
+# How to run extracted code
+```
+cd /path/to/codegen-examples/mersenne-twister
+docker build . -t mt19937
+docker run mt19937 /workdir/mt
 ```
