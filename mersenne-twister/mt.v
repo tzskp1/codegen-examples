@@ -79,6 +79,22 @@ Proof.
   by elim => //= x ->.
 Qed.
 
+Lemma lem2 i j n : n <> 0 -> j mod n <> 0 -> (i + j) mod n == i = false.
+Proof.
+  move=> n0 jn0.
+  apply/negP => /eqP /(f_equal (fun x => x mod n)%N).
+  rewrite N.mod_mod // N.add_mod // -[(i mod n)]N.mod_mod //.
+  set I := i mod n.
+  move/(f_equal (fun x => (x mod n + (n - I) mod n mod n) mod n)%N).
+  rewrite N.mod_mod // -!N.add_mod // N.add_sub_assoc; last
+   by apply/N.lt_le_incl/N.mod_lt.
+  rewrite [in RHS]N.add_comm N.add_sub N.mod_same //.
+  rewrite N.add_comm N.add_assoc.
+  rewrite N.add_mod // -[((n - I) mod n + I mod n) mod n]N.add_mod //.
+  rewrite N.sub_add; last by apply/N.lt_le_incl/N.mod_lt.
+  by rewrite N.mod_same // N.add_0_l !N.mod_mod //.
+Qed.
+
 Lemma next_random_state_fil0 x :
   next_random_state x = next_random_state (fil0 x).
 Proof.
@@ -86,34 +102,16 @@ Proof.
   rewrite /fil0 /= /next_random_state !nth_set_nth /= set_set_nth eqxx.
   set T := _ == _.
   have->: T = false.
-   subst T.
    apply/negP => /eqP /(f_equal bin_of_nat).
-   rewrite !nat_of_binK => /(f_equal (fun x => x mod len)%N).
-   rewrite N.mod_mod // N.add_mod // -[(i mod len)]N.mod_mod //.
-   set I := i mod len.
-   move/(f_equal (fun x => (x mod len + (len - I) mod len mod len) mod len)%N).
-   rewrite N.mod_mod // -!N.add_mod // N.add_sub_assoc; last
-    by apply/N.lt_le_incl/N.mod_lt.
-   rewrite [in RHS]N.add_comm N.add_sub N.mod_same //.
-   rewrite N.add_comm N.add_assoc.
-   rewrite N.add_mod // -[((len - I) mod len + I mod len) mod len]N.add_mod //.
-   rewrite N.sub_add; last by apply/N.lt_le_incl/N.mod_lt.
-   by rewrite N.mod_same // N.add_0_l !N.mod_mod.
+   rewrite !nat_of_binK.
+   apply/eqP/negP.
+   by rewrite lem2.
   subst T; set T := _ == _.
   have ->: T = false.
-   subst T.
    apply/negP => /eqP /(f_equal bin_of_nat).
-   rewrite !nat_of_binK => /(f_equal (fun x => x mod len)%N).
-   rewrite -N.add_1_r N.mod_mod // N.add_mod // -[(i mod len)]N.mod_mod //.
-   set I := i mod len.
-   move/(f_equal (fun x => (x mod len + (len - I) mod len mod len) mod len)%N).
-   rewrite N.mod_mod // -!N.add_mod // N.add_sub_assoc; last
-    by apply/N.lt_le_incl/N.mod_lt.
-   rewrite [in RHS]N.add_comm N.add_sub N.mod_same //.
-   rewrite N.add_comm N.add_assoc.
-   rewrite N.add_mod // -[((len - I) mod len + I mod len) mod len]N.add_mod //.
-   rewrite N.sub_add; last by apply/N.lt_le_incl/N.mod_lt.
-   by rewrite N.mod_same // N.add_0_l !N.mod_mod // N.mod_1_l //.
+   rewrite !nat_of_binK -N.add_1_r.
+   apply/eqP/negP.
+   by rewrite lem2 // N.mod_1_l.
   suff->: (N.land (N.land (nth 0 x i) upper_mask) upper_mask) =
           (N.land (nth 0 x i) upper_mask) by [].
   by rewrite -N.land_assoc landnn.
