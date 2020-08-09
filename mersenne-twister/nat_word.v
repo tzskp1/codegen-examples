@@ -407,4 +407,48 @@ Proof.
       by apply/leq_mul.
   + by case: y => []//[].
 Qed.
+
+Definition lor' (x y : w.-tuple 'F_2) :=
+  map (fun '(x, y) => if (x == 1) || (y == 1) then 1 : 'F_2 else 0)%R (zip x y).
+
+Lemma lor_prf x y : size (lor' x y) == w.
+Proof.
+  case: x y => x X [] y /= Y.
+  by rewrite size_map size_zip /= (eqP X) (eqP Y) minnn.
+Qed.
+
+Definition lor (x y : w.-tuple 'F_2) :=
+  Tuple (lor_prf x y).
+
+Lemma lorE x y :
+N.lor (N_of_word x) (N_of_word y) = N_of_word (lor x y).
+Proof.
+  case: x y => x X [] y Y.
+  rewrite /N_of_word /lor /= /lor' /=.
+  elim: w w0 x y X Y => // w' IH _ []// x0 x []// y0 y.
+  rewrite !eqSS.
+  case w'0: (w' > 0)%nat; last first.
+   rewrite lt0n in w'0.
+   move/negP/negP/eqP: w'0 ->.
+   case: x y => []//[]// _ _.
+   rewrite /=.
+   by case: ifP => [/eqP H1|]; case: ifP => [/eqP H2|].
+ move=> H1 H2.
+ rewrite /= -(IH w'0 _ _ H1 H2).
+ case: ifP => X; case: ifP => Y.
+ + do! case: (foldr _ _ _) => //=.
+ + do! case: (foldr _ _ _) => //=.
+ + do! case: (foldr _ _ _) => //=.
+ + do! case: (foldr _ _ _) => //=.
+Qed.
+
+Lemma bound_lor (x y : N) :
+(x <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+(y <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+(N.lor x y <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat.
+Proof.
+  move=> H1 H2.
+  rewrite -[x]word_of_NK // -[y]word_of_NK //.
+  by rewrite lorE bound_N_of_word.
+Qed.
 End nat_word.
