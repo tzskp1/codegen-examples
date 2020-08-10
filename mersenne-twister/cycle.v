@@ -1259,16 +1259,6 @@ case: v => v c cn.
 by rewrite maxnE addnBA /= bin_of_natK // addnC addnK.
 Qed.
 
-Lemma size_next_random_state' v :
-(index v < size (state_vector v))%nat ->
-size (state_vector (next_random_state v).2) = size (state_vector v).
-Proof.
-move=> H.
-rewrite /next_random_state size_set_nth /maxn.
-case: ifP => //.
-by rewrite ltnNge leq_eqVlt ltnNge H orbF => /negP/negP/eqP ->.
-Qed.
-
 Lemma mod_1_l x : (x > 1)%N -> 1 mod x = 1%N.
 Proof. case: x => //. by elim. Qed.
 
@@ -1430,21 +1420,56 @@ Definition next_random_state' : valid_random_state -> N * valid_random_state.
     by rewrite nth_cat size_rep xr nth_rep // andbF.
 Defined.
 
-Local Lemma tns v b a' (Ha : (a' < w)%nat) (Hb : (b < n)%nat) :
-  N.testbit (nth 0%N (state_vector (state_of_array v)) b) [Num of a']
-= (ai v (rev_ord (Ordinal Hb)) (rev_ord (Ordinal Ha)) == 1%R).
+Lemma size_next_random_state' v :
+size (state_vector (next_random_state' (state_of_array v)).2) = n.
 Proof.
-  have ord0w: 'I_w.
-   case: w w0 => // *.
-   by apply ord0.
-  have H: b = val (Ordinal Hb) by [].
-  rewrite [in LHS]H nth_state_vector.
-  have {H} H : a' = val (Ordinal Ha) by [].
-  rewrite [in LHS]H testbit_N_of_word //  nth_rev ?size_tuple //
-          (nth_map ord0w) ?size_tuple ?rev_ord_proof //.
-  congr (_ == _); congr (ai _ _); apply/ord_inj.
-  by rewrite nth_enum_ord ?rev_ord_proof.
+rewrite !size_set_nth size_rev size_rot size_tuple.
+case: v => v c cn.
+rewrite maxnE addnBA /= bin_of_natK; last first.
+ apply/leq_trans/leq_maxr/ltP'.
+ rewrite nat_of_binK; apply/N.mod_lt.
+ by case: n n0.
+by rewrite addnC addnK maxnE addnBA // addnC addnK.
 Qed.
+
+(* Lemma nth_state_vector v (i : 'I_n) : *)
+(*   nth 0%N (state_vector (state_of_array v)) i = *)
+(*   N_of_word (rev_tuple (mktuple (ai v (rev_ord i)))). *)
+(* Proof. *)
+(* rewrite nth_rev size_rot 2!size_map size_enum_ord //. *)
+(* rewrite /ai /=. *)
+(* rewrite nth_cat size_drop size_map size_tuple. *)
+(* rewrite (nth_map (word_of_N w 0)) size_map size_tuple; last by rewrite rev_ord_proof. *)
+(* have ord0n: 'I_n. *)
+(*  case: n mn => // *. *)
+(*  by apply ord0. *)
+(* have ord0w: 'I_w. *)
+(*  case: w w0 => // *. *)
+(*  by apply ord0. *)
+(* rewrite (nth_map ord0n) ?size_tuple ?rev_ord_proof //. *)
+(* congr N_of_word. *)
+(* apply/eq_from_tnth => j. *)
+(* rewrite !(tnth_nth ord0) !nth_rev ?size_tuple // *)
+(*         !(nth_map ord0w) ?size_tuple ?rev_ord_proof *)
+(*         ?(esym (enumT _), size_enum_ord, rev_ord_proof) //. *)
+(* by congr (ai _ _); apply/ord_inj; rewrite /= nth_enum_ord ?rev_ord_proof. *)
+(* Qed. *)
+
+(* Local Lemma tns v b a' (Ha : (a' < w)%nat) (Hb : (b < n)%nat) : *)
+(*   N.testbit (nth 0%N (state_vector (state_of_array v)) b) [Num of a'] *)
+(* = (ai v (rev_ord (Ordinal Hb)) (rev_ord (Ordinal Ha)) == 1%R). *)
+(* Proof. *)
+(*   have ord0w: 'I_w. *)
+(*    case: w w0 => // *. *)
+(*    by apply ord0. *)
+(*   have H: b = val (Ordinal Hb) by []. *)
+(*   rewrite [in LHS]H. nth_state_vector. *)
+(*   have {H} H : a' = val (Ordinal Ha) by []. *)
+(*   rewrite [in LHS]H testbit_N_of_word //  nth_rev ?size_tuple // *)
+(*           (nth_map ord0w) ?size_tuple ?rev_ord_proof //. *)
+(*   congr (_ == _); congr (ai _ _); apply/ord_inj. *)
+(*   by rewrite nth_enum_ord ?rev_ord_proof. *)
+(* Qed. *)
 
 Lemma testbita i x :
   (i < w)%nat ->
@@ -1456,21 +1481,21 @@ Proof.
   by rewrite (nth_word_of_N (N_of_word x) 0%R) N_of_wordK.
 Qed.
 
-Lemma mod_small x y : (x < y)%N -> x mod y = x.
-Proof.
-  move=> xy.
-  apply N.Private_NZDiv.mod_small.
-  split => //.
-  by elim: x {xy}.
-Qed.
+(* Lemma mod_small x y : (x < y)%N -> x mod y = x. *)
+(* Proof. *)
+(*   move=> xy. *)
+(*   apply N.Private_NZDiv.mod_small. *)
+(*   split => //. *)
+(*   by elim: x {xy}. *)
+(* Qed. *)
 
-Lemma size_state_vector_random_state y :
-(index y < size (state_vector y))%nat ->
-size (state_vector (next_random_state y).2) = size (state_vector y).
-Proof.
-  case: y => y z H.
-  by rewrite /= size_set_nth maxnE addnBA // addnC addnK.
-Qed.
+(* Lemma size_state_vector_random_state y : *)
+(* (index y < size (state_vector y))%nat -> *)
+(* size (state_vector (next_random_state y).2) = size (state_vector y). *)
+(* Proof. *)
+(*   case: y => y z H. *)
+(*   by rewrite /= size_set_nth maxnE addnBA // addnC addnK. *)
+(* Qed. *)
 
 Lemma bin_of_nat_mn :
  (bin_of_nat m < bin_of_nat n)%N.
@@ -1482,7 +1507,7 @@ Hint Resolve bin_of_nat_mn : core.
 
 Lemma mod1n : (1 mod bin_of_nat n = 1)%N.
 Proof.
-  rewrite mod_small //.
+  rewrite N.mod_small //.
   case: n mn => []//[]// *.
   rewrite -addn2 -bin_of_add_nat.
   by apply N.lt_lt_add_l.
@@ -1502,7 +1527,7 @@ Proof.
     rewrite -C add1n bin_succ nat_of_binK N.Private_NZDiv.mod_same.
      by rewrite -bin_succ -add1n C rot0 rot_size.
     by case: y yz C.
-   rewrite mod_small.
+   rewrite N.mod_small.
     by rewrite -bin_succ add1n.
    move/ltP': C.
    by rewrite -Num_succ /= nat_of_binK N.add_1_r.
@@ -1587,14 +1612,24 @@ Proof.
   by rewrite ?nth_default // !size_take ?size_set_nth ?C !H leqNgt izyy.
 Qed.
 
+Definition mulBwc (v : vector_with_counter) : vector_with_counter.
+  apply (@Build_vector_with_counter (vector v *m B)%R
+                                    (bin_of_nat (counter v).+1 mod bin_of_nat n)).
+  apply/ltP'.
+  rewrite !nat_of_binK.
+  apply N.mod_lt.
+  by case: n n0.
+Defined.
+
 Lemma next_random_stateE v :
-  (array_of_state \o snd \o next_random_state \o state_of_array) v = (v *m B)%R.
+  (array_of_state \o snd \o next_random_state' \o state_of_array) v = mulBwc v.
 Proof.
-  apply/rowP => i.
+  apply/vector_with_counter_eqP/andP; split; last by rewrite /= -succ_nat eqxx.
+  apply/eqP/rowP => i.
 * case wi: (i >= w)%nat.
   rewrite computeBE_large // !mxE ?castmxE ?mxE (nth_map 0%N)
-          ?nth_rev ?size_tuple ?size_rot ?ltn_pmod //
-          ?size_rev ?size_rot ?size_next_random_state //.
+          ?nth_rev ?size_tuple ?size_rev ?size_rot ?ltn_pmod
+          ?size_next_random_state' //.
   set R := row_ind _.
   have<-: (rev_ord R = w - R.+1 :> nat)%nat by [].
   rewrite nth_word_of_N index_next_random_state
@@ -1602,7 +1637,21 @@ Proof.
           nth_cat size_drop ?size_next_random_state.
   set B := (n - _ < _)%nat.
   case: (ifP B) => Bt.
-  + rewrite nth_drop add1n nth_next_random_state tns.
+  + rewrite nth_drop.
+    rewrite /= nth_set_nth /=.
+    rewrite /= set_set_nth.
+    set T := _ == _.
+    have Tf: T = false.
+     apply/negP => /eqP /(f_equal bin_of_nat).
+     rewrite !nat_of_binK -N.add_1_r.
+     apply/eqP/negP.
+     rewrite eq_sym lem2 //; first by case: n n0.
+     by rewrite N.mod_1_l; move/ltP': n1.
+    rewrite Tf set_set_nth eq_sym -/T Tf.
+    rewrite set_set_nth -/T Tf.
+    rewrite set_set_nth eq_sym -/T Tf.
+    rewrite set_set_nth.
+     add1n nth_next_random_state tns.
     - subst B R.
       case: (col_ind i) Bt => ?.
       case: n => // n' ?.
