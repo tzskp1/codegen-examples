@@ -1693,8 +1693,29 @@ Proof.
    by rewrite !nat_of_binK.
   apply/eqP/rowP => i.
   rewrite 2!mxE (nth_map 0%N) ?size_rev ?size_rot //.
-* case wi: (i >= w)%nat.
-  rewrite computeBE_large // !mxE ?castmxE ?mxE (nth_map 0%N)
+* case wi: (i >= w)%nat; last first.
+  move/negP/negP: wi; rewrite -ltnNge => wi.
+  rewrite computeBE_small // !mxE ?castmxE ?mxE (nth_map 0%N)
+          ?nth_rev ?size_tuple ?size_rot ?ltn_pmod //
+          ?size_rev ?size_rot ?size_next_random_state //.
+  rewrite nth_cat size_drop.
+
+  Check col_ind.
+  have->: (w - (row_ind i).+1)%nat = rev_ord (row_ind i) by [].
+  rewrite nth_word_of_N.
+
+  rewrite nth_rot.
+  rewrite !size_set_nth.
+
+  rewrite /=.
+  Check B.
+  set R := row_ind _.
+  have<-: (rev_ord R = w - R.+1 :> nat)%nat by [].
+  rewrite nth_word_of_N index_next_random_state
+          ?size_rot ?size_next_random_state ?nth_drop //
+          nth_cat size_drop ?size_next_random_state.
+
+* rewrite computeBE_large // !mxE ?castmxE ?mxE (nth_map 0%N)
           ?nth_rev ?size_tuple ?size_rev ?size_rot ?ltn_pmod
           ?size_next_random_state' //.
   congr nth; last
@@ -1703,13 +1724,50 @@ Proof.
   have nvn : size (state_vector (next_random_state' v).2) = n.
    case: (next_random_state' v).2 => state0 i0 i1 i2 i3.
    by rewrite (eqP i0).
+  have vn : size (state_vector v) = n.
+   case: (v) => state0 i0 i1 i2 i3.
+   by rewrite (eqP i0).
   rewrite /= -[X in rot (N.succ (index v) mod bin_of_nat X) _]nvn rot_succ;
    last by apply/ltnW; rewrite nvn; case: (v).
   rewrite nth_cat size_drop size_rot nvn.
-  case: ifP => nn.
-   rewrite nth_drop subnS add1n divnB // divnn modnn w0 ltn0 subn1 subn0.
-   rewrite prednK // prednK ?divn_large //.
-   rewrite nth_cat size_drop nvn.
+  rewrite ltn_sub2l //; last by rewrite ltnS divn_large //.
+  rewrite nth_drop subnS add1n divnB // divnn modnn w0 ltn0 subn1 subn0.
+  rewrite prednK // prednK ?divn_large // vn.
+  rewrite !nth_cat !size_drop !nvn !vn.
+  case: ifP => ninv.
+   rewrite !nth_drop nth_set_nth /=.
+   rewrite subnBA; last first.
+    apply/ltnW.
+    by case v.
+   rewrite addnC -subnBA ?leq_subr // subKn;
+    last by apply/ltnW/col_ind_prf.
+   rewrite !nth_take.
+   rewrite nth_set_nth /=.
+
+   rewrite -subnDA.
+   rewrite /=.
+
+  rewrite nth_rot.
+  rewrite nth_rot.
+  rewrite /=.
+  rewrite nth_set_nth /=.
+
+  rewrite ltn_sub2l.
+  rewrite /=.
+
+   rewrite nth_take.
+   rewrite !nth_drop nth_set_nth /=.
+   rewrite /=.
+  rewrite nth_cat.
+
+
+
+   rewrite nth_rot.
+  rewrite take.
+  done.
+   rewrite /=.
+   case: ifP => ninv.
+    rewrite nth_drop nth_set_nth /=.
 
    case: ifP => niwnv.
     rewrite nth_drop.
