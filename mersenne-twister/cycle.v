@@ -1767,7 +1767,7 @@ Proof.
 Qed.
 
 Lemma eqnnS x : (x == x.+1 = false)%nat.
-Proof. by elim: x.
+Proof. by elim: x. Qed.
 
 Hint Resolve vnn col_val niw wkw npmnp rkw rkw' mod_leq succ_pos : core.
 
@@ -2145,9 +2145,9 @@ Proof.
 * rewrite computeBE_large // !mxE ?castmxE ?mxE (nth_map 0%N)
           ?nth_rev ?size_tuple ?size_rev ?size_rot ?ltn_pmod
           ?size_next_random_state' //.
-  congr nth; last
-   by rewrite /= modnB // modnn subn0 ltn0 mul0n add0n.
-  congr word_of_N.
+  have->: (w - (row_ind i).+1)%nat = rev_ord (row_ind i) by [].
+  have->: (w - (row_ind (Ordinal (iw i))).+1)%nat = rev_ord (row_ind (Ordinal (iw i))) by [].
+  rewrite !nth_word_of_N; congr (if _ then _ else _).
   rewrite /= -[X in rot (N.succ (index v) mod bin_of_nat X) _]nvn rot_succ;
    last by apply/ltnW; rewrite nvn; case: (v).
   rewrite nth_cat size_drop size_rot nvn.
@@ -2157,5 +2157,22 @@ Proof.
   rewrite !nth_cat !size_drop !nvn !vn.
   case: ifP => ninv.
    rewrite !nth_drop nth_set_nth /=.
+   rewrite nth_set_nth /=.
+   set T := _ == nat_of_bin (index v).
+   have Tf: T = false.
+    apply/negP => /eqP /(f_equal bin_of_nat).
+    rewrite !nat_of_binK -N.add_1_r.
+    apply/eqP/negP.
+    rewrite lem2 //.
+    by rewrite N.mod_1_l; move/ltP': n1.
+   rewrite Tf nth_set_nth /=.
+   case: ifP => H.
+    rewrite /=.
+    rewrite N.land_spec -(eqP H).
+    rewrite modnB // modnn ltn0 mul0n add0n subn0.
+    Search ((_ - _) %% _)%nat.
+
+
+     rewrite Tf bound_land //.
    Admitted.
 End Main.
