@@ -64,6 +64,30 @@ Proof.
   by rewrite -addn1 -bin_of_add_nat IH N.add_1_r.
 Qed.
 
+Lemma bin_succ y :
+(nat_of_bin y).+1 = nat_of_bin (N.succ y).
+Proof.
+case: y => //.
+elim => //= ? <-.
+by rewrite !natTrecE -[in RHS]addn1 -[in RHS]muln2 mulnDl mul1n muln2 addn2.
+Qed.
+
+Lemma nat_of_sub_bin x y : (nat_of_bin x - nat_of_bin y)%nat = nat_of_bin (x - y).
+Proof.
+  rewrite -[y]nat_of_binK -[x]nat_of_binK.
+  set X := (nat_of_bin x).
+  elim: (nat_of_bin y) X.
+   move=> {x} x.
+   by rewrite /= N.sub_0_r subn0.
+  move=> {x y} y IHy []// x.
+  by rewrite !succ_nat !N.sub_succ -!bin_succ subSS IHy.
+Qed.
+
+Lemma bin_of_sub_nat x y : (bin_of_nat x - bin_of_nat y) = bin_of_nat (x - y)%nat.
+Proof.
+  by rewrite -[y]bin_of_natK -[x]bin_of_natK nat_of_sub_bin !nat_of_binK.
+Qed.
+
 Lemma Num_succ i : [Num of i] + 1 = [Num of i.+1].
 Proof. by rewrite N.add_1_r succ_nat. Qed.
 
@@ -257,14 +281,6 @@ Proof.
     elim: p => // p H.
     apply/(leq_trans H).
     by rewrite /= natTrecE -!addnn leq_addr.
-Qed.
-
-Lemma bin_succ y :
-(nat_of_bin y).+1 = nat_of_bin (N.succ y).
-Proof.
-case: y => //.
-elim => //= ? <-.
-by rewrite !natTrecE -[in RHS]addn1 -[in RHS]muln2 mulnDl mul1n muln2 addn2.
 Qed.
 
 Lemma bound_N_of_word x :
