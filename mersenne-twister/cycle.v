@@ -2167,9 +2167,68 @@ Proof.
     by rewrite N.mod_1_l; move/ltP': n1.
    rewrite Tf nth_set_nth /=.
    case: ifP => H.
-    rewrite /=.
     rewrite N.land_spec -(eqP H).
     rewrite modnB // modnn ltn0 mul0n add0n subn0.
+    have->: (w - (i %% w).+1)%nat = rev_ord (Ordinal (ltn_pmod i w0)) by [].
+    rewrite testbit_N_of_word ?bin_of_natK // nth_cat size_rep.
+    case: ifP => C; last by rewrite nth_rep ?andbT // ltn_sub2r ?bin_of_natK.
+    rewrite /= bin_of_natK in C.
+    have C' : (w - r <= i %% w)%nat.
+     rewrite /leq subnS prednK in C; last by rewrite ?ltnNge ?leqn0 ?subn_eq0 leqNgt ?ltn_pmod.
+     by rewrite /leq subnAC C.
+    have Svn: (N.succ (index v) < n)%nat.
+     rewrite -bin_succ ltn_neqAle.
+     apply/andP; split; last by case v.
+     apply/negP => /eqP vn'.
+     rewrite bin_succ in vn'.
+     rewrite -[N.succ _]nat_of_binK vn' N.mod_same // addn_eq0 in H.
+     case/andP: H => /eqP v0.
+     rewrite -bin_succ in vn'.
+     move: v0 vn' => -> + _.
+     by case: n n1 => []//[].
+    rewrite N.mod_small in H; last first.
+     move/ltP': Svn.
+     by rewrite nat_of_binK.
+    rewrite -bin_succ -addn1 eqn_add2l in H.
+    have iwn: (i %/ w = n.-1)%nat.
+     by rewrite -subn1 -(eqP H) subKn // ltnW // col_ind_prf.
+    have: (i < p)%nat by [].
+    rewrite (divn_eq i w) iwn => ip.
+    have nwwr: (n.-1 * w + (w - r) <= n.-1 * w + i %% w)%nat by rewrite leq_add2l.
+    move: (leq_ltn_trans nwwr ip).
+    by rewrite addnBA // addnC -mulSn prednK // ltnn.
+   rewrite -[X in _ == X]addn0 eqn_add2l subn_eq0 leqNgt col_ind_prf /=.
+   by rewrite modnB // modnn ltn0 mul0n add0n subn0.
+  rewrite !nth_take.
+   Search ((_ - _) %% _)%nat.
+    /leq_trans
+    move=> /(_ _ ip).
+    move/leq_trans
+    n.-1 * w + (w - r) < i < p.
+    = i %/ w * w + i %% w
+
+    rewrite nth_rep // andbF.
+    case: v nvn vn ninv T Tf H.
+    intros state0 i0 i1 i2 i3 nvn vn ninv T Tf H.
+    move/forallP: (i3) => /(_ (Ordinal (ltn_pmod i w0))).
+    rewrite nth_rev size_tuple //.
+    have->: (w - (Ordinal (ltn_pmod i w0)).+1)%nat = rev_ord (Ordinal (ltn_pmod i w0)) by [].
+    rewrite nth_word_of_N.
+    rewrite /leq.
+    rewrite /= /leq -subSn ?ltn_pmod // subSS bin_of_natK subnAC in C.
+    rewrite /= (eqP C) /=.
+    rewrite leqNgt.
+    rewrite /=.
+    rewrite /= in C.
+    rewrite testbit_N_of_word.
+    rewrite /=.
+    rewrite leq_sub2l /=.
+    rewrite /=i n
+
+    rewrite /=.
+
+    rewrite -testbit_N_of_word.
+    done.
     Search ((_ - _) %% _)%nat.
 
 
