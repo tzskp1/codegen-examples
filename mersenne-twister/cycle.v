@@ -2312,14 +2312,60 @@ Proof.
   have ni : (i < n)%nat.
    case: (v1) isr => state0 i0 i1 i2 i3.
    by rewrite size_rot (eqP i0).
-  rewrite -[LHS](word_of_NK w0).
-  rewrite -[RHS](word_of_NK w0).
+  rewrite -[LHS](word_of_NK w0); last first.
+   case: v1 H0 isr => state0 i0 i1 i2 i3 H0 isr.
+   move/forallP: (i2) => /(_ _) /implyP i2'.
+   rewrite nth_cat; case: ifP => ?.
+    rewrite nth_drop /=.
+    case H : (index state0 + i < size (state_vector state0))%nat.
+     move: (H) => H'.
+     rewrite (eqP i0) in H'.
+     by rewrite (i2' (Ordinal H') H).
+    by rewrite nth_default // leqNgt H.
+   rewrite size_drop /=.
+   case H: (i - (size (state_vector state0) - index state0) < index state0)%nat.
+    rewrite nth_take //.
+    case H': (i - (size (state_vector state0) - index state0) < size (state_vector state0))%nat.
+     move: (H') => H''; rewrite (eqP i0) in H''.
+     by rewrite (eqP i0) (i2' (Ordinal H'')) //= (eqP i0).
+    by rewrite nth_default // leqNgt H'.
+   by rewrite nth_default // size_take (eqP i0) i1 leqNgt -(eqP i0) H.
+  rewrite -[RHS](word_of_NK w0); last first.
+   case: v2 H0 isr => state0 i0 i1 i2 i3 H0 isr.
+   move/forallP: (i2) => /(_ _) /implyP i2'.
+   rewrite nth_cat; case: ifP => ?.
+    rewrite nth_drop /=.
+    case H : (index state0 + i < size (state_vector state0))%nat.
+     move: (H) => H'.
+     rewrite (eqP i0) in H'.
+     by rewrite (i2' (Ordinal H') H).
+    by rewrite nth_default // leqNgt H.
+   rewrite size_drop /=.
+   case H: (i - (size (state_vector state0) - index state0) < index state0)%nat.
+    rewrite nth_take //.
+    case H': (i - (size (state_vector state0) - index state0) < size (state_vector state0))%nat.
+     move: (H') => H''; rewrite (eqP i0) in H''.
+     by rewrite (eqP i0) (i2' (Ordinal H'')) //= (eqP i0).
+    by rewrite nth_default // leqNgt H'.
+   by rewrite nth_default // size_take (eqP i0) i1 leqNgt -(eqP i0) H.
   congr N_of_word.
-   apply/eq_from_tnth => j.
-   move: (H0 (rev_ord (Ordinal ni)) (rev_ord j)).
-   rewrite !mxE !(nth_map 0%N).
-   rewrite nth_rev.
-   Admitted.
+  apply/eq_from_tnth => j.
+  move: (H0 (rev_ord (Ordinal ni)) (rev_ord j)).
+  rewrite !mxE !(nth_map 0%N) ?size_rev ?size_rot; last first.
+    case: (v1) => state0 i0 i1 i2 i3.
+    by rewrite (eqP i0).
+   case: (v2) => state0 i0 i1 i2 i3.
+   by rewrite (eqP i0).
+  rewrite !nth_rev ?size_rot ?size_tuple //; last first.
+    case: (v1) => state0 i0 i1 i2 i3.
+    by rewrite (eqP i0).
+   case: (v2) => state0 i0 i1 i2 i3.
+   by rewrite (eqP i0).
+  rewrite !(tnth_nth 0%R) /= -!subSn // !subSS !subKn; last by apply/ltnW.
+  case: v1 H0 isr => state0 i0 i1 i2 i3 H0 isr.
+  case: v2 H0 => state1 i4 i5 i6 i7 H0.
+  by rewrite /= (eqP i0) (eqP i4) !subKn // ltnW.
+Qed.
 
 Lemma next_random_stateEq q x :
   array_of_state (iter q (snd \o next_random_state') x)
