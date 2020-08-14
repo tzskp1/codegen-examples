@@ -2276,4 +2276,142 @@ Proof.
   case: (i %/ w)%nat => // ? _ *.
   by rewrite subSS ltnS leq_subr.
 Qed.
+
+Definition upto_rot_eq v1 v2 :=
+  rot (index v1) (state_vector v1) == rot (index v2) (state_vector v2).
+
+Lemma pres_eq v1 v2 :
+(vector (array_of_state v1) == vector (array_of_state v2)) = upto_rot_eq v1 v2.
+Proof.
+  apply/eqP; case: ifP.
+* move=> H.
+  congr ia.
+  apply/eqP.
+  rewrite eqE /=.
+  apply/eqP.
+  apply/matrixP => i j.
+  rewrite !mxE.
+  rewrite !(nth_map 0%N) ?size_rev ?size_rot.
+  by rewrite (eqP H).
+  case: (v2) => state0 i0 i1 i2 i3.
+  by rewrite (eqP i0).
+  case: (v1) => state0 i0 i1 i2 i3.
+  by rewrite (eqP i0).
+* move=> H /(f_equal ai) /eqP H0.
+  suff: false by [].
+  rewrite -{}H.
+  rewrite !incomplete_arrayK !eqE /= in H0.
+  move/eqP/matrixP: H0 => H0.
+  apply/eqP/(@eq_from_nth _ 0%N).
+   rewrite !size_rot.
+   case: (v2) => state0 i0 i1 i2 i3.
+   rewrite (eqP i0).
+   case: (v1) => state1 i i4 i5 i6.
+   by rewrite (eqP i).
+  move=> i isr.
+  have ni : (i < n)%nat.
+   case: (v1) isr => state0 i0 i1 i2 i3.
+   by rewrite size_rot (eqP i0).
+  rewrite -[LHS](word_of_NK w0).
+  rewrite -[RHS](word_of_NK w0).
+  congr N_of_word.
+   apply/eq_from_tnth => j.
+   move: (H0 (rev_ord (Ordinal ni)) (rev_ord j)).
+   rewrite !mxE !(nth_map 0%N).
+   rewrite nth_rev.
+   Admitted.
+
+Lemma next_random_stateEq q x :
+  array_of_state (iter q (snd \o next_random_state') x)
+= iter q mulBwc (array_of_state x).
+Proof.
+  elim: q x => // q IH x.
+  rewrite !iterS.
+  move: (next_random_stateE (iter q (snd \o next_random_state') x)).
+  rewrite /comp => ->.
+  by rewrite IH.
+Qed.
+
+Lemma itermulBwcE q x :
+  vector (iter q mulBwc x)
+  = x *m (castmx (esym tecp, esym tecp) (castmx (tecp, tecp) B ^+ q)).
+Proof.
+  elim: q x => [x|q IH x].
+   rewrite /= GRing.expr0 .
+   have->: castmx (esym tecp, esym tecp) 1 = (1 : 'F_2)%:M.
+    apply/matrixP => i j.
+    by rewrite castmxE !mxE !eqE.
+   by rewrite mulmx1.
+  rewrite iterSr IH -mulmxA.
+  congr (x *m _).
+  rewrite GRing.exprS.
+  apply/matrixP => i j.
+  rewrite !(mxE, castmxE).
+  apply: eq_big_cond.
+   by rewrite prednK.
+  move=> ? k.
+  rewrite !(castmxE, mxE) /=.
+  set A := cast_ord _ _.
+  apply/esym.
+  set B := cast_ord _ _.
+  apply/esym.
+  have->: A = B by apply/val_inj.
+  set K := cast_ord (esym (esym tecp)) (cast_ord _ k).
+  have->: K = k by apply/val_inj.
+  set K1 :=  cast_ord (esym tecnw) _.
+  set K2 :=  cast_ord (esym tecnw) _.
+  by have->: K1 = K2 by apply/val_inj.
+Qed.
+
+Lemma eq_from_mulmx x y (A B : 'M['F_2]_(x, y)) :
+  (forall z : 'rV__ , z *m A = z *m B) -> A = B.
+Proof.
+  move=> H; apply/matrixP => i j.
+  move/matrixP: (H (delta_mx 0 i)) => /(_ ord0 j).
+  rewrite !mxE (bigD1 i) //=.
+  under eq_bigr => ? /negPf H0.
+   rewrite mxE eqxx H0 andbF GRing.mul0r.
+  over.
+  move/esym.
+  rewrite (bigD1 i) //=.
+  under eq_bigr => ? /negPf H0.
+   rewrite mxE eqxx H0 andbF GRing.mul0r.
+  over.
+  by rewrite !sum_f2_eq0 !GRing.addr0 !mxE !eqxx !GRing.mul1r => ->.
+Qed.
+
+Lemma cycle_next_random_state :
+  irreducible_poly phi ->
+  forall q, (q > 0)%nat ->
+       reflect (forall x, upto_rot_eq (iter q (snd \o next_random_state') x) ((snd \o next_random_state') x))
+               (2 ^ (size phi).-1 - 1 %| q - 1)%nat.
+Proof.
+  move=> irp q q0.
+  rewrite -cycleB_dvdP //.
+  apply/(iffP idP) => [H x|].
+* rewrite -pres_eq next_random_stateEq.
+  move: (next_random_stateE x); rewrite /comp => ->.
+  by rewrite itermulBwcE (eqP H) castmxK.
+* move=> H; apply/eqP/eq_from_mulmx => z.
+  set x := state_of_array
+             (Build_vector_with_counter (castmx (erefl, esym tecp) z) n0).
+  move: (H x).
+  rewrite -pres_eq next_random_stateEq.
+  move: (next_random_stateE x); rewrite /comp => ->.
+  rewrite !state_of_arrayK itermulBwcE => /eqP/matrixP H0.
+  apply/matrixP => i j; move: (H0 i (cast_ord (esym tecp) j)) => {H0}.
+  rewrite !mxE /=.
+  set L := \sum_(j0 < p) _.
+  have->: L = \sum_(j0 < p.-1.+1) z i j0 * (castmx (tecp, tecp) B ^+ q) j0 j.
+   apply/eq_big_cond => *.
+    by rewrite prednK.
+   rewrite !(castmxE, mxE) /=.
+   congr (z _ _ * (castmx (tecp, tecp) B ^+ q) _ _); by apply/val_inj.
+  set R := \sum_(j0 < p) _.
+  suff->: R = \sum_(j0 < p.-1.+1) z i j0 * castmx (tecp, tecp) B j0 j by [].
+  apply/eq_big_cond => *.
+   by rewrite prednK.
+  rewrite 2!castmxE /=.
+  congr (z _ _ * B _ _); by apply/val_inj.
+Qed.
 End Main.
