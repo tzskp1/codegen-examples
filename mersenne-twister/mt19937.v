@@ -54,13 +54,9 @@ Definition tempering xi :=
 Lemma temperingE : tempering =1 mt.tempering u s t l b c.
 Proof. by []. Qed.
 
-Definition cycleB_dvdP :=
-  @cycle.cycleB_dvdP w len (len - m) r (word_of_N w a) pm
-                     erefl erefl erefl erefl erefl.
-
-Definition next_random_stateE1 :=
-  @cycle.next_random_stateE w len (len - m) r (word_of_N w a)
-                            erefl erefl erefl erefl erefl.
+Definition cycle_next_random_state :=
+  @cycle.cycle_next_random_state w len (len - m) r (word_of_N w a) pm
+                                 erefl erefl erefl erefl erefl.
 End gluing.
 
 CodeGen Snippet "#include <stdbool.h> /* for bool, true and false */".
