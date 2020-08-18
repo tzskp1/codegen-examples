@@ -1020,8 +1020,9 @@ case: a => [][|[]//] i; set T := Ordinal i.
  have->: T = 0%R by apply/val_inj.
  by rewrite !GRing.scale0r !GRing.add0r.
 have->: T = 1%R by apply/val_inj.
-rewrite !GRing.scale1r /Phi.
-Admitted.
+apply/rowP => k.
+by rewrite !GRing.scale1r !mxE linearD.
+Qed.
 
 Canonical linearType_Phi := Eval hnf in Linear linearPhi.
 
@@ -1089,6 +1090,13 @@ Proof.
   rewrite /pairing !mxE; apply/eq_bigr => i _.
   rewrite (coord_basis (QphiIX_full _) (memvf x)) linear_sum.
   rewrite !linear_sum !mxE.
+  under eq_bigr => k _.
+   rewrite /=.
+   Check deprecate _ _.
+   rewrite /= (nth_map 0%R).
+  rewrite mxE.
+  apply/eq_bigr.
+  rewrite /=.
   set e0 := QphiIX _.
   by rewrite linearZ_LR /= expXpE !QphiIXE rmorphX -exprM mulnC exprM H0.
 * by rewrite expXpE => ->.
