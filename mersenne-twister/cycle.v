@@ -210,6 +210,9 @@ Proof. by case: p p3. Qed.
 Lemma w0 : 0 < w.
 Proof. by case: w rw r0 => //; rewrite leqn0 => /eqP ->. Qed.
 
+Lemma wpw : w.-1 < w.
+Proof. by case: w w0. Qed.
+
 Lemma rw' : r <= w.
 by apply/ltnW.
 Qed.
@@ -387,6 +390,13 @@ Definition phi := char_poly (castmx (tecp, tecp) B).
 Lemma size_phi : (size phi).-1 = p.
 Proof. by rewrite size_char_poly prednK. Qed.
 
+Lemma size_phi1 : (1 < size phi)%nat.
+Proof.
+  rewrite -[size phi]prednK ?size_phi ?ltnS //.
+  case: (size phi) size_phi => // /eqP/negPn.
+  by rewrite eq_sym -lt0n p0.
+Qed.
+
 Lemma X2X : 'X ^ 2 %% phi != 'X %% phi.
 Proof.
   rewrite -GRing.subr_eq0 -modp_opp -modp_add.
@@ -449,6 +459,8 @@ Proof.
     rewrite -GRing.rmorphX /= exprnP -irreducible.XnE => /eqP ->.
     by rewrite modp_small // size_polyX size_char_poly prednK ltnW // ltnW.
 Qed.
+
+Section Gluing.
 
 Lemma size_ord_enum q : size (ord_enum q) = q.
 Proof. by rewrite -(size_map val) val_ord_enum size_iota. Qed.
@@ -901,7 +913,7 @@ Record valid_random_state :=
     _ : ((index state) < n)%nat;
     _ : [forall i, (((i : 'I_n) < size (state_vector state)) ==>
                         (nth 0%N (state_vector state) i <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w)))))%nat];
-    _ : [forall x, ((w - r <= (x : 'I_w))%nat ==>  ((rev (word_of_N w (nth 0%N (state_vector state) (index state))))`_x == 0))];
+    _ : [forall x, ((w - r <= (x : 'I_w))%nat ==> ((rev (word_of_N w (nth 0%N (state_vector state) (index state))))`_x == 0))];
   }.
 
 Lemma valid_random_state_eqP : Equality.axiom (fun a b => state a == state b).
@@ -1293,27 +1305,6 @@ Qed.
 
 Hint Resolve nmn nmn' : core.
 
-(* Lemma nth_state_vector v (i : 'I_n) : *)
-(*   nth 0%N (state_vector (state_of_array v)) i = *)
-(*   N_of_word (rev_tuple (mktuple (ai v (rev_ord i)))). *)
-(* Proof. *)
-(* rewrite nth_rev; last by rewrite 2!size_map size_enum_ord. *)
-(* rewrite (nth_map (word_of_N w 0)) size_map size_tuple ; last by rewrite rev_ord_proof. *)
-(* have ord0n: 'I_n. *)
-(*  case: n mn => // *. *)
-(*  by apply ord0. *)
-(* have ord0w: 'I_w. *)
-(*  case: w w0 => // *. *)
-(*  by apply ord0. *)
-(* rewrite (nth_map ord0n) ?size_tuple ?rev_ord_proof //. *)
-(* congr N_of_word. *)
-(* apply/eq_from_tnth => j. *)
-(* rewrite !(tnth_nth ord0) !nth_rev ?size_tuple // *)
-(*         !(nth_map ord0w) ?size_tuple ?rev_ord_proof *)
-(*         ?(esym (enumT _), size_enum_ord, rev_ord_proof) //. *)
-(* by congr (ai _ _); apply/ord_inj; rewrite /= nth_enum_ord ?rev_ord_proof. *)
-(* Qed. *)
-
 Lemma testbit_N_of_word a' w' v : (a' < w')%nat ->
   N.testbit (@N_of_word w' v) (bin_of_nat a') = (nth 1%R v a' == 1%R).
 Proof.
@@ -1430,71 +1421,6 @@ rewrite maxnE addnBA; last first.
 by rewrite addnC addnK.
 Qed.
 
-(* Lemma nth_state_vector v (i : 'I_n) : *)
-(*   nth 0%N (state_vector (state_of_array v)) i = *)
-(*   N_of_word (rev_tuple (mktuple (ai v (rev_ord i)))). *)
-(* Proof. *)
-(* rewrite nth_rev size_rot 2!size_map size_enum_ord //. *)
-(* rewrite /ai /=. *)
-(* rewrite nth_cat size_drop size_map size_tuple. *)
-(* rewrite (nth_map (word_of_N w 0)) size_map size_tuple; last by rewrite rev_ord_proof. *)
-(* have ord0n: 'I_n. *)
-(*  case: n mn => // *. *)
-(*  by apply ord0. *)
-(* have ord0w: 'I_w. *)
-(*  case: w w0 => // *. *)
-(*  by apply ord0. *)
-(* rewrite (nth_map ord0n) ?size_tuple ?rev_ord_proof //. *)
-(* congr N_of_word. *)
-(* apply/eq_from_tnth => j. *)
-(* rewrite !(tnth_nth ord0) !nth_rev ?size_tuple // *)
-(*         !(nth_map ord0w) ?size_tuple ?rev_ord_proof *)
-(*         ?(esym (enumT _), size_enum_ord, rev_ord_proof) //. *)
-(* by congr (ai _ _); apply/ord_inj; rewrite /= nth_enum_ord ?rev_ord_proof. *)
-(* Qed. *)
-
-(* Local Lemma tns v b a' (Ha : (a' < w)%nat) (Hb : (b < n)%nat) : *)
-(*   N.testbit (nth 0%N (state_vector (state_of_array v)) b) [Num of a'] *)
-(* = (ai v (rev_ord (Ordinal Hb)) (rev_ord (Ordinal Ha)) == 1%R). *)
-(* Proof. *)
-(*   have ord0w: 'I_w. *)
-(*    case: w w0 => // *. *)
-(*    by apply ord0. *)
-(*   have H: b = val (Ordinal Hb) by []. *)
-(*   rewrite [in LHS]H. nth_state_vector. *)
-(*   have {H} H : a' = val (Ordinal Ha) by []. *)
-(*   rewrite [in LHS]H testbit_N_of_word //  nth_rev ?size_tuple // *)
-(*           (nth_map ord0w) ?size_tuple ?rev_ord_proof //. *)
-(*   congr (_ == _); congr (ai _ _); apply/ord_inj. *)
-(*   by rewrite nth_enum_ord ?rev_ord_proof. *)
-(* Qed. *)
-
-Lemma testbita i x :
-  (i < w)%nat ->
-  (if N.testbit (@N_of_word w x) [Num of i] then 1%R else 0%R) = nth 0%R x i.
-Proof.
-  move=> iw.
-  rewrite -[x]N_of_wordK.
-  have ->: i = Ordinal iw by [].
-  by rewrite (nth_word_of_N (N_of_word x) 0%R) N_of_wordK.
-Qed.
-
-(* Lemma mod_small x y : (x < y)%N -> x mod y = x. *)
-(* Proof. *)
-(*   move=> xy. *)
-(*   apply N.Private_NZDiv.mod_small. *)
-(*   split => //. *)
-(*   by elim: x {xy}. *)
-(* Qed. *)
-
-(* Lemma size_state_vector_random_state y : *)
-(* (index y < size (state_vector y))%nat -> *)
-(* size (state_vector (next_random_state y).2) = size (state_vector y). *)
-(* Proof. *)
-(*   case: y => y z H. *)
-(*   by rewrite /= size_set_nth maxnE addnBA // addnC addnK. *)
-(* Qed. *)
-
 Lemma bin_of_nat_mn :
  (bin_of_nat m < bin_of_nat n)%N.
 Proof.
@@ -1505,14 +1431,6 @@ Lemma n0' : (bin_of_nat n <> 0)%N.
 Proof. by case: n n0. Qed.
 
 Hint Resolve bin_of_nat_mn n0' : core.
-
-Lemma mod1n : (1 mod bin_of_nat n = 1)%N.
-Proof.
-  rewrite N.mod_small //.
-  case: n mn => []//[]// *.
-  rewrite -addn2 -bin_of_add_nat.
-  by apply N.lt_lt_add_l.
-Qed.
 
 Lemma rot_succ T (y : N) (z : seq T) :
   (y <= size z)%nat ->
@@ -2460,4 +2378,140 @@ Proof.
   rewrite 2!castmxE /=.
   congr (z _ _ * B _ _); by apply/val_inj.
 Qed.
+
+End Gluing.
+
+Lemma npwp : (n.-1 * w - 1 < p)%nat.
+Proof.
+  rewrite -[n]prednK //= mulSn addnC -addnBA // subn1.
+  apply/leq_trans/leq_addr.
+  suff: (n.-1 * w > 0)%nat by case: (n.-1 * w)%nat.
+  by rewrite lt0n muln_eq0 negb_or -!lt0n w0 pn0.
+Qed.
+
+Definition b (x : 'rV['F_2]_p) := x ord0 (Ordinal npwp).
+Definition Phi x :=
+  \row_(j < p) b (castmx (erefl, esym tecp)
+                 (castmx (erefl, tecp) x *m castmx (tecp, tecp) B ^+ j)).
+
+Lemma HPhiE S :
+(castmx (erefl, size_phi) \o irreducible.H pm'
+  \o castmx (erefl, esym size_phi) \o Phi) S
+= \row_(j < p) b (castmx (erefl, esym tecp)
+                 (castmx (erefl, tecp) S *m castmx (tecp, tecp) B ^+ j.*2)).
+Proof.
+  apply/(can_inj (castmxK (esym erefl) (esym size_phi)))
+       /(can_inj (irreducible.rVQphiIK (irreducible.phi_gt1 pm'))).
+  rewrite castmxK irreducible.QphiI_rV_K /Phi
+          [castmx _ (\row_j _)]row_sum_delta
+          [castmx _ (\row_j _) in RHS]row_sum_delta.
+  move: (GRing.linear_sum (irreducible.linearType_rVQphiI pm')) => /= ->.
+  move: (GRing.linear_sum (irreducible.linearType_rVQphiI pm')) => /= ->.
+  move: (GRing.linear_sum (irreducible.linearType_F pm')) => /= ->.
+  under eq_bigr => j _.
+   rewrite !castmxE !mxE.
+   move: (GRing.linearZ_LR (irreducible.linearType_rVQphiI pm')) => /= ->.
+   move: (GRing.linearZ_LR (irreducible.linearType_F pm')) => /= ->.
+   rewrite /irreducible.rVQphiI.
+   rewrite /comp rVpoly_delta.
+   rewrite /irreducible.F GRing.Frobenius_autE.
+  over.
+  apply/esym.
+  under eq_bigr => j _.
+   rewrite !castmxE !mxE.
+   move: (GRing.linearZ_LR (irreducible.linearType_rVQphiI pm')) => /= ->.
+   rewrite /irreducible.rVQphiI.
+   rewrite /comp rVpoly_delta.
+  over.
+  rewrite /=.
+
+Check
+  (GRing.rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (irreducible.phiI_idealr (irreducible.phi_gt1 pm'))))).
+  )))).
+                                                             .keyd_phiI phi)))).
+
+   rewrite /irreducible.F.
+   Search (rVpoly _).
+   move=> ->.
+   rewrite /scalable.
+   rewrite irreducible.rVQphiI_D.
+  rewrite
+
+  under eq_bigr => j _.
+  over.
+  move=> ->.
+  rewrite /=.
+  Check irreducible.rVQphiI .
+
+  Check irreducible.rVQphiI.
+
+Search ((\sum__ _)).
+
+  rewrite /=.
+
+
+  rewrite (@irreducible.QphiI_rV_K _ size_phi1).
+  rewrite /irreducible.H /comp.
+  have->: irreducible.F = irreducible.F' by [].
+  set FS := (irreducible.F' _).
+  Check FS : (irreducible.QphiI size_phi1).
+  move: (@irreducible.QphiI_rV_K _ size_phi1).
+  rewrite /cancel.
+  move=> ->.
+
+  Set Printing Coercions.
+  (irreducible.F (irreducible.rVQphiI (irreducible.phi_gt1 pm') (castmx (erefl, esym size_phi) (Phi S))))).
+  rewrite (irreducible.rVQphiI size_phi1 (irreducible.QphiI_rV _))
+  rewrite /irreducible.H.
+  rewrite /=.
+ Check (@irreducible.QphiI_rV_K _ size_phi1 FS).
+
+  rewrite /= (irreducible.QphiI_rV_K size_phi1).
+  rewrite /=. (irreducible.rVQphiIK size_phi1).
+  Check
+   rewrite -size_phi.
+
+  apply/(can_inj (castmxK (esym erefl) (esym size_phi))).
+  rewrite
+  rewrite /=.
+
+  apply/rowP => i.
+  rewrite 2!(mxE, castmxE).
+  rewrite /=.
+
+
+Definition H (x : valid_random_state) : valid_random_state.
+  apply: state_of_array.
+  apply (@Build_vector_with_counter
+           (castmx (erefl, size_phi)
+            (irreducible.H pm' (castmx (erefl, esym size_phi) (array_of_state x))))
+           (index x)).
+  case: x => ? ? H *.
+  apply H.
+Defined.
+Check irreducible.H pm'.
+Check B.
+Check array_incomplete.
+Check irreducible.H pm'.
+
+Check next_random_state.
+(* Record double_random_state := *)
+(*   { *)
+(*     state_double :> random_state; *)
+(*     _ : size (state_vector state_double) == n.*2; *)
+(*     _ : ((index state_double) < n.*2)%nat; *)
+(*     _ : [forall i, (((i : 'I_n) < size (state_vector state_double)) ==> *)
+(*                         (nth 0%N (state_vector state_double) i <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w)))))%nat]; *)
+(*     _ : [forall x, ((w - r <= (x : 'I_w))%nat ==>  ((rev (word_of_N w (nth 0%N (state_vector state_double) (index state_double))))`_x == 0))]; *)
+(*   }. *)
+(* Check vector_with_counter. *)
+(* Check H. *)
+(* Check size_phi. *)
+(* Check irreducible.irreducibleP2 _. *)
+
+(* Definition *)
+(* Definition x : valid_random_state. *)
+(*   apply (@Build_valid_random_state {| index := 0; *)
+(*                                       state_vector := *)
+
 End Main.

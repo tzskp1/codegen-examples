@@ -1,5 +1,7 @@
 From mathcomp
 Require Import all_ssreflect all_algebra all_field all_fingroup.
+From Coq.Logic
+Require FunctionalExtensionality.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -960,54 +962,190 @@ case/andP; rewrite !XnE -!exprnP !rmorphX.
 by apply irreducibleP_direct.
 Qed.
 
-Definition H := (@QphiI_rV _ _) \o F \o (@rVQphiI _ _).
+(* Definition H := (@QphiI_rV _ _) \o F \o (@rVQphiI _ _). *)
 
-Lemma iterHE s :
-   iter s H =1 (@QphiI_rV _ _) \o iter s F \o (@rVQphiI _ _).
-Proof.
-  elim: s => [?|s IH x].
-   by rewrite /= rVQphiIK.
-  by rewrite iterS IH /H /= QphiI_rV_K.
-Qed.
+(* Lemma iterHE s : *)
+(*    iter s H =1 (@QphiI_rV _ _) \o iter s F \o (@rVQphiI _ _). *)
+(* Proof. *)
+(*   elim: s => [?|s IH x]. *)
+(*    by rewrite /= rVQphiIK. *)
+(*   by rewrite iterS IH /H /= QphiI_rV_K. *)
+(* Qed. *)
 
 Lemma irreducibleP1 :
   reflect (irreducible_poly phi)
-  [exists x, (H x != x) && (iter (size phi).-1 H x == x)%R].
+  [exists x, (F x != x) && (iter (size phi).-1 F x == x)%R].
 Proof.
 pose rmorphX :=
   (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
 apply/(iffP idP).
-* case/existsP => x /andP [].
-  rewrite iterHE /H /= => H1' H2'.
-  have H1: (F (rVQphiI phi_gt1 x)) != rVQphiI phi_gt1 x.
-   move: H1'; apply/contra => /eqP ->.
-   by rewrite rVQphiIK.
-  have H2: (iter (size phi).-1 F (rVQphiI phi_gt1 x))
-           == (rVQphiI phi_gt1 x)
-   by apply/eqP/canRL/(eqP H2')/QphiI_rV_K.
+* case/existsP => x /andP [] H1 H2.
   rewrite expXpE in H2.
   rewrite /F Frobenius_autE in H1.
   by apply (irreducibleP_direct H1 H2).
 * case/irreducibleP/andP.
-  rewrite !XnE => H1 H2; apply/existsP; exists (QphiI_rV (\pi_(QphiI phi_gt1) 'X)).
+  rewrite !XnE => H1 H2; apply/existsP; exists (\pi_(QphiI phi_gt1) 'X).
   apply/andP; split.
-   rewrite /H /= QphiI_rV_K /F Frobenius_autE.
-   move: H1; apply/contra => /eqP/(can_inj (@QphiI_rV_K _ _))/eqP.
+   rewrite /= /F Frobenius_autE.
+   move: H1; apply/contra.
    by rewrite rmorphX.
   rewrite -!exprnP !rmorphX -!expXpE in H2.
-  by rewrite iterHE /= QphiI_rV_K (eqP H2).
+  by rewrite (eqP H2).
 Qed.
 
 Lemma irreducibleP2 x :
-  H x != x ->
-  reflect (irreducible_poly phi) (iter (size phi).-1 H x == x)%R.
+  F x != x ->
+  reflect (irreducible_poly phi) (iter (size phi).-1 F x == x)%R.
 Proof.
 move=> Hxx.
 apply/(iffP idP) => [iHxx|].
 * apply/irreducibleP1/existsP.
   by exists x; rewrite Hxx iHxx.
-* case/irreducibleP/andP => ? /expandF/(_ (rVQphiI _ x)).
-  rewrite iterHE /= => ->.
-  by rewrite rVQphiIK.
+* by case/irreducibleP/andP => ? /expandF/(_ x) ->.
 Qed.
+
+Section InversiveDecimation.
+Variable f : {linear QphiI phi_gt1 -> QphiI phi_gt1}.
+Variable b : {linear QphiI phi_gt1 ->
+              (primeChar_lmodType (erefl : 2 \in [char 'F_2]))}.
+Definition Phi S := \row_(j < (size phi).-1) (b \o iter j f) S.
+Variable Phi_inv : 'rV['F_2]_(size phi).-1 ->  QphiI phi_gt1.
+Hypothesis PhiK : cancel Phi_inv Phi.
+Hypothesis Phi_invK : cancel Phi Phi_inv.
+
+Lemma linearPhi : linear Phi.
+Proof.
+move=> a x y.
+case: a => [][|[]//] i; set T := Ordinal i.
+ have->: T = 0%R by apply/val_inj.
+ by rewrite !GRing.scale0r !GRing.add0r.
+have->: T = 1%R by apply/val_inj.
+rewrite !GRing.scale1r /Phi.
+Admitted.
+
+Canonical linearType_Phi := Eval hnf in Linear linearPhi.
+
+Definition Phi_long S := \row_(j < (size phi).-1.*2) (b \o iter j f) S.
+Definition double_ord_prf (j : 'I_(size phi).-1) : (j.*2 < (size phi).-1.*2)%nat.
+Proof.
+  case: j => j H.
+  rewrite -!addnn /=.
+  apply/leq_trans.
+   apply: (_ : _ < j + (size phi).-1)%nat.
+   by rewrite ltn_add2l.
+  by rewrite leq_add2r ltnW.
+Qed.
+
+Definition H (x : 'rV['F_2]_((size phi).-1).*2) :=
+  \row_(j < (size phi).-1) x ord0 (Ordinal (double_ord_prf j)).
+
+Definition pairing (x : QphiI phi_gt1) (y : 'rV['F_2]_(size phi).-1) : 'F_2 :=
+  ((@QphiI_rV _ _) x *m y^T) ord0 ord0.
+
+Lemma sum_f2_eq0 q (P : pred 'I_q) :
+\big[GRing.add_comoid [ringType of 'F_2]/0]_(i0 | P i0) 0 = 0.
+Proof.
+rewrite big_const; set T := #|_|.
+elim: T => // t IHt.
+by rewrite iterS IHt /= GRing.addr0.
+Qed.
+
+Lemma pairing_nondeg x : (forall y, pairing x y = 0) -> x = 0.
+Proof.
+  move=> H; apply/(can_inj (@QphiI_rV_K _ _)).
+  apply/rowP => j.
+  move: H; rewrite /pairing => /(_ (delta_mx ord0 j)).
+  rewrite mxE.
+  under eq_bigr => k _.
+   rewrite ![(delta_mx _ _)^T _ _]mxE ![delta_mx _ _ _ _]mxE.
+  over.
+  rewrite (bigD1 j) //= eqxx mulr1.
+  under eq_bigr => k /negPf K.
+   rewrite K mulr0.
+  over.
+  rewrite sum_f2_eq0 addr0 => ->.
+  by rewrite linear0 mxE.
+Qed.
+
+Lemma pairing_nondeg' y : (forall x, pairing x y = 0) -> y = 0.
+Proof.
+  move=> H; apply/rowP => j.
+  move: {H} (H (rVQphiI _ (delta_mx ord0 j))).
+  rewrite /pairing rVQphiIK 2!mxE.
+  under eq_bigr => k _.
+   rewrite ![delta_mx _ _ _ _]mxE.
+  over.
+  rewrite (bigD1 j) //= eqxx mul1r.
+  under eq_bigr => k /negPf K.
+   rewrite K mul0r.
+  over.
+  by rewrite mxE sum_f2_eq0 addr0 => ->.
+Qed.
+
+Lemma adjFH x y :
+pairing ((F \o (@rVQphiI _ _) \o Phi) x) y
+= pairing x ((H \o Phi_long \o (@rVQphiI _ _)) y).
+Proof.
+  rewrite /pairing !mxE; apply/eq_bigr => i _.
+  rewrite (coord_basis (QphiIX_full _) (memvf x)) linear_sum.
+  rewrite !linear_sum !mxE.
+  set e0 := QphiIX _.
+  by rewrite linearZ_LR /= expXpE !QphiIXE rmorphX -exprM mulnC exprM H0.
+* by rewrite expXpE => ->.
+  rewrite /=.
+  rewrite /=.
+
+Check F \o (@rVQphiI _ _) \o Phi.
+Check pairing ((F \o (@rVQphiI _ _) \o Phi) _) _.
+Check pairing _ ((H \o Phi_long) _).
+
+Lemma FPhiE : F \o Phi =1
+
+
+Definition Phi
+Check
+Check  Phi.
+
+Check iter _ f.
+
+End InversiveDecimation.
+(* Section Infinite. *)
+(* Local Open Scope ring_scope. *)
+(* Import GRing.Theory. *)
+
+(* Local Definition zero (x : nat) := 0 : 'F_2. *)
+(* Local Definition add (x y : nat -> 'F_2) : nat -> 'F_2 := *)
+(*   fun i => x i + y i. *)
+(* Local Definition opp (x : nat -> 'F_2) : nat -> 'F_2 := *)
+(*   fun i => - x i. *)
+
+(* Lemma F2infA : associative add. *)
+(* Proof. *)
+(*   move=> x y z. *)
+(*   apply Coq.Logic.FunctionalExtensionality.functional_extensionality => n. *)
+(*   by rewrite /add addrA. *)
+(* Qed. *)
+(* Lemma F2infC : commutative add. *)
+(*   move=> x y. *)
+(*   apply Coq.Logic.FunctionalExtensionality.functional_extensionality => n. *)
+(*   by rewrite /add addrC. *)
+(* Qed. *)
+(* Lemma F2inf0r : left_id zero add. *)
+(*   move=> x. *)
+(*   apply Coq.Logic.FunctionalExtensionality.functional_extensionality => n. *)
+(*   by rewrite /add add0r. *)
+(* Qed. *)
+(* Lemma F2infNr : left_inverse zero opp add. *)
+(*   move=> x. *)
+(*   apply Coq.Logic.FunctionalExtensionality.functional_extensionality => n. *)
+(*   by rewrite /add addNr. *)
+(* Qed. *)
+
+(* Definition F2inf_zmodMixin := Eval hnf in ZmodMixin F2infA F2infC F2inf0r F2infNr. *)
+(* Canonical F2inf_zmodType := Eval hnf in ZmodType _ F2inf_zmodMixin. *)
+
+(* Check ZmodType _ _. *)
+
+(* Check LmodType 'F_2 _ _. *)
+(* End Infinite. *)
 End Irreducible.
