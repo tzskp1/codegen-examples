@@ -844,6 +844,19 @@ Qed.
 
 Canonical linearType_F := Eval hnf in Linear linearF.
 
+Lemma linearQphiI_rV : linear (@QphiI_rV _ phi_gt1).
+Proof.
+  move=> a x y.
+  by rewrite QphiI_rV_D QphiI_rV_scaler.
+Qed.
+
+Canonical linearType_QphiI_rV := Eval hnf in Linear linearQphiI_rV.
+
+Lemma linearrVQphiI : linear (@rVQphiI _ phi_gt1).
+Proof. apply (can2_linear (@QphiI_rV_K _ _) (@rVQphiIK _ _)). Qed.
+
+Canonical linearType_rVQphiI := Eval hnf in Linear linearrVQphiI.
+
 Lemma expXpE p x : iter p F x = (x ^+ (2 ^ p))%R.
 Proof.
   elim: p x => [x|p IH x].
