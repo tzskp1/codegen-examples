@@ -1004,12 +1004,182 @@ apply/(iffP idP) => [iHxx|].
 * by case/irreducibleP/andP => ? /expandF/(_ x) ->.
 Qed.
 
+Definition H (f : nat -> 'F_2) := fun i => f i.*2.
+
+Definition D (f : nat -> 'F_2) := fun i => f i.+1.
+
+Definition map_phi D (f: nat -> 'F_2) :=
+  fun i => \sum_(j < (size phi).-1) phi`_j * iter j D f i.
+
+Lemma iterDE r f : iter r D f =1 fun i => f (i + r)%nat.
+Proof.
+  elim: r f => [* ?|r IH f x].
+   by rewrite addn0.
+  by rewrite iterSr (IH (D f)) addnS.
+Qed.
+
+Lemma DHC : D \o H =2 H \o D \o D.
+Proof.
+  move=> x y.
+  by rewrite /D /H /= doubleS.
+Qed.
+
+Lemma phiDH f : map_phi D (H f) =1 H (map_phi (D \o D) f).
+Proof.
+  move=> x; apply/eq_bigr => i _; congr (_ * _).
+  case: i => i /= _; elim: i x f => // i IH x f.
+  rewrite !iterSr.
+  have ->: iter i D (D (H f)) x = iter i D ((H \o D \o D) f) x.
+   by elim: i {IH}.
+  by rewrite IH.
+Qed.
+
+Lemma iter_comp T (D : T -> T) j : iter j (D \o D) =1 iter j D \o iter j D.
+Proof.
+  move=> x; elim: j x => // j IH x.
+  rewrite !iterS IH /=; congr D.
+  elim: j x {IH} => // j IH x.
+  by rewrite iterS iterSr IH iterS.
+Qed.
+
+Lemma mulrr (x : 'F_2) : x * x = x.
+Proof.
+  case: x => [][|[]//] i; apply/val_inj.
+   by rewrite /= muln0 mod0n.
+  by rewrite /= mul1n modn_small.
+Qed.
+
+Lemma phiD2C : map_phi (D \o D) =2 map_phi D \o map_phi D.
+Proof.
+  move=> x y; apply/esym; rewrite /map_phi /=.
+  under eq_bigr => i _.
+   have->: iter i D (fun i0 : nat => \sum_(j < (size phi).-1) phi`_j * iter j D x i0) y
+         = \sum_(j < (size phi).-1) phi`_j * iter i D (fun i0 : nat => iter j D x i0) y.
+    case: i => i /= _.
+    elim: (size phi).-1 i => [i |s IH i].
+     rewrite big_ord0 /=.
+     elim: i y => [*|i IH y]; first by rewrite /= big_ord0.
+     rewrite iterS.
+     move: (IH y.+1).
+     by rewrite /D /= .
+    rewrite big_ord_recr -{}IH.
+    elim: i y => [y|i IH y].
+     by rewrite /= big_ord_recr /=.
+    move: (IH y.+1).
+    by rewrite /D /=.
+   have->: phi`_i * (\sum_(j < (size phi).-1) phi`_j * iter i D [eta iter j D x] y)
+       = (\sum_(j < (size phi).-1) phi`_i * phi`_j * iter i D [eta iter j D x] y).
+    case: i => i /= _.
+    elim: (size phi).-1 i => [i |s IH i].
+     by rewrite !big_ord0 mulr0.
+    rewrite big_ord_recr mulrDr {}IH.
+    by rewrite [in RHS]big_ord_recr /= mulrA.
+  over.
+  elim: (size phi).-1 => [|s IH].
+   by rewrite !big_ord0.
+  rewrite [in RHS]big_ord_recr -{}IH !big_ord_recr iter_comp /= addrA.
+  congr (_ + _); last by rewrite mulrr.
+  rewrite exchange_big big_ord_recr /= -addrA -[RHS]addr0.
+  congr (_ + _); first by rewrite exchange_big.
+  rewrite -big_split; under eq_bigr => k _.
+   rewrite /= -!iter_add addnC [phi`__*_]mulrC addrr_char2 //.
+  over.
+  elim: s => /= [|s IH].
+   by rewrite big_ord0.
+  by rewrite big_ord_recr IH /= addr0.
+Qed.
+
+Lemma phiDH0 f : map_phi D f =1 (fun _ => 0) -> map_phi D (H f) =1 fun _ => 0.
+Proof.
+  move=> H0 x; rewrite phiDH.
+  suff H1: (map_phi (D \o D) f) =1 fun _ => 0 by rewrite /H H1.
+  move=> y; rewrite phiD2C /=; move: H0; rewrite /map_phi => H.
+  under eq_bigr => i _.
+   have->: iter i D (fun i0 : nat => \sum_(j < (size phi).-1) phi`_j * iter j D f i0) y = 0.
+    case: i H => i /= _.
+    elim: i y => [y H|i IH y H].
+     by rewrite /= H.
+    rewrite iterS; move: (IH y.+1 H).
+    by rewrite /D => ->.
+   rewrite mulr0.
+  over.
+  elim: (size phi).-1 => [|s IH].
+   by rewrite big_ord0.
+  by rewrite big_ord_recr IH /= addr0.
+Qed.
+
+Lemma iter_split i (f g : nat -> 'F_2) x :
+iter i D (fun i0 => f i0 + g i0) x =
+iter i D (fun i0 => f i0) x + iter i D (fun i0 => g i0) x.
+Proof.
+  elim: i x => // i IH x.
+  rewrite iterS.
+  move: (IH x.+1).
+  rewrite /D => ->.
+  by rewrite !iterS.
+Qed.
+
+Lemma iter_opp i (f : nat -> 'F_2) x :
+iter i D (fun i0 : nat => - f i0) x = - iter i D (fun i0 : nat => f i0) x.
+Proof.
+  elim: i x => // i IH x.
+  rewrite iterS.
+  move: (IH x.+1).
+  rewrite /D => ->.
+  by rewrite !iterS.
+Qed.
+
+Section V.
+Definition V := { f | map_phi D f =1 fun _ => 0 }.
+Local Lemma add_prf (f g : V) :
+  map_phi D (fun i => sval f i + sval g i) =1 fun _ => 0.
+Proof.
+  case: f => f; case: g => g.
+  rewrite /map_phi => F G x.
+  under eq_bigr => i _.
+   rewrite iter_split mulrDr.
+  over.
+  by rewrite big_split F G /= addr0.
+Defined.
+Local Lemma opp_prf (f : V) :
+  map_phi D (fun i => - sval f i) =1 fun _ => 0.
+Proof.
+  case: f => f.
+  rewrite /map_phi => F x.
+  under eq_bigr => i _.
+   rewrite iter_opp mulrN -mulrN1.
+  over.
+  by rewrite -big_distrl /= F mul0r.
+Defined.
+
+Local Definition add (f g : V) :=
+@exist _ (fun f => map_phi D f =1 fun _ => 0) _ (add_prf f g).
+Local Definition opp (f : V) :=
+@exist _ (fun f => map_phi D f =1 fun _ => 0) _ (opp_prf f).
+
+Lemma VA : associative add.
+  move=> x y z.
+  rewrite /add /add_prf.
+  rewrite /=.
+  constructor.
+  rewrite /add.
+End V.
+
+Check ringType.
+
+Definition
+nat -> 'F_2
+
+Check map_poly.
+Check horner_mx
+Check D.
+
 Section InversiveDecimation.
-Variable f : {linear QphiI phi_gt1 -> QphiI phi_gt1}.
-Variable b : {linear QphiI phi_gt1 ->
+Variable f : {linear 'rV['F_2]_(size phi).-1 -> 'rV_(size phi).-1}.
+Variable b : {linear 'rV_(size phi).-1 ->
               (primeChar_lmodType (erefl : 2 \in [char 'F_2]))}.
 Definition Phi S := \row_(j < (size phi).-1) (b \o iter j f) S.
-Variable Phi_inv : 'rV['F_2]_(size phi).-1 ->  QphiI phi_gt1.
+Variable Phi_inv : 'rV['F_2]_(size phi).-1 ->  'rV['F_2]_(size phi).-1.
 Hypothesis PhiK : cancel Phi_inv Phi.
 Hypothesis Phi_invK : cancel Phi Phi_inv.
 
@@ -1040,60 +1210,164 @@ Qed.
 Definition H (x : 'rV['F_2]_((size phi).-1).*2) :=
   \row_(j < (size phi).-1) x ord0 (Ordinal (double_ord_prf j)).
 
-Definition pairing (x : QphiI phi_gt1) (y : 'rV['F_2]_(size phi).-1) : 'F_2 :=
-  ((@QphiI_rV _ _) x *m y^T) ord0 ord0.
+Lemma doublephi_gt0 : ((size phi).-1.*2 > 0)%nat.
+Proof. by case: (size phi) phi_gt1 => []//[]. Qed.
 
-Lemma sum_f2_eq0 q (P : pred 'I_q) :
-\big[GRing.add_comoid [ringType of 'F_2]/0]_(i0 | P i0) 0 = 0.
-Proof.
-rewrite big_const; set T := #|_|.
-elim: T => // t IHt.
-by rewrite iterS IHt /= GRing.addr0.
-Qed.
+Definition D : 'M['F_2]__ :=
+  castmx (esym (prednK doublephi_gt0), esym (prednK doublephi_gt0))
+  (\matrix_(i, j) (1 *+ (i == j.+1 :> nat))).
 
-Lemma pairing_nondeg x : (forall y, pairing x y = 0) -> x = 0.
-Proof.
-  move=> H; apply/(can_inj (@QphiI_rV_K _ _)).
-  apply/rowP => j.
-  move: H; rewrite /pairing => /(_ (delta_mx ord0 j)).
-  rewrite mxE.
-  under eq_bigr => k _.
-   rewrite ![(delta_mx _ _)^T _ _]mxE ![delta_mx _ _ _ _]mxE.
-  over.
-  rewrite (bigD1 j) //= eqxx mulr1.
-  under eq_bigr => k /negPf K.
-   rewrite K mulr0.
-  over.
-  rewrite sum_f2_eq0 addr0 => ->.
-  by rewrite linear0 mxE.
-Qed.
+Definition V := { X : 'rV__ | X *m horner_mx D phi == 0 }.
 
-Lemma pairing_nondeg' y : (forall x, pairing x y = 0) -> y = 0.
+Definition extend0 (v :'rV['F_2]_((size phi).-1)) : 'rV['F_2]_((size phi).-1).*2 :=
+  castmx (erefl, (addnn _)) (row_mx 0 v).
+
+Local Notation D' :=
+  (castmx ((prednK doublephi_gt0), (prednK doublephi_gt0)) D).
+
+Lemma HDC (x : 'rV__) :
+  extend0 (H x) *m D' = extend0 (H (x *m D' *m D')).
 Proof.
-  move=> H; apply/rowP => j.
-  move: {H} (H (rVQphiI _ (delta_mx ord0 j))).
-  rewrite /pairing rVQphiIK 2!mxE.
-  under eq_bigr => k _.
-   rewrite ![delta_mx _ _ _ _]mxE.
-  over.
-  rewrite (bigD1 j) //= eqxx mul1r.
-  under eq_bigr => k /negPf K.
-   rewrite K mul0r.
-  over.
-  by rewrite mxE sum_f2_eq0 addr0 => ->.
-Qed.
+  apply/rowP => k.
+  rewrite !(mxE, castmxE, summxE) /=.
+  case: (splitP _) => j J.
+   under eq_bigr => i _.
+   rewrite !castmxE !mxE /=.
+   case ik: (i == k.+1 :> nat).
+    case: (splitP _) => m M.
+     rewrite mxE mul0r.
+     over.
+    rewrite /= in J.
+    rewrite /= (eqP ik) J in M.
+    have: (j.+1 <= (size phi).-1)%nat by [].
+    rewrite M leqNgt -[X in (X < _)%nat]addn0 ltn_add2l.
+    rewrite lt0n.
+     done.
+     rewrite
+
+   over.
+   rewrite
+   rewrite /= in J.
+
+Variable (x : QphiI phi_gt1).
+Check horner_mx D (generic_quotientrepr x).
+
+Definition pairing (x : QphiI phi_gt1) (y : 'rV['F_2]_(size phi).-1.*2) : 'F_2 :=
+  (poly_rV (generic_quotient.repr x) *m y^T) ord0 ord0.
+(* Check generic_quotient.repr _. *)
+
+(* Lemma sum_f2_eq0 q (P : pred 'I_q) : *)
+(* \big[GRing.add_comoid [ringType of 'F_2]/0]_(i0 | P i0) 0 = 0. *)
+(* Proof. *)
+(* rewrite big_const; set T := #|_|. *)
+(* elim: T => // t IHt. *)
+(* by rewrite iterS IHt /= GRing.addr0. *)
+(* Qed. *)
+
+(* Lemma pairing_nondeg x : (forall y, pairing x y = 0) -> x = 0. *)
+(* Proof. *)
+(*   move=> H; apply/(can_inj (@QphiI_rV_K _ _)). *)
+(*   apply/rowP => j. *)
+(*   move: H; rewrite /pairing => /(_ (delta_mx ord0 j)). *)
+(*   rewrite mxE. *)
+(*   under eq_bigr => k _. *)
+(*    rewrite ![(delta_mx _ _)^T _ _]mxE ![delta_mx _ _ _ _]mxE. *)
+(*   over. *)
+(*   rewrite (bigD1 j) //= eqxx mulr1. *)
+(*   under eq_bigr => k /negPf K. *)
+(*    rewrite K mulr0. *)
+(*   over. *)
+(*   rewrite sum_f2_eq0 addr0 => ->. *)
+(*   by rewrite linear0 mxE. *)
+(* Qed. *)
+
+(* Lemma pairing_nondeg' y : (forall x, pairing x y = 0) -> y = 0. *)
+(* Proof. *)
+(*   move=> H; apply/rowP => j. *)
+(*   move: {H} (H (rVQphiI _ (delta_mx ord0 j))). *)
+(*   rewrite /pairing rVQphiIK 2!mxE. *)
+(*   under eq_bigr => k _. *)
+(*    rewrite ![delta_mx _ _ _ _]mxE. *)
+(*   over. *)
+(*   rewrite (bigD1 j) //= eqxx mul1r. *)
+(*   under eq_bigr => k /negPf K. *)
+(*    rewrite K mul0r. *)
+(*   over. *)
+(*   by rewrite mxE sum_f2_eq0 addr0 => ->. *)
+(* Qed. *)
 
 Lemma adjFH x y :
-pairing ((F \o (@rVQphiI _ _) \o Phi) x) y
+pairing (F x) ((Phi \o (@rVQphiI _ _)) y)
 = pairing x ((H \o Phi_long \o (@rVQphiI _ _)) y).
 Proof.
-  rewrite /pairing !mxE; apply/eq_bigr => i _.
-  rewrite (coord_basis (QphiIX_full _) (memvf x)) linear_sum.
-  rewrite !linear_sum !mxE.
+pose rmorphX' :=
+  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+  rewrite (coord_basis (QphiIX_full _) (memvf x)) /pairing !linear_sum.
+  rewrite /pairing !mulmx_suml !summxE; apply/eq_bigr => k _.
+  have sp0: (0 < (size phi).-1)%nat by move: (size phi) phi_gt1 => [][].
+   rewrite (nth_map (Ordinal sp0)) ?size_enum_ord //
+            nth_enum_ord // /= /F Frobenius_autE.
+    rewrite !linearZ_LR /=.
+    Check reprK _.
+   Check (poly_rV (generic_quotient.repr x)).
+    Check exprZn (coord (QphiIX phi_gt1) k x) (\pi 'X^k) 2.
+    Search ((_ *: _) ^+ _).
+    rewrite rmorph
+    mxE rmorphX'.
+  rewrite /=.
+  rewrite /pairing !mxE.
+  under eq_bigr => i _.
+   rewrite !summxE.
+   under eq_bigr => k _.
+    rewrite !linearZ_LR /= (nth_map (Ordinal sp0)) ?size_enum_ord //
+            nth_enum_ord // /F Frobenius_autE mxE rmorphX'.
+   over.
+   rewrite mulrC.
+   under eq_bigr => k _.
+    rewrite !linearZ_LR /= !mxE.
+   over.
+  over.
+  apply/esym.
+  under eq_bigr => i _.
+   rewrite !summxE.
+   under eq_bigr => k _.
+    rewrite !linearZ_LR /= (nth_map (Ordinal sp0)) ?size_enum_ord //
+            nth_enum_ord // mxE rmorphX'.
+   over.
+   rewrite mulrC 2!mxE !linear_sum mxE.
+   under eq_bigr => k _.
+    rewrite !linearZ_LR.
+   over.
+   rewrite !linear_sum.
+   under eq_bigr => k _.
+    rewrite !linearZ_LR.
+   over.
+  over.
+rewrite /=.
+Check horner_mx.
+  under eq_bigr => i _.
+   rewrite !linear_sum.
+    rewrite !linearZ_LR.
+
+  apply/esym.
+   rewrite /Phi.
+   rewrite mxE.
+   under eq_bigr => k _.
+   rewrite /= (nth_map (Ordinal sp0)) ?size_enum_ord //
+           nth_enum_ord // !linearZ_LR.
+   over.
+   rewrite !mxE.
+  rewrite /=.
+  rewrite (row_sum_delta y).
   under eq_bigr => k _.
-   rewrite /=.
+   rewrite /= (nth_map (Ordinal sp0)) ?size_enum_ord // nth_enum_ord //
+           !linearZ_LR.
+  over.
+  rewrite /=.
+  rewrite /=.
+  rewrite linearD.
+   Check ltn_phi_pred.
    Check deprecate _ _.
-   rewrite /= (nth_map 0%R).
   rewrite mxE.
   apply/eq_bigr.
   rewrite /=.
