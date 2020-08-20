@@ -1008,8 +1008,11 @@ Definition H (f : nat -> 'F_2) := fun i => f i.*2.
 
 Definition D (f : nat -> 'F_2) := fun i => f i.+1.
 
+Definition map_poly_infinite (q : {poly 'F_2}) D (f: nat -> 'F_2) :=
+  fun i => \sum_(j < (size q)) q`_j * iter j D f i.
+
 Definition map_phi D (f: nat -> 'F_2) :=
-  fun i => \sum_(j < (size phi).-1) phi`_j * iter j D f i.
+  map_poly_infinite phi D f.
 
 Lemma iterDE r f : iter r D f =1 fun i => f (i + r)%nat.
 Proof.
@@ -1049,14 +1052,11 @@ Proof.
   by rewrite /= mul1n modn_small.
 Qed.
 
-Lemma phiD2C : map_phi (D \o D) =2 map_phi D \o map_phi D.
+Lemma iter_sum i (q : {poly 'F_2}) x y :
+iter i D (fun i0 : nat => \sum_(j < (size q)) q`_j * iter j D x i0) y =
+\sum_(j < (size q)) q`_j * iter i D (fun i0 : nat => iter j D x i0) y.
 Proof.
-  move=> x y; apply/esym; rewrite /map_phi /=.
-  under eq_bigr => i _.
-   have->: iter i D (fun i0 : nat => \sum_(j < (size phi).-1) phi`_j * iter j D x i0) y
-         = \sum_(j < (size phi).-1) phi`_j * iter i D (fun i0 : nat => iter j D x i0) y.
-    case: i => i /= _.
-    elim: (size phi).-1 i => [i |s IH i].
+    elim: (size q) i => [i |s IH i].
      rewrite big_ord0 /=.
      elim: i y => [*|i IH y]; first by rewrite /= big_ord0.
      rewrite iterS.
@@ -1067,15 +1067,24 @@ Proof.
      by rewrite /= big_ord_recr /=.
     move: (IH y.+1).
     by rewrite /D /=.
-   have->: phi`_i * (\sum_(j < (size phi).-1) phi`_j * iter i D [eta iter j D x] y)
-       = (\sum_(j < (size phi).-1) phi`_i * phi`_j * iter i D [eta iter j D x] y).
+Qed.
+
+Lemma phiD2C : map_phi (D \o D) =2 map_phi D \o map_phi D.
+Proof.
+  move=> x y; apply/esym; rewrite /map_phi /map_poly_infinite /=.
+  under eq_bigr => i _.
+   have->: iter i D (fun i0 : nat => \sum_(j < (size phi)) phi`_j * iter j D x i0) y
+         = \sum_(j < (size phi)) phi`_j * iter i D (fun i0 : nat => iter j D x i0) y.
+    by rewrite iter_sum.
+   have->: phi`_i * (\sum_(j < (size phi)) phi`_j * iter i D [eta iter j D x] y)
+       = (\sum_(j < (size phi)) phi`_i * phi`_j * iter i D [eta iter j D x] y).
     case: i => i /= _.
-    elim: (size phi).-1 i => [i |s IH i].
+    elim: (size phi) i => [i |s IH i].
      by rewrite !big_ord0 mulr0.
     rewrite big_ord_recr mulrDr {}IH.
     by rewrite [in RHS]big_ord_recr /= mulrA.
   over.
-  elim: (size phi).-1 => [|s IH].
+  elim: (size phi) => [|s IH].
    by rewrite !big_ord0.
   rewrite [in RHS]big_ord_recr -{}IH !big_ord_recr iter_comp /= addrA.
   congr (_ + _); last by rewrite mulrr.
@@ -1093,9 +1102,9 @@ Lemma phiDH0 f : map_phi D f =1 (fun _ => 0) -> map_phi D (H f) =1 fun _ => 0.
 Proof.
   move=> H0 x; rewrite phiDH.
   suff H1: (map_phi (D \o D) f) =1 fun _ => 0 by rewrite /H H1.
-  move=> y; rewrite phiD2C /=; move: H0; rewrite /map_phi => H.
+  move=> y; rewrite phiD2C /=; move: H0; rewrite /map_phi /map_poly_infinite => H.
   under eq_bigr => i _.
-   have->: iter i D (fun i0 : nat => \sum_(j < (size phi).-1) phi`_j * iter j D f i0) y = 0.
+   have->: iter i D (fun i0 : nat => \sum_(j < (size phi)) phi`_j * iter j D f i0) y = 0.
     case: i H => i /= _.
     elim: i y => [y H|i IH y H].
      by rewrite /= H.
@@ -1103,7 +1112,7 @@ Proof.
     by rewrite /D => ->.
    rewrite mulr0.
   over.
-  elim: (size phi).-1 => [|s IH].
+  elim: (size phi) => [|s IH].
    by rewrite big_ord0.
   by rewrite big_ord_recr IH /= addr0.
 Qed.
@@ -1129,50 +1138,123 @@ Proof.
   by rewrite !iterS.
 Qed.
 
-Section V.
+Check horner _ _.
+Set Printing All.
+Check _.[_].
+
+Section
+
 Definition V := { f | map_phi D f =1 fun _ => 0 }.
-Local Lemma add_prf (f g : V) :
-  map_phi D (fun i => sval f i + sval g i) =1 fun _ => 0.
-Proof.
-  case: f => f; case: g => g.
-  rewrite /map_phi => F G x.
-  under eq_bigr => i _.
-   rewrite iter_split mulrDr.
-  over.
-  by rewrite big_split F G /= addr0.
-Defined.
-Local Lemma opp_prf (f : V) :
-  map_phi D (fun i => - sval f i) =1 fun _ => 0.
-Proof.
-  case: f => f.
-  rewrite /map_phi => F x.
-  under eq_bigr => i _.
-   rewrite iter_opp mulrN -mulrN1.
-  over.
-  by rewrite -big_distrl /= F mul0r.
-Defined.
 
-Local Definition add (f g : V) :=
-@exist _ (fun f => map_phi D f =1 fun _ => 0) _ (add_prf f g).
-Local Definition opp (f : V) :=
-@exist _ (fun f => map_phi D f =1 fun _ => 0) _ (opp_prf f).
+Definition pairing (x : QphiI phi_gt1) (y : V) :=
+  map_poly_infinite (generic_quotient.repr x) D (sval y) 0.
 
-Lemma VA : associative add.
-  move=> x y z.
-  rewrite /add /add_prf.
+
+Lemma map_poly_infiniteM x y z :
+map_poly_infinite (x * y) D z =1
+map_poly_infinite x D (map_poly_infinite y D z).
+Proof.
+  move=> w; rewrite /map_poly_infinite.
+  under eq_bigr => i _.
+   rewrite coefMr big_distrl.
+  over.
+  apply/esym => /=.
+  under eq_bigr => i _.
+   rewrite iter_sum big_distrr /=.
+   under eq_bigr => j _.
+    rewrite -iter_add mulrA.
+   over.
+  over.
+  case x0: (size x == 0)%nat.
+   rewrite (eqP x0) big_ord0.
+   rewrite size_poly_eq0 in x0.
+   rewrite (eqP x0) /= mul0r.
+   set T := size _; have->: (T = 0)%nat.
+    apply/eqP.
+    by rewrite size_poly_eq0.
+   by rewrite big_ord0.
+  case y0: (size y == 0)%nat.
+   rewrite exchange_big (eqP y0) big_ord0.
+   rewrite size_poly_eq0 in y0.
+   rewrite (eqP y0) mulr0.
+   set T := size _; have->: (T = 0)%nat.
+    apply/eqP.
+    by rewrite size_poly_eq0.
+   by rewrite big_ord0.
+  rewrite !size_poly_eq0 in x0, y0.
+  move/negP/negP: x0 => x0; move/negP/negP: y0 => y0.
+  rewrite size_mul //.
+  rewrite -!size_poly_eq0 in x0, y0.
+   Admitted.
+
+Definition pairing_wd x y :
+  pairing (\pi x) y = map_poly_infinite x D (sval y) 0.
+Proof.
+  rewrite /pairing.
+  case: piP => z xz; case: y => y Y.
+  rewrite /= /map_poly_infinite.
+  move/esym/eqP: xz => xz.
+  rewrite -Quotient.idealrBE unfold_in in xz.
+  have->: \sum_(j < size z) z`_j * iter j D y 0%nat
+        = \sum_(j < maxn (size phi) (size z)) z`_j * iter j D y 0%nat.
+    rewrite maxnC maxnE big_split_ord -[LHS]addr0; congr (_ + _).
+    under eq_bigr => k _.
+     rewrite nth_default ?leq_addr // mul0r.
+    over.
+    elim: (size phi - size z)%nat => [/=|n].
+     by rewrite big_ord0.
+    rewrite big_ord_recr => /= <-.
+    by rewrite addr0.
+  have->: \sum_(j < size x) x`_j * iter j D y 0%nat
+        = \sum_(j < maxn (size x) (size phi)) x`_j * iter j D y 0%nat.
+    rewrite maxnE big_split_ord -[LHS]addr0; congr (_ + _).
+    under eq_bigr => k _.
+     rewrite nth_default ?leq_addr // mul0r.
+    over.
+    elim: (size phi - size x)%nat => [/=|n].
+     by rewrite big_ord0.
+    rewrite big_ord_recr => /= <-.
+    by rewrite addr0.
+  apply subr0_eq.
+  Admitted.
+
+Lemma pairing_nondeg x : (forall y, pairing x y = 0) -> x = 0.
+Proof.
+  move=> H.
+  rewrite /pairing in H.
+  apply/eqP.
+  rewrite eqE.
   rewrite /=.
-  constructor.
-  rewrite /add.
-End V.
+  apply/eqP.
+  ; apply/(can_inj (@QphiI_rV_K _ _)).
+  apply/rowP => j.
+  move: H; rewrite /pairing => /(_ (delta_mx ord0 j)).
+  rewrite mxE.
+  under eq_bigr => k _.
+   rewrite ![(delta_mx _ _)^T _ _]mxE ![delta_mx _ _ _ _]mxE.
+  over.
+  rewrite (bigD1 j) //= eqxx mulr1.
+  under eq_bigr => k /negPf K.
+   rewrite K mulr0.
+  over.
+  rewrite sum_f2_eq0 addr0 => ->.
+  by rewrite linear0 mxE.
+Qed.
 
-Check ringType.
-
-Definition
-nat -> 'F_2
-
-Check map_poly.
-Check horner_mx
-Check D.
+(* Lemma pairing_nondeg' y : (forall x, pairing x y = 0) -> y = 0. *)
+(* Proof. *)
+(*   move=> H; apply/rowP => j. *)
+(*   move: {H} (H (rVQphiI _ (delta_mx ord0 j))). *)
+(*   rewrite /pairing rVQphiIK 2!mxE. *)
+(*   under eq_bigr => k _. *)
+(*    rewrite ![delta_mx _ _ _ _]mxE. *)
+(*   over. *)
+(*   rewrite (bigD1 j) //= eqxx mul1r. *)
+(*   under eq_bigr => k /negPf K. *)
+(*    rewrite K mul0r. *)
+(*   over. *)
+(*   by rewrite mxE sum_f2_eq0 addr0 => ->. *)
+(* Qed. *)
 
 Section InversiveDecimation.
 Variable f : {linear 'rV['F_2]_(size phi).-1 -> 'rV_(size phi).-1}.
