@@ -1315,32 +1315,75 @@ Lemma adjFHX y :
   pairing (F (\pi 'X)) y
 = pairing (\pi 'X) (exist _ (H (sval y)) (H_wd y)).
 Proof.
-  rewrite pairing_wd.
+pose rmorphX :=
+    (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+  by rewrite /F Frobenius_autE -rmorphX !pairing_wd /H /= /map_poly_infinite
+             size_polyXn size_polyX !big_ord_recr !coefXn
+             !big_ord0 !coefX !mul0r /= !add0r.
+Qed.
+
+Lemma sum_f2_eq0 q (P : pred 'I_q) :
+\big[GRing.add_comoid [ringType of 'F_2]/0]_(i0 | P i0) 0 = 0.
+Proof.
+rewrite big_const; set T := #|_|.
+elim: T => // t IHt.
+by rewrite iterS IHt /= GRing.addr0.
+Qed.
+
+Lemma adjFHXn y n :
+  pairing (F (\pi 'X^n)) y
+= pairing (\pi 'X^n) (exist _ (H (sval y)) (H_wd y)).
+Proof.
+pose rmorphX' :=
+    (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+  rewrite /F Frobenius_autE -!rmorphX' !pairing_wd /H /= /map_poly_infinite
+             !size_polyXn.
+  rewrite -!exprM muln2 size_polyXn.
+  have nn : (n.*2 < n.*2.+1)%nat by [].
+  rewrite (bigD1 (Ordinal nn)) //= coefXn eqxx.
+  under eq_bigr => k /negPf K.
+   rewrite eqE /= in K.
+   rewrite coefXn K mul0r.
+  over.
+  rewrite sum_f2_eq0 mul1r addr0 {nn}.
+  have nn : (n < n.+1)%nat by [].
+  rewrite (bigD1 (Ordinal nn)) //= coefXn eqxx.
+  under eq_bigr => k /negPf K.
+   rewrite eqE /= in K.
+   rewrite coefXn K mul0r.
+  over.
+  by rewrite sum_f2_eq0 mul1r addr0 {nn} !iterDE !add0n.
+Qed.
 
 Lemma adjFH x y :
   pairing (F x) y
 = pairing x (exist _ (H (sval y)) (H_wd y)).
 Proof.
-  rewrite (coord_basis (QphiIX_full _) (memvf x)).
-  rewrite !linear_sum.
-
-  rewrite /pairing.
-  rewrite /pairing !mulmx_suml !summxE; apply/eq_bigr => k _.
-  rewrite
-
-
-
+  rewrite (coord_basis (QphiIX_full _) (memvf x)) !linear_sum.
+  Admitted.
 
 Lemma irreducibleP3 x :
-  ~ H x =1 x ->
-  irreducible_poly phi <-> iter (size phi).-1 H x =1 x.
+  map_phi D x =1 (fun _ => 0) -> ~ H x =1 x ->
+  iter (size phi).-1 H x =1 x -> irreducible_poly phi.
 Proof.
-move=> Hxx.
+move=> Dx Hxx H0.
+apply/irreducibleP1.
+rewrite -[[exists _, _]]negbK negb_exists.
+apply/negP => /forallP H1.
+rewrite negb_and in H1.
+/negP => H1.
+rewrite in H1.
+rewrite
+rewrite /=.
+split.
+ move/irreducibleP2 => H0.
 apply/(iffP idP) => [iHxx|].
 * apply/irreducibleP1/existsP.
   by exists x; rewrite Hxx iHxx.
 * by case/irreducibleP/andP => ? /expandF/(_ x) ->.
 Qed.
+
+
 
 
 Section InversiveDecimation.
