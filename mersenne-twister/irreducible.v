@@ -1004,6 +1004,69 @@ apply/(iffP idP) => [iHxx|].
 * by case/irreducibleP/andP => ? /expandF/(_ x) ->.
 Qed.
 
+(* Section Infinite. *)
+(* Local Definition add (f g : nat -> 'F_2) := *)
+(*   fun i => f i + g i. *)
+(* Local Definition opp (f : nat -> 'F_2) := *)
+(*   fun i => - f i. *)
+
+(* Lemma NF2AA : associative add. *)
+(* Proof. *)
+(*   move=> x y z. *)
+(*   apply/Coq.Logic.FunctionalExtensionality.functional_extensionality => i. *)
+(*   by rewrite /add addrA. *)
+(* Qed. *)
+
+(* Lemma NF2AC : commutative add. *)
+(* Proof. *)
+(*   move=> x y. *)
+(*   apply/Coq.Logic.FunctionalExtensionality.functional_extensionality => i. *)
+(*   by rewrite /add addrC. *)
+(* Qed. *)
+
+(* Lemma NF20A : left_id (fun _ => 0) add. *)
+(* Proof. *)
+(*   move=> x. *)
+(*   apply/Coq.Logic.FunctionalExtensionality.functional_extensionality => i. *)
+(*   by rewrite /add add0r. *)
+(* Qed. *)
+
+(* Lemma NF2A0N : left_inverse (fun=> 0) opp add. *)
+(* Proof. *)
+(*   move=> x. *)
+(*   apply/Coq.Logic.FunctionalExtensionality.functional_extensionality => i. *)
+(*   by rewrite /add /opp addNr. *)
+(* Qed. *)
+
+(* Definition NF2_zmodMixin := ZmodMixin NF2AA NF2AC NF20A NF2A0N. *)
+
+(* Check GRing.Zmodule.pack NF2_zmodMixin. *)
+(* Check ZmodType (nat -> 'F_2) NF2_zmodMixin. *)
+
+(* Fact NF2_choiceMixin : choiceMixin (nat -> 'F_2). *)
+(* Admitted. *)
+
+(* Canonical NF2_choiceType := Eval hnf in ChoiceType (nat -> 'F_2) NF2_choiceMixin. *)
+(* Canonical *)
+(*  Print seq_choiceMixin . *)
+(* Eval unfold seq_choiceMixin in (seq_choiceMixin nat_choiceType). *)
+(*       seq_choiceMixin. *)
+(* Compute (Choice.find (seq_choiceMixin nat_choiceType)). *)
+(* Proof. *)
+(*   exists _. *)
+(* Check choose . *)
+(*   constructor. *)
+(*   apply exist. *)
+(*   move=> x. *)
+(* Check (Choice.class_of (nat -> 'F_2)). *)
+(* Check zmodType. *)
+(*   Definition zmodType *)
+
+(* End Infinite. *)
+
+(*   Check ringType *)
+(* End Infinite. *)
+
 Definition H (f : nat -> 'F_2) := fun i => f i.*2.
 
 Definition D (f : nat -> 'F_2) := fun i => f i.+1.
@@ -1138,17 +1201,10 @@ Proof.
   by rewrite !iterS.
 Qed.
 
-Check horner _ _.
-Set Printing All.
-Check _.[_].
-
-Section
-
 Definition V := { f | map_phi D f =1 fun _ => 0 }.
 
 Definition pairing (x : QphiI phi_gt1) (y : V) :=
   map_poly_infinite (generic_quotient.repr x) D (sval y) 0.
-
 
 Lemma map_poly_infiniteM x y z :
 map_poly_infinite (x * y) D z =1
@@ -1196,65 +1252,96 @@ Proof.
   move/esym/eqP: xz => xz.
   rewrite -Quotient.idealrBE unfold_in in xz.
   have->: \sum_(j < size z) z`_j * iter j D y 0%nat
-        = \sum_(j < maxn (size phi) (size z)) z`_j * iter j D y 0%nat.
+        = \sum_(j < maxn (size x) (size z)) z`_j * iter j D y 0%nat.
     rewrite maxnC maxnE big_split_ord -[LHS]addr0; congr (_ + _).
     under eq_bigr => k _.
      rewrite nth_default ?leq_addr // mul0r.
     over.
-    elim: (size phi - size z)%nat => [/=|n].
+    elim: (size x - size z)%nat => [/=|n].
      by rewrite big_ord0.
     rewrite big_ord_recr => /= <-.
     by rewrite addr0.
   have->: \sum_(j < size x) x`_j * iter j D y 0%nat
-        = \sum_(j < maxn (size x) (size phi)) x`_j * iter j D y 0%nat.
+        = \sum_(j < maxn (size x) (size z)) x`_j * iter j D y 0%nat.
     rewrite maxnE big_split_ord -[LHS]addr0; congr (_ + _).
     under eq_bigr => k _.
      rewrite nth_default ?leq_addr // mul0r.
     over.
-    elim: (size phi - size x)%nat => [/=|n].
+    elim: (size z - size x)%nat => [/=|n].
      by rewrite big_ord0.
     rewrite big_ord_recr => /= <-.
     by rewrite addr0.
   apply subr0_eq.
+  rewrite -mulrN1 big_distrl -big_split.
+  under eq_bigr => i _.
+   rewrite /= mulrN1 -mulrBl -coefB
+           (rdivp_eq (phi_is_monic phi_gt1) (z - x)) (eqP xz) addr0
+           -Pdiv.IdomainMonic.divpE //.
+  over.
+  case zxp0: ((z - x) %/ phi == 0).
+   under eq_bigr => i _.
+    rewrite (eqP zxp0) mul0r coef0 mul0r.
+   over.
+   elim: (maxn (size x) (size z)) => [|n IH].
+    by rewrite big_ord0.
+   by rewrite big_ord_recr IH /= addr0.
+  move/negP/negP: zxp0 => zxp0.
+  rewrite /=.
+  move: (map_poly_infiniteM ((z - x) %/ phi) phi y 0%nat).
+  rewrite /map_poly_infinite size_mul // size_divp //.
   Admitted.
 
-Lemma pairing_nondeg x : (forall y, pairing x y = 0) -> x = 0.
+Lemma pairing_nondeg y : (forall x, pairing x y = 0) -> sval y =1 (fun _ =>  0).
 Proof.
-  move=> H.
-  rewrite /pairing in H.
-  apply/eqP.
-  rewrite eqE.
-  rewrite /=.
-  apply/eqP.
-  ; apply/(can_inj (@QphiI_rV_K _ _)).
-  apply/rowP => j.
-  move: H; rewrite /pairing => /(_ (delta_mx ord0 j)).
-  rewrite mxE.
-  under eq_bigr => k _.
-   rewrite ![(delta_mx _ _)^T _ _]mxE ![delta_mx _ _ _ _]mxE.
+  move=> H x.
+  move: (H (\pi 'X^x)).
+  rewrite pairing_wd /map_poly_infinite size_polyXn.
+  have xx: (x < x.+1)%nat by [].
+  rewrite (bigD1 (Ordinal xx)) //= iterDE add0n coefXn eqxx mul1r.
+  under eq_bigr => k /negPf /= K.
+   rewrite eqE /= in K.
+   rewrite coefXn K mul0r.
   over.
-  rewrite (bigD1 j) //= eqxx mulr1.
-  under eq_bigr => k /negPf K.
-   rewrite K mulr0.
-  over.
-  rewrite sum_f2_eq0 addr0 => ->.
-  by rewrite linear0 mxE.
+  Admitted.
+
+Lemma H_wd (y : V) : map_phi D (H (sval y)) =1 fun _ => 0.
+Proof.
+  move=> x.
+  apply phiDH0.
+  by case: y.
 Qed.
 
-(* Lemma pairing_nondeg' y : (forall x, pairing x y = 0) -> y = 0. *)
-(* Proof. *)
-(*   move=> H; apply/rowP => j. *)
-(*   move: {H} (H (rVQphiI _ (delta_mx ord0 j))). *)
-(*   rewrite /pairing rVQphiIK 2!mxE. *)
-(*   under eq_bigr => k _. *)
-(*    rewrite ![delta_mx _ _ _ _]mxE. *)
-(*   over. *)
-(*   rewrite (bigD1 j) //= eqxx mul1r. *)
-(*   under eq_bigr => k /negPf K. *)
-(*    rewrite K mul0r. *)
-(*   over. *)
-(*   by rewrite mxE sum_f2_eq0 addr0 => ->. *)
-(* Qed. *)
+Lemma adjFHX y :
+  pairing (F (\pi 'X)) y
+= pairing (\pi 'X) (exist _ (H (sval y)) (H_wd y)).
+Proof.
+  rewrite pairing_wd.
+
+Lemma adjFH x y :
+  pairing (F x) y
+= pairing x (exist _ (H (sval y)) (H_wd y)).
+Proof.
+  rewrite (coord_basis (QphiIX_full _) (memvf x)).
+  rewrite !linear_sum.
+
+  rewrite /pairing.
+  rewrite /pairing !mulmx_suml !summxE; apply/eq_bigr => k _.
+  rewrite
+
+
+
+
+Lemma irreducibleP3 x :
+  ~ H x =1 x ->
+  irreducible_poly phi <-> iter (size phi).-1 H x =1 x.
+Proof.
+move=> Hxx.
+apply/(iffP idP) => [iHxx|].
+* apply/irreducibleP1/existsP.
+  by exists x; rewrite Hxx iHxx.
+* by case/irreducibleP/andP => ? /expandF/(_ x) ->.
+Qed.
+
 
 Section InversiveDecimation.
 Variable f : {linear 'rV['F_2]_(size phi).-1 -> 'rV_(size phi).-1}.
