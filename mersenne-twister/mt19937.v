@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect all_algebra.
 Require Import codegen.codegen primitivity nat_word BinNat.
-Require mt cycle.
+Require mt cycle irreducible.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -54,9 +54,16 @@ Definition tempering xi :=
 Lemma temperingE : tempering =1 mt.tempering u s t l b c.
 Proof. by []. Qed.
 
+Definition phi :=
+  @cycle.phi w len (len - m) r (word_of_N w a) erefl erefl erefl erefl erefl.
+
+Lemma phi_is_irred : irreducible_poly phi.
+Proof.
+  Admitted.
+
 Definition cycle_next_random_state :=
   @cycle.cycle_next_random_state w len (len - m) r (word_of_N w a) pm
-                                 erefl erefl erefl erefl erefl.
+                                 erefl erefl erefl erefl erefl phi_is_irred.
 End gluing.
 
 CodeGen Snippet "#include <stdbool.h> /* for bool, true and false */".
