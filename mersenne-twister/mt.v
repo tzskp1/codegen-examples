@@ -12,6 +12,12 @@ Section Implementation.
 Variables len m r a w : N.
 Variables u s t l b c : N.
 Hypothesis rw : (r <= w)%nat.
+Hypothesis len1 : 1 < len.
+Lemma len0 : len <> 0.
+Proof. by case: len len1. Qed.
+Hypothesis m0 : m mod len <> 0.
+
+Hint Resolve len0 : core.
 
 Definition upper_mask := (N_of_word (make_upper_mask rw)).
 Definition lower_mask := (N_of_word (make_lower_mask rw)).
@@ -46,4 +52,68 @@ Definition next_random_state (rand : random_state) : (N * random_state) :=
         state_vector := set_nth 0 state_vec ind xi;
       |} in
   (xi, next_rand).
+
+Definition fil0 (y : random_state) :=
+  let z := N.land (nth 0%N (state_vector y) (index y)) upper_mask in
+  {|
+    index := index y;
+    state_vector := set_nth 0%N (state_vector y) (index y) z;
+  |}.
+
+Lemma random_state_eqP :
+  Equality.axiom
+  (fun a b => (state_vector a == state_vector b) && (index a == index b)).
+Proof.
+  case=> [] cx x [] cy y.
+  apply/(iffP idP) => [/andP [] /= /eqP -> /eqP -> //|-> /=].
+  by rewrite !eqxx.
+Qed.
+
+Canonical random_state_eqMixin := EqMixin random_state_eqP.
+Canonical random_state_eqType :=
+   Eval hnf in EqType random_state random_state_eqMixin.
+
+Lemma landnn x : N.land x x = x.
+Proof.
+  case: x => //.
+  by elim => //= x ->.
+Qed.
+
+Lemma lem2 i j n : n <> 0 -> j mod n <> 0 -> (i + j) mod n == i = false.
+Proof.
+  move=> n0 jn0.
+  apply/negP => /eqP /(f_equal (fun x => x mod n)%N).
+  rewrite N.mod_mod // N.add_mod // -[(i mod n)]N.mod_mod //.
+  set I := i mod n.
+  move/(f_equal (fun x => (x mod n + (n - I) mod n mod n) mod n)%N).
+  rewrite N.mod_mod // -!N.add_mod // N.add_sub_assoc; last
+   by apply/N.lt_le_incl/N.mod_lt.
+  rewrite [in RHS]N.add_comm N.add_sub N.mod_same //.
+  rewrite N.add_comm N.add_assoc.
+  rewrite N.add_mod // -[((n - I) mod n + I mod n) mod n]N.add_mod //.
+  rewrite N.sub_add; last by apply/N.lt_le_incl/N.mod_lt.
+  by rewrite N.mod_same // N.add_0_l !N.mod_mod //.
+Qed.
+
+Lemma next_random_state_fil0 x :
+  next_random_state x = next_random_state (fil0 x).
+Proof.
+  case: x => // i x.
+  rewrite /fil0 /= /next_random_state !nth_set_nth /= set_set_nth eqxx.
+  set T := _ == _.
+  have->: T = false.
+   apply/negP => /eqP /(f_equal bin_of_nat).
+   rewrite !nat_of_binK.
+   apply/eqP/negP.
+   by rewrite lem2.
+  subst T; set T := _ == _.
+  have ->: T = false.
+   apply/negP => /eqP /(f_equal bin_of_nat).
+   rewrite !nat_of_binK -N.add_1_r.
+   apply/eqP/negP.
+   by rewrite lem2 // N.mod_1_l.
+  suff->: (N.land (N.land (nth 0 x i) upper_mask) upper_mask) =
+          (N.land (nth 0 x i) upper_mask) by [].
+  by rewrite -N.land_assoc landnn.
+Qed.
 End Implementation.

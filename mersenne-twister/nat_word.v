@@ -64,6 +64,30 @@ Proof.
   by rewrite -addn1 -bin_of_add_nat IH N.add_1_r.
 Qed.
 
+Lemma bin_succ y :
+(nat_of_bin y).+1 = nat_of_bin (N.succ y).
+Proof.
+case: y => //.
+elim => //= ? <-.
+by rewrite !natTrecE -[in RHS]addn1 -[in RHS]muln2 mulnDl mul1n muln2 addn2.
+Qed.
+
+Lemma nat_of_sub_bin x y : (nat_of_bin x - nat_of_bin y)%nat = nat_of_bin (x - y).
+Proof.
+  rewrite -[y]nat_of_binK -[x]nat_of_binK.
+  set X := (nat_of_bin x).
+  elim: (nat_of_bin y) X.
+   move=> {x} x.
+   by rewrite /= N.sub_0_r subn0.
+  move=> {x y} y IHy []// x.
+  by rewrite !succ_nat !N.sub_succ -!bin_succ subSS IHy.
+Qed.
+
+Lemma bin_of_sub_nat x y : (bin_of_nat x - bin_of_nat y) = bin_of_nat (x - y)%nat.
+Proof.
+  by rewrite -[y]bin_of_natK -[x]bin_of_natK nat_of_sub_bin !nat_of_binK.
+Qed.
+
 Lemma Num_succ i : [Num of i] + 1 = [Num of i.+1].
 Proof. by rewrite N.add_1_r succ_nat. Qed.
 
@@ -201,14 +225,6 @@ Qed.
 Lemma N_of_word_zero : N_of_word zero = 0.
 Proof. by rewrite /N_of_word /zero /= lem. Qed.
 
-Lemma word_of_N_iter1 (w' : nat) : (w' > 0)%nat ->
-  word_of_N_iter w' 1 = 1%R :: map (fun _ => 0%R) (iota 0 w'.-1).
- Proof. by case: w'. Qed.
-
-Lemma word_of_N_iterwO p:
-   word_of_N_iter w p~0 = 0%R :: word_of_N_iter w.-1 p.
-Proof. by case: w w0. Qed.
-
 Lemma posxO p : N.pos (xO p) = 2 * N.pos p.
 Proof. by elim: p. Qed.
 
@@ -267,14 +283,6 @@ Proof.
     by rewrite /= natTrecE -!addnn leq_addr.
 Qed.
 
-Lemma bin_succ y :
-(nat_of_bin y).+1 = nat_of_bin (N.succ y).
-Proof.
-case: y => //.
-elim => //= ? <-.
-by rewrite !natTrecE -[in RHS]addn1 -[in RHS]muln2 mulnDl mul1n muln2 addn2.
-Qed.
-
 Lemma bound_N_of_word x :
 (N_of_word x <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat.
 Proof.
@@ -297,5 +305,166 @@ Proof.
   rewrite N.add_1_r -bin_succ ltnS nat_of_mul_bin.
   apply/leq_mul => //.
   by apply(IH (Tuple i)).
+Qed.
+
+Definition lxor' (x y : w.-tuple 'F_2) :=
+  map (fun '(x, y) => x + y)%R (zip x y).
+
+Lemma lxor_prf x y : size (lxor' x y) == w.
+Proof.
+  case: x y => x X [] y /= Y.
+  by rewrite size_map size_zip /= (eqP X) (eqP Y) minnn.
+Qed.
+
+Definition lxor (x y : w.-tuple 'F_2) :=
+  Tuple (lxor_prf x y).
+
+Lemma neq1 y :
+  (y == 1%R :> 'F_2) = false -> y = 0%R.
+Proof.
+  case: y => [][|[]//] y ?.
+  by apply/val_inj.
+Qed.
+
+Lemma lxorE x y :
+N.lxor (N_of_word x) (N_of_word y) = N_of_word (lxor x y).
+Proof.
+  case: x y => x X [] y Y.
+  rewrite /N_of_word /lxor /= /lxor' /=.
+  elim: w w0 x y X Y => // w' IH _ []// x0 x []// y0 y.
+  rewrite !eqSS.
+  case w'0: (w' > 0)%nat; last first.
+   rewrite lt0n in w'0.
+   move/negP/negP/eqP: w'0 ->.
+   case: x y => []//[]// _ _.
+   rewrite /=.
+   case: ifP => [/eqP H1|]; case: ifP => [/eqP H2|].
+   + by rewrite /= H1 H2 /=.
+   + rewrite H1 /=.
+     by case: y0 => [][]//[]//=.
+   + rewrite /= H2.
+     by case: x0 => [][]//[]//=.
+   + case: x0 => [][|[]//]//.
+     by case: y0 => [][|[]//]//.
+ move=> H1 H2.
+ rewrite /= -(IH w'0 _ _ H1 H2).
+ case: ifP => X; case: ifP => Y.
+ + do! case: (foldr _ _ _) => //=.
+   - by rewrite (eqP X) (eqP Y).
+   - move=> p.
+     by rewrite (eqP X) (eqP Y).
+   - move=> p.
+     by rewrite (eqP X) (eqP Y).
+   - move=> p p0.
+     by rewrite (eqP X) (eqP Y) /= N.add_0_r.
+ + do! case: (foldr _ _ _) => //=.
+   - by rewrite (eqP X) (neq1 Y).
+   - move=> p.
+     by rewrite (eqP X) (neq1 Y).
+   - move=> p.
+     by rewrite (eqP X) (neq1 Y).
+   - move=> p p0.
+     rewrite (eqP X) (neq1 Y) /= N.add_1_r.
+     by case: (Pos.lxor p0 p).
+ + do! case: (foldr _ _ _) => //=.
+   - by rewrite (neq1 X) (eqP Y).
+   - move=> p.
+     by rewrite (neq1 X) (eqP Y).
+   - move=> p.
+     by rewrite (neq1 X) (eqP Y).
+   - move=> p p0.
+     rewrite (neq1 X) (eqP Y) /= N.add_1_r.
+     by case: (Pos.lxor p0 p).
+ + do! case: (foldr _ _ _) => //=.
+   - by rewrite (neq1 X) (neq1 Y).
+   - move=> p.
+     by rewrite (neq1 X) (neq1 Y).
+   - move=> p.
+     by rewrite (neq1 X) (neq1 Y).
+   - move=> p p0.
+     rewrite (neq1 X) (neq1 Y) /=.
+     by case: (Pos.lxor p0 p).
+Qed.
+
+Lemma bound_lxor (x y : N) :
+(x <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+(y <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+(N.lxor x y <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat.
+Proof.
+  move=> H1 H2.
+  rewrite -[x]word_of_NK // -[y]word_of_NK //.
+  by rewrite lxorE bound_N_of_word.
+Qed.
+
+Lemma bound_land (x y : N) :
+(x <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+(N.land x y <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat.
+Proof.
+  move=> H; apply/leq_trans/H.
+  case: x {H} => // x.
+  elim: x y => [x IH []// y|x IH []// y|y].
+  + case: y => //[y|y].
+    - move: (IH (Npos y)) => /=.
+      case: (Pos.land x y) => // p.
+      rewrite /= !natTrecE ltnS -!muln2 => H.
+      by apply/leq_mul.
+    - move: (IH (Npos y)) => /=.
+      case: (Pos.land x y) => // p.
+      rewrite /= !natTrecE -!muln2 => H.
+      by apply/leqW/leq_mul.
+  + case: y => //[y|y].
+    - move: (IH (Npos y)) => /=.
+      case: (Pos.land x y) => // p.
+      rewrite /= !natTrecE -!muln2 => H.
+      by apply/leq_mul.
+    - move: (IH (Npos y)) => /=.
+      case: (Pos.land x y) => // p.
+      rewrite /= !natTrecE -!muln2 => H.
+      by apply/leq_mul.
+  + by case: y => []//[].
+Qed.
+
+Definition lor' (x y : w.-tuple 'F_2) :=
+  map (fun '(x, y) => if (x == 1) || (y == 1) then 1 : 'F_2 else 0)%R (zip x y).
+
+Lemma lor_prf x y : size (lor' x y) == w.
+Proof.
+  case: x y => x X [] y /= Y.
+  by rewrite size_map size_zip /= (eqP X) (eqP Y) minnn.
+Qed.
+
+Definition lor (x y : w.-tuple 'F_2) :=
+  Tuple (lor_prf x y).
+
+Lemma lorE x y :
+N.lor (N_of_word x) (N_of_word y) = N_of_word (lor x y).
+Proof.
+  case: x y => x X [] y Y.
+  rewrite /N_of_word /lor /= /lor' /=.
+  elim: w w0 x y X Y => // w' IH _ []// x0 x []// y0 y.
+  rewrite !eqSS.
+  case w'0: (w' > 0)%nat; last first.
+   rewrite lt0n in w'0.
+   move/negP/negP/eqP: w'0 ->.
+   case: x y => []//[]// _ _.
+   rewrite /=.
+   by case: ifP => [/eqP H1|]; case: ifP => [/eqP H2|].
+ move=> H1 H2.
+ rewrite /= -(IH w'0 _ _ H1 H2).
+ case: ifP => X; case: ifP => Y.
+ + do! case: (foldr _ _ _) => //=.
+ + do! case: (foldr _ _ _) => //=.
+ + do! case: (foldr _ _ _) => //=.
+ + do! case: (foldr _ _ _) => //=.
+Qed.
+
+Lemma bound_lor (x y : N) :
+(x <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+(y <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat ->
+(N.lor x y <= N_of_word (Tuple (@introTF _ _ true eqP (size_rep (1%R: 'F_2) w))))%nat.
+Proof.
+  move=> H1 H2.
+  rewrite -[x]word_of_NK // -[y]word_of_NK //.
+  by rewrite lorE bound_N_of_word.
 Qed.
 End nat_word.

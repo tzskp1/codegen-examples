@@ -13,7 +13,7 @@ Definition r : nat := 31.
 
 Definition p : nat := w * n - r.
 
-Definition len : nat := 2*p.
+Definition len : nat := 2 * p.
 
 Definition upper_mask := 2147483648.
 Definition lower_mask := upper_mask - 1.
