@@ -919,7 +919,7 @@ Canonical valid_random_state_eqType :=
 Record vector_with_counter :=
   {
     vector :> 'rV['F_2]_p;
-    counter : nat;
+    counter : nat; (* number of multiplications by B *)
     _ : (counter < n)%nat;
   }.
 
