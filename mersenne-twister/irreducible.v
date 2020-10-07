@@ -960,54 +960,562 @@ case/andP; rewrite !XnE -!exprnP !rmorphX.
 by apply irreducibleP_direct.
 Qed.
 
-Definition H := (@QphiI_rV _ _) \o F \o (@rVQphiI _ _).
-
-Lemma iterHE s :
-   iter s H =1 (@QphiI_rV _ _) \o iter s F \o (@rVQphiI _ _).
-Proof.
-  elim: s => [?|s IH x].
-   by rewrite /= rVQphiIK.
-  by rewrite iterS IH /H /= QphiI_rV_K.
-Qed.
-
 Lemma irreducibleP1 :
   reflect (irreducible_poly phi)
-  [exists x, (H x != x) && (iter (size phi).-1 H x == x)%R].
+  [exists x, (F x != x) && (iter (size phi).-1 F x == x)%R].
 Proof.
 pose rmorphX :=
   (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
 apply/(iffP idP).
-* case/existsP => x /andP [].
-  rewrite iterHE /H /= => H1' H2'.
-  have H1: (F (rVQphiI phi_gt1 x)) != rVQphiI phi_gt1 x.
-   move: H1'; apply/contra => /eqP ->.
-   by rewrite rVQphiIK.
-  have H2: (iter (size phi).-1 F (rVQphiI phi_gt1 x))
-           == (rVQphiI phi_gt1 x)
-   by apply/eqP/canRL/(eqP H2')/QphiI_rV_K.
-  rewrite expXpE in H2.
-  rewrite /F Frobenius_autE in H1.
-  by apply (irreducibleP_direct H1 H2).
+* case/existsP => x /andP [] H1 H2.
+  apply (irreducibleP_direct H1).
+  by rewrite expXpE in H2.
 * case/irreducibleP/andP.
-  rewrite !XnE => H1 H2; apply/existsP; exists (QphiI_rV (\pi_(QphiI phi_gt1) 'X)).
+  rewrite !XnE => H1 H2; apply/existsP; exists (\pi_(QphiI phi_gt1) 'X).
   apply/andP; split.
-   rewrite /H /= QphiI_rV_K /F Frobenius_autE.
-   move: H1; apply/contra => /eqP/(can_inj (@QphiI_rV_K _ _))/eqP.
+   rewrite //= /F Frobenius_autE.
+   move: H1; apply/contra.
    by rewrite rmorphX.
   rewrite -!exprnP !rmorphX -!expXpE in H2.
-  by rewrite iterHE /= QphiI_rV_K (eqP H2).
+  by rewrite (eqP H2).
 Qed.
 
 Lemma irreducibleP2 x :
-  H x != x ->
-  reflect (irreducible_poly phi) (iter (size phi).-1 H x == x)%R.
+  F x != x ->
+  reflect (irreducible_poly phi) (iter (size phi).-1 F x == x)%R.
 Proof.
 move=> Hxx.
 apply/(iffP idP) => [iHxx|].
 * apply/irreducibleP1/existsP.
   by exists x; rewrite Hxx iHxx.
-* case/irreducibleP/andP => ? /expandF/(_ (rVQphiI _ x)).
-  rewrite iterHE /= => ->.
-  by rewrite rVQphiIK.
+* by case/irreducibleP/andP => ? /expandF ->.
 Qed.
 End Irreducible.
+
+Require Import Coq.Logic.FunctionalExtensionality
+        Eqdep_dec Coq.Logic.ClassicalFacts Coq.Arith.Wf_nat.
+
+Axiom pi : proof_irrelevance.
+Axiom em : excluded_middle.
+
+Section Infinite.
+Variable phi : {poly 'F_2}.
+Variable pm : prime (2 ^ (size phi).-1 - 1).
+Local Open Scope ring_scope.
+Local Open Scope quotient_scope.
+Import GRing.Theory.
+
+Lemma polyF2_char2 : 2 \in [char {poly 'F_2}].
+Proof. by apply (GRing.rmorph_char (polyC_rmorphism _)). Qed.
+
+Hint Resolve polyF2_char2 : core.
+
+Definition S := nat -> 'F_2.
+
+Local Definition add (f g : S) := fun i => f i + g i.
+Local Definition zero : S := fun i => 0.
+
+Fixpoint subst_rec (s : seq 'F_2) x : S -> S :=
+  if s is a :: s'
+  then fun (b : S) => add ((subst_rec s' x \o x) b)
+                       (if a == 1 then b else zero)
+  else fun=> zero.
+Definition subst p := subst_rec p.
+
+(* Local Fixpoint subst p D : S -> S := *)
+(*   match p with *)
+(*   | [::] => fun _ => zero *)
+(*   | a :: q => *)
+(*     if a == (1 : 'F_2) *)
+(*     then fun (b : S) => add (iter (size q) D b) (subst q D b) *)
+(*     else subst q D *)
+(*   end. *)
+
+Lemma addC : commutative add.
+Proof.
+  move=> f g.
+  apply/functional_extensionality => i.
+  by rewrite /add addrC.
+Qed.
+
+Lemma addA : associative add.
+Proof.
+  move=> f g h.
+  apply/functional_extensionality => i.
+  by rewrite /add addrA.
+Qed.
+
+Lemma add0p h : add zero h = h.
+Proof.
+  apply/functional_extensionality => i.
+  by rewrite /add add0r.
+Qed.
+
+Lemma addp0 h : add h zero = h.
+Proof. by rewrite addC add0p. Qed.
+
+Lemma addpp p : add p p = zero.
+Proof.
+  apply functional_extensionality => j.
+  by rewrite /add addrr_char2.
+Qed.
+
+Lemma iterD D :
+  (forall a b, D (add a b) = add (D a) (D b)) ->
+  forall n a b, (iter n D) (add a b) = add (iter n D a) (iter n D b).
+Proof.
+  move=> H.
+  elim => // n IH a b.
+  by rewrite /= IH H.
+Qed.
+
+Lemma substD phi' D a b :
+  (forall a b, D (add a b) = add (D a) (D b)) ->
+  subst phi' D (add a b) = add (subst phi' D a) (subst phi' D b).
+Proof.
+  move=> H.
+  elim: phi' a b => /=[*|c phi' IH a b].
+   apply/functional_extensionality => i.
+   by rewrite /add /zero addr0.
+  rewrite H IH -!addA; congr add.
+  case: (c == 1).
+   by rewrite addC -addA [X in add _ X]addC.
+  by rewrite !add0p !addp0.
+Qed.
+
+Lemma substX D a : subst 'X D a = D a.
+Proof. by rewrite polyseqX /= !add0p !addp0. Qed.
+
+Definition D (f : S) := fun i => f i.+1.
+
+Definition V := { x : S | subst phi D x = zero }.
+
+Lemma eqV f g H I :
+  f = g ->
+  exist (fun x : S => subst phi D x = zero) f H
+= exist (fun x : S => subst phi D x = zero) g I.
+Proof.
+  move=> K; move: H I; rewrite K => H I.
+  rewrite (eq_proofs_unicity _ H I) // => x y.
+  by apply em.
+Qed.
+
+Local Definition addv (a b : V) : V.
+exists (add (proj1_sig a) (proj1_sig b)).
+apply functional_extensionality => i.
+case: a => a Ha; case: b => b Hb.
+by rewrite substD //= Ha Hb /add add0r.
+Defined.
+
+Local Definition zerov : V.
+exists (fun _ => 0).
+apply functional_extensionality => i.
+elim: (polyseq phi) => //= a l.
+case: (a == 1); by rewrite /add /zero => ->; rewrite addr0.
+Defined.
+
+Lemma addvA : associative addv.
+Proof.
+  case => []f fH []g gH []h hH.
+  rewrite /addv /= (eqV _ _ (addA _ _ _)).
+   by rewrite !substD // hH fH gH ?add0p.
+  move=> ?; by apply eqV.
+Qed.
+
+Lemma addvC : commutative addv.
+Proof.
+  case => []f fH []g gH.
+  by apply eqV, addC.
+Qed.
+
+Lemma add0v : left_id zerov addv.
+Proof.
+  case=> x xH.
+  apply eqV, functional_extensionality => i.
+  by rewrite /add add0r.
+Qed.
+
+Lemma addIv : left_inverse zerov id addv.
+Proof.
+  case=> x xH.
+  apply eqV, functional_extensionality => i.
+  by rewrite /add /= addrr_char2.
+Qed.
+
+Definition t (f : S) := f 0%nat.
+
+Definition pairing (g: QphiI (phi_gt1 pm)) (x : V) : 'F_2 :=
+  t (subst (generic_quotient.repr g) D (sval x)).
+
+Definition H (f : S) : S := fun i => f i.*2.
+
+Lemma DHC x : subst phi D (H x) = H (subst phi (D \o D) x).
+Proof.
+  elim: (polyseq phi) x => //= a l IH x.
+  have DH: forall x, D (H x) = H ((D \o D) x).
+   move=> y.
+   apply functional_extensionality => j.
+   by rewrite /D /H doubleS.
+  by case: (a == 1); rewrite DH IH; apply functional_extensionality.
+Qed.
+
+Lemma substC j l :
+  subst l D (D j) = (D \o subst l D) j.
+Proof.
+   elim: l j => //= b l IH j.
+   apply functional_extensionality => x.
+   by case: ifP; rewrite IH.
+Qed.
+
+Lemma phiD2 : subst phi (D \o D) = subst phi D \o subst phi D.
+Proof.
+  elim: (polyseq phi) => //= a l IH.
+  apply functional_extensionality => j.
+  case: (a == 1).
+   rewrite /= !substD // IH -!addA [add _ (add _ j)]addA addpp add0p.
+   congr add.
+   apply functional_extensionality => x.
+   congr subst.
+   apply functional_extensionality => i.
+   elim: l {IH} j => //= b l IH j.
+   case: ifP; by rewrite addC /add IH addrC.
+  by rewrite /= !addp0 IH /= !substC.
+Qed.
+
+Lemma subst0 p D :
+  D zero = zero ->
+  subst p D zero = zero.
+Proof.
+  move=> D00.
+  elim: p => //= a p IH.
+  by case: (a == 1); rewrite D00 {}IH add0p.
+Qed.
+
+Lemma substDMXC (p : {poly 'F_2}) c D a :
+  subst (p * 'X + c%:P) D a =
+  add ((subst p D \o D) a) (subst c%:P D a).
+Proof.
+  rewrite -cons_poly_def polyseq_cons.
+  case: ifP => /= H; last first.
+   case: (polyseq p) H => // _.
+   apply/functional_extensionality => i.
+   by rewrite /add /= add0r.
+  case: ifP => c1.
+   by rewrite (eqP c1) polyseqC /= add0p.
+  case: c c1 => [][|[]//] /= c c1.
+  by rewrite polyseqC.
+Qed.
+
+Lemma substMX p x : subst (p * 'X) x = subst p x \o x.
+Proof.
+  rewrite -[p * 'X]addr0.
+  have->: 0 = (0 : 'F_2)%:P by rewrite polyC0.
+  apply functional_extensionality => ?.
+  by rewrite substDMXC !polyC0 polyseq0 /= addp0.
+Qed.
+
+Lemma subst_poly s x : subst (Poly s) x = subst_rec s x.
+Proof.
+  elim: s => [|a s IH].
+   by rewrite polyseqC.
+  rewrite /= cons_poly_def.
+  apply functional_extensionality => ?.
+  by case: a => [][|[]//] /= i; rewrite substDMXC !polyseqC /= IH ?add0p.
+Qed.
+
+Lemma subst_rcons s a D x :
+  subst_rec (rcons s a) D x =
+  add (if a == 1 then iter (size s) D x else zero) (subst_rec s D x).
+Proof.
+  elim: s a D x => [*| b s IH a D x].
+   by rewrite addC.
+  rewrite /= IH.
+  case: ifP; first by case: ifP; rewrite -!iterS iterSr !addA.
+  by rewrite !add0p.
+Qed.
+
+Lemma substD' (p r : {poly 'F_2}) a :
+  subst (p + r) D a = add (subst p D a) (subst r D a).
+Proof.
+  rewrite /GRing.add /= /add_poly
+          unlock /add_poly_def /poly
+          unlock subst_poly.
+  move mnE : (maxn (size p) (size r)) => mn.
+  elim: (lt_wf mn) p r a mnE => {mn} [][_ _ p r a /eqP|mn _ IH p r a mnE].
+   rewrite maxnE addn_eq0 => /andP [] p0.
+   rewrite (eqP p0) subn0; move: p0.
+   rewrite !size_poly_eq0 => /eqP -> /eqP ->.
+   by rewrite !polyseq0 /= add0p.
+  move: r a p mnE.
+  apply: (@poly_ind _ (fun (r : {poly 'F_2})=> forall a (p : {poly 'F_2}), maxn (size p) (size r) = mn.+1 -> _)).
+   move=> ? p.
+   rewrite size_poly0 maxn0 => <-.
+   have->: (fun i : nat => p`_i + (0: {poly 'F_2})`_i) = fun i => p`_i.
+    apply/functional_extensionality => ?.
+    by rewrite coef0 addr0.
+   case p0: (size p == 0%nat).
+    rewrite size_poly_eq0 in p0.
+    by rewrite (eqP p0) !polyseq0 /= addp0.
+   rewrite polyseq0 /= addp0 -polyseq_poly ?coefK //.
+   case: p p0 => /= p + p0.
+   by rewrite (last_nth 0%R) -[size p]prednK // lt0n p0.
+  move=> p c _ a r H'.
+  set P := p * _ + _.
+  rewrite /mkseq.
+  have->: (mn.+1 = mn + 1)%nat by rewrite -addn1.
+  rewrite addnC iota_add add0n map_cat.
+  have->: [seq r`_i + P`_i | i <- iota 1 mn]
+      = mkseq (fun i : nat => r`_i.+1 + p`_i) mn.
+   apply (@eq_from_nth _ 0).
+    by rewrite size_map size_iota size_mkseq.
+   move=> i H.
+   have ?: (i < mn)%nat.
+    move: H.
+    by rewrite size_map size_iota.
+   by rewrite (nth_map 0%nat 0) ?size_iota // !nth_iota // !add1n
+              /P -cons_poly_def coef_cons nth_mkseq.
+  rewrite cat1s /P -cons_poly_def coef_cons eqxx.
+  subst P; move: r a c p H'.
+  apply: (@poly_ind _ (fun (r : {poly 'F_2})=> forall a c (p : {poly 'F_2}), maxn (size r) _ = mn.+1 -> _)).
+   move=> ? c p.
+   rewrite size_poly0 max0n -cons_poly_def size_cons_poly coef0 add0r polyseq0 /= add0p.
+   have->: (fun i : nat => (0: 'F_2) + p`_i) = fun i => p`_i.
+    apply/functional_extensionality => ?.
+    by rewrite add0r.
+   case: ifP => // n [] <-.
+   case p0: (size p == 0%nat).
+    rewrite size_poly_eq0 in p0; move: n.
+    rewrite (eqP p0) !polyseq0 /= add0p.
+    case: c => [][|[]//] // *.
+    by rewrite /= polyseq_cons polyseq0 /= polyseqC /= add0p.
+   rewrite -polyseq_poly ?coefK // ?polyseq_cons.
+    by case: (polyseq p) p0.
+   case: p p0 n => /= p + p0.
+   by rewrite (last_nth 0%R) -[size p]prednK // lt0n p0.
+  move=> p c _ a b r H'.
+  rewrite -!cons_poly_def coef_cons eqxx.
+  have->: (fun i : nat => (cons_poly c p)`_i.+1 + r`_i)
+        = (fun i : nat => p`_i + r`_i).
+   apply/functional_extensionality => ?.
+   rewrite polyseq_cons /=.
+   case: (polyseq p) => //=.
+   rewrite polyseqC /=.
+   case: c {H'} => [][|[]//] //= c.
+   by rewrite nth_nil !add0r.
+  rewrite /= IH //; last first.
+   move: H'.
+   rewrite -!cons_poly_def !size_cons_poly.
+   case: ifP; case: ifP => //.
+   + rewrite max0n => ? /andP [] p0 ? [] <-.
+     case: (polyseq p) p0 => //=.
+     by rewrite max0n.
+   + rewrite maxn0 => /andP [] r0 ? ? [] <-.
+     by case: (polyseq r) r0.
+   + by move=> ?? /eqP; rewrite maxnSS eqSS => /eqP.
+  rewrite !cons_poly_def !substDMXC -!addA.
+  congr add.
+  rewrite [in RHS]addC -!addA.
+  congr add.
+  rewrite !polyseqC.
+  case: c {H'} => [][|[]//]; case: b => [][|[]//] /= c b;
+  by rewrite ?(addp0, add0p, addpp).
+Qed.
+
+Lemma substM (p q : {poly 'F_2}) a :
+  subst (p * q) D a = (subst p D \o subst q D) a.
+Proof.
+  elim/poly_ind: p a => [?|p c IH a].
+   by rewrite mul0r !polyseq0.
+  rewrite mulrDl substD' mulrC mulrA substMX /comp mulrC IH.
+  case: c => [][|[]//] c.
+   have->: Ordinal c = 0 by apply/val_inj.
+   by rewrite polyC0 mul0r addr0 substMX polyseq0 /= addp0 substC.
+  have->: Ordinal c = 1 by apply/val_inj.
+  by rewrite substDMXC polyC1 mul1r polyseq1 /= add0p substC.
+Qed.
+
+Lemma substMXn n x : subst 'X^n x = \big[comp/id]_(i < n) subst 'X x.
+Proof.
+  elim: n x => [x|n IH x].
+   rewrite big_ord0 expr0 polyseqC.
+   apply/functional_extensionality => ?.
+   by rewrite /= add0p.
+  rewrite exprSr substMX IH big_ord_recl.
+  elim: n {IH} => [|n IH].
+   rewrite big_ord0; apply/functional_extensionality => ?.
+   by rewrite /= polyseqX /= addp0 add0p.
+  by rewrite big_ord_recl -[in RHS]IH.
+Qed.
+
+Definition H' : V -> V.
+case => x Hx; exists (H x).
+rewrite DHC phiD2 /comp Hx subst0 //.
+Defined.
+
+Lemma subst_subst x y f :
+  subst phi D f = zero ->
+  x = y %[mod QphiI (phi_gt1 pm)] -> subst y D f = subst x D f.
+Proof.
+move => Hf /eqP.
+rewrite -Quotient.idealrBE unfold_in Pdiv.RingMonic.rmodp_add
+        ?f2p_monic ?phi_neq0 ?phi_gt1 // addr_eq0
+        -!Pdiv.IdomainMonic.modpE ?f2p_monic ?phi_neq0 ?phi_gt1 //
+        modp_opp opprK => /eqP H.
+by rewrite (divp_eq x phi) (divp_eq y phi) H !substD' !substM /comp ?Hf
+           // !subst0.
+Qed.
+
+Lemma exprsumn_char2 (R : comRingType) s (f : 'I_s -> R) :
+  2 \in [char R] ->
+  (\sum_(i < s) f i) ^+ 2 = \sum_(i < s) (f i ^+ 2).
+Proof.
+  move=> H; elim: s f => [f |s IH f]; first by rewrite !big_ord0 expr0n.
+  rewrite !big_ord_recl exprDn_comm; last by rewrite /GRing.comm mulrC.
+  by rewrite !big_ord_recl !subn0 !subn1 !subnn !expr0
+             !expr1 !big_ord0 !mulr1 !mul1r !addr0
+             /= /bump /= !addn0 !addn1 (IH (fun i => f (lift ord0 i)))
+             binn bin1 mulr1n /= mulr2n addrr_char2 // add0r.
+Qed.
+
+Lemma subst_sum s (f : 'I_s -> {poly 'F_2}) x :
+  subst (\sum_(i < s) f i) D x = \big[add/zero]_(i < s) subst (f i) D x.
+Proof.
+  elim: s f => [|s IH] f; first by rewrite !big_ord0 polyseq0.
+  by rewrite !big_ord_recl substD' IH.
+Qed.
+
+Lemma t_sum s (f : 'I_s -> S) :
+  t (\big[add/zero]_(i < s) f i) = \sum_(i < s) t (f i).
+Proof.
+  elim: s f => [|s IH] f; first by rewrite !big_ord0.
+  by rewrite !big_ord_recl -IH.
+Qed.
+
+Lemma pairing_adj f x : pairing (@irreducible.F _ pm x) f = pairing x (H' f).
+Proof.
+  have->: (@irreducible.F _ pm x) = iter 1 (@irreducible.F _ pm) x by [].
+  rewrite expXpE /pairing expn1 (coord_basis (QphiIX_full _) (memvf x)).
+  under eq_bigr => j _.
+   rewrite (nth_map j) ?size_enum_ord // nth_enum_ord // -linearZ_LR.
+  over.
+  rewrite -linear_sum -rmorphX exprsumn_char2 //=.
+  case: piP => y yE; case: piP => z zE; case: f => f fH /=.
+  rewrite (subst_subst _ yE) // (subst_subst _ zE); last first.
+   by rewrite DHC phiD2 /comp fH subst0.
+  rewrite !subst_sum !t_sum; apply/eq_bigr => i _.
+  case: (coord (QphiIX (phi_gt1 pm)) i x) => [][|[]//] i0.
+   have ->: Ordinal i0 = 0 by apply/val_inj.
+   by rewrite !scale0r expr0n !polyseqC.
+  have ->: Ordinal i0 = 1 by apply/val_inj.
+  rewrite !scale1r -exprM muln2.
+  case: i => i /= _; elim: i f fH => [??|i IH f fH].
+   by rewrite expr0 polyseqC /= !add0p.
+  rewrite doubleS !exprSr !substM /= substM /= IH.
+   congr t; congr subst.
+   move: (substM 'X 'X) => /= <-.
+   by rewrite -expr2 polyseqXn polyseqX /= !addp0 !add0p.
+  repeat move: substM => /= <-.
+  by rewrite mulrC mulrA mulrC mulrA substM /= fH subst0.
+Qed.
+
+Check H'.
+
+Fixpoint add x y :=
+  match x, y with
+  | a :: x, b :: y =>
+    xorb a b :: add x y
+  | [::], _ => y
+  | _, [::] => x
+  end.
+
+Fixpoint mul x y :=
+  match x with
+  | [::] => [::]
+  | a :: x =>
+    if a == false then false :: mul x y
+    else add (false :: mul x y) y
+  end.
+
+(*
+Definition rV_seq (x : 'rV['F_2]_(size phi).-1) :=
+  mktuple (fun y => x ord0 y).
+*)
+
+Fixpoint one n :=
+  match n with
+  | 0 => [:: true]
+  | n.+1 => false :: one n
+  end.
+
+(*
+Fixpoint div (x y : seq 'F_2) : seq 'F_2 :=
+  if (size x < size y)%nat then x
+  else add (one (size x - size y))
+           (div (add x (mul (one (size x - size y)) y)) y).
+*)
+
+Fixpoint truncate x :=
+  match x with
+  | [::] => [::]
+  | a :: x =>
+    if a == false then
+      let tx := truncate x in
+      if tx == [::] then [::] else false :: tx
+    else true :: truncate x
+  end.
+
+Definition div_rec q :=
+  let sq := size q in
+   fix loop (k : nat) (qq r : seq bool) (n : nat) {struct n} :=
+    let str := size (truncate r) in
+    if (str < sq)%nat then (k, qq, r) else
+    let m := one (str - sq) in
+    let qq1 := add m qq in
+    let r1 := add r (mul m q) in
+       if n is n1.+1 then loop k.+1 qq1 r1 n1 else (k.+1, qq1, r1).
+
+Definition div_expanded_def p q :=
+  let tp := truncate p in
+  let tq := truncate q in
+  if size tq == 0%N then (0%N, [::], tp) else div_rec tq 0 [::] tp (size tp).
+
+Definition div p q := ((div_expanded_def p q).1).2.
+Definition mod p q := (div_expanded_def p q).2.
+
+Definition f x := mul x x.
+
+Compute iter 19937 f [:: false; true].
+
+Require Import nat_word.
+Compute mul [:: false; true] [:: false; true].
+Compute mul (mul [:: false; true] [:: false; true]) (mul [:: false; true] [:: false; true]).
+Check pm.
+Compute one (2^19937 - 1).
+
+2 ^ (size phi).-1 - 1
+Compute mul [:: false; true].
+Time Compute truncate (mod (mul (rep 19937 true) (rep 19937 true)) [:: true; false; true; false]).
+(* Finished transaction in 186.546 secs (186.347u,0.s) (successful) *)
+
+Compute truncate (mod (rep 19937 true) [:: true; false; true; false]).
+
+Compute truncate (mul [:: 0; 1; 0; 1] [:: 1; 1]) == [:: 0; 1; 1; 1; 1].
+Compute truncate (mul [:: 1; 1] [:: 0; 1; 0; 1]) == [:: 0; 1; 1; 1; 1].
+Compute mul [:: 0; 1] [:: 0; 1] == [:: 0; 0; 1].
+Compute truncate (div [:: 0; 1; 1; 1] [:: 0; 1]) == [:: 1; 1; 1].
+Compute truncate (div [:: 0; 1; 1] [:: 0; 1]) == [:: 1; 1].
+Compute truncate (add [:: 1] [:: 1]) == [::].
+Compute truncate (mod [:: 0; 1; 1] [:: 0; 1]) == [::].
+Compute truncate (div [:: 0; 1] [:: 0; 1]) == [:: 1].
+
+Time Compute (rep 19937 (1 : 'F_2)).
+(* Finished transaction in 2.465 secs (1.615u,0.s) (successful) *)
+Time Compute (rep 19937 true).
+(* Finished transaction in 0.138 secs (0.109u,0.s) (successful) *)
+Print mul.
+Check add (iota (fun _ => 0) 19937) (iota (fun _ => 0) 19937).
+
+Definition H' x := mod (mul x x) phi.
+Compute H' [:: 0; 1].
+End Infinite.
+End Infinite.
