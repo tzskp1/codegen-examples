@@ -993,10 +993,13 @@ Qed.
 End Irreducible.
 
 Require Import Coq.Logic.FunctionalExtensionality
-        Eqdep_dec Coq.Logic.ClassicalFacts Coq.Arith.Wf_nat.
+        Eqdep_dec Coq.Logic.ClassicalFacts Coq.Arith.Wf_nat
+        Coq.Logic.Classical_Pred_Type
+        Coq.Logic.ChoiceFacts.
 
 Axiom pi : proof_irrelevance.
 Axiom em : excluded_middle.
+Axiom fc : forall a b, FunctionalChoice_on a b.
 
 Section Infinite.
 Variable phi : {poly 'F_2}.
@@ -1140,6 +1143,13 @@ Proof.
   case=> x xH.
   apply eqV, functional_extensionality => i.
   by rewrite /add /= addrr_char2.
+Qed.
+
+Lemma addvv v : addv v v = zerov.
+Proof.
+  case: v => v p.
+  apply eqV.
+  by rewrite addpp.
 Qed.
 
 Definition t (f : S) := f 0%nat.
@@ -1416,6 +1426,493 @@ Proof.
    by rewrite -expr2 polyseqXn polyseqX /= !addp0 !add0p.
   repeat move: substM => /= <-.
   by rewrite mulrC mulrA mulrC mulrA substM /= fH subst0.
+Qed.
+
+Lemma nondeg1 x :
+  x = zerov <-> (forall y, pairing y x = 0).
+Proof.
+  split => [-> y|].
+* by rewrite /pairing subst0.
+* rewrite /pairing; case: x => x p H0.
+  apply eqV, functional_extensionality => i.
+  move: (H0 (\pi 'X^i)); case: piP => y E.
+  rewrite (subst_subst _ E) //= polyseqXn /subst subst_rcons size_nseq.
+  have->: (subst_rec (nseq i 0) D x) = zero.
+   elim: i x {E p H0} => // i IH x.
+   by rewrite /= IH addp0.
+  rewrite /= addp0.
+  elim: i x {E p H0} => // i IH x.
+  by rewrite iterSr => /IH.
+Qed.
+
+Definition Veq (x y : V) :=
+  [forall i, sval x (i : 'I_(size phi).-1) == sval y i].
+
+Lemma add_eq0 x y :
+  add x y = zero <-> x = y.
+Proof.
+  split => [H |->].
+  * move: (f_equal (add x) H).
+    by rewrite addp0 addA addpp add0p => ->.
+  * by rewrite addpp.
+Qed.
+
+Lemma addv_eq0 x y :
+  addv x y = zerov <-> x = y.
+Proof.
+  split => [H |->].
+  * move: (f_equal (addv x) H).
+    by rewrite [in RHS]addvC add0v addvA addvv add0v => ->.
+  * by rewrite addvv.
+Qed.
+
+Canonical op : Monoid.law zero.
+  apply: (@Monoid.Law _ zero add addA) => p;
+  by rewrite !(add0p, addp0).
+Defined.
+
+Lemma big_subst (F : nat -> S) p j :
+  (\big[add/zero]_(i < p) F i) j = \sum_(i < p) F i j.
+Proof.
+  elim: p F => [?|p IH F].
+   by rewrite !big_ord0.
+  by rewrite !big_ord_recr /= /add /= IH.
+Qed.
+
+Lemma VeqP : Equality.axiom Veq.
+Proof.
+case=> x xH []y yH.
+apply/(iffP idP).
+* move=> H0.
+  apply/eqV/functional_extensionality => j.
+  rewrite /Veq /= in H0.
+  elim: (lt_wf j) => {j} j _ IH.
+  case js: (j < (size phi).-1)%nat.
+   by move/forallP/(_ (Ordinal js))/eqP: H0.
+  move/negP/negP: js; rewrite -leqNgt => js.
+  move: xH yH H0.
+  rewrite /Veq /= -[phi]coefK poly_def !subst_sum.
+  move pn: (size phi) js => p'.
+  case: p' pn (phi_gt0 pm) => [->//|] p' pn _ js.
+  have cD: forall x i, (\big[comp/id]_(i0 < i) subst 'X D) x = fun j => x (j + i)%nat.
+   move=> z.
+    elim.
+     apply/functional_extensionality => k.
+     by rewrite big_ord0 addn0.
+    move=> i IH'.
+    rewrite big_ord_recl /= IH' polyseqX /= !addp0 !add0p.
+    apply/functional_extensionality => k.
+    by rewrite /D addSn addnS.
+  under eq_bigr => i _.
+   rewrite -mul_polyC substM substMXn /= cD.
+  over.
+  move=> xH.
+  under eq_bigr => i _.
+   rewrite -mul_polyC substM substMXn /= cD.
+  over.
+  move=> yH H0; move: xH yH.
+  rewrite !big_ord_recr /= !add_eq0.
+  have->: p' = (size phi).-1 by rewrite pn.
+  have->: phi`_(size phi).-1 = 1.
+   rewrite nth_last.
+   case: phi pn => [][]//= a l.
+   case: (last a l) => [][|[]//]// *.
+   by apply val_inj.
+  rewrite !polyseqC /= !add0p => xH yH.
+  move: (f_equal (fun x => x (j - (size phi).-1)%nat) xH).
+  rewrite /= subnK ?pn // => <-.
+  move: (f_equal (fun x => x (j - (size phi).-1)%nat) yH).
+  rewrite /= subnK ?pn // => <-.
+  rewrite (big_subst (fun i => subst (phi`_i)%:P D (fun j0 : nat => x (j0 + i)%N)))
+          (big_subst (fun i => subst (phi`_i)%:P D (fun j0 : nat => y (j0 + i)%N))).
+  apply/eq_bigr => i _.
+  case p1: (phi`_i == 1).
+   rewrite (eqP p1) !polyseqC /= !add0p IH //.
+   apply/ltP.
+   rewrite addnBAC // -subnBA; last by apply ltnW.
+   suff: ((p' - i) > 0)%nat.
+    case: j js {IH}.
+     rewrite leqn0 /= => /eqP p0 C.
+     by rewrite {1}p0 sub0n in C.
+    case: (p' - i)%nat => // ? j js.
+    by rewrite subSS !ltnS leq_subr.
+   by rewrite ltnNge leqn0 subn_eq0 -ltnNge.
+  have->: phi`_i = 0.
+   case: (phi`_i) p1 => [][|[]//] *.
+   by apply val_inj.
+  by rewrite !polyseqC /=.
+* case => H.
+  apply/forallP => i.
+  by rewrite /= H.
+Qed.
+
+Definition V_eqMixin := EqMixin VeqP.
+Canonical V_eqType := Eval hnf in EqType V V_eqMixin.
+
+Lemma pairing_addv x y z :
+  pairing x (addv y z) = pairing x y + pairing x z.
+Proof.
+  case: y z => [y Hy] [z Hz].
+  by rewrite /pairing /addv /= substD.
+Qed.
+
+Lemma tD x y : t (add x y) = t x + t y.
+Proof. by []. Qed.
+
+Lemma pairing_add x y z :
+  pairing (x + y) z = pairing x z + pairing y z.
+Proof.
+  rewrite /pairing -tD -substD'; congr t.
+  apply subst_subst; first by case: z.
+  by rewrite reprK piD !reprK.
+Qed.
+
+Lemma pairing0v x : pairing 0 x = 0.
+Proof.
+  rewrite /pairing.
+  rewrite -[RHS](_ : t (subst (polyseq 0) D (sval x)) = _).
+   congr t.
+   apply subst_subst.
+    by case: x.
+   by rewrite reprK (rmorph0 (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+  by rewrite /t polyseqC.
+Qed.
+
+Lemma pairing_adj_iter s x y:
+  pairing x (iter s H' y) = pairing (iter s (@irreducible.F _ pm) x) y.
+Proof.
+  elim: s x y => // s IHs x y.
+  by rewrite /= -pairing_adj IHs -iterSr -iterS.
+Qed.
+
+Lemma fH (w : V) :
+  exists (v: QphiI (phi_gt1 pm)), (w <> zerov -> pairing v w = 1)
+                             /\ (w = zerov -> v = 0).
+Proof.
+  case: (em (w = zerov)) => w0.
+   apply not_all_not_ex.
+   rewrite w0 => /(_ 0).
+   case/Classical_Prop.not_and_or => //.
+   apply/ex_not_not_all.
+   by suff: zerov <> zerov -> pairing 0 zerov = 1 by move=> w1; exists w1.
+  move: (w0); rewrite {1}nondeg1 => /not_all_ex_not w1.
+  case: w1 => x xH; exists x; split => [|/w0 //].
+  move: xH; case: (pairing x w) => [][|[]//] i /eqP // ? ?.
+  by apply/val_inj.
+Qed.
+
+Lemma addr_eq0 (x y : QphiI_zmodType (phi_gt1 pm)) :
+  (y + x == 0) = (y == x).
+Proof.
+   by rewrite -[in RHS]subr_eq0 oppr_char2 ?char2_phi.
+Qed.
+
+Lemma nondeg2 x :
+  x = 0 <-> (forall y, pairing x y = 0).
+Proof.
+  split => [-> [] y yH|].
+* rewrite /pairing.
+  have->: 0 = \pi_(QphiI (phi_gt1 pm)) 0 by rewrite linear0.
+  case: piP => z E.
+  by rewrite (subst_subst _ E) // polyseq0.
+* move=> xy; apply/eqP/negP => /negP x0.
+  apply/ex_not_not_all: xy; move: x0.
+  case: (fc fH) => f fH.
+  suff: exists y, f y = x.
+   case => y fyx x0.
+   exists y.
+   case: (fH y).
+   case y0: (y == zerov).
+    move=> + /(_ (eqP y0)).
+    rewrite fyx => + x00.
+    by rewrite x00 eqxx in x0.
+   move/eqP: y0 => y0 /(_ y0).
+   by rewrite fyx => ->.
+
+  suff: forall x, exists y, f y = x by apply.
+
+  suff: exists y, (f y) + x = 0.
+   case => y; exists y.
+   apply/eqP.
+   by rewrite -addr_eq0 p.
+
+   Search (_ - _ = _ + _).
+   rewrite .subr_char2.
+   rewrite
+   oppr_char2 ?char2_phi //.
+   rewrite
+  rewrite -addv_eq0.
+  apply/not_all_not_ex.
+
+   move=> /(_ (eqP y0)).
+    rewrite x0.
+   rewrite fyx.
+   rewrite fyx -fyx.
+   rew
+   rewrite
+
+  have: exists g, cancel f g.
+
+  rewrite (coord_basis (QphiIX_full _) (memvf x)).
+  rewrite /=.
+* rewrite
+* case: (em (x = 0)) => // x0; suff: False by [].
+  suff/(_ _ x0): forall x, x <> 0 -> exists y, pairing x y = 1.
+   by case => y; move: (H0 y) => ->.
+  move=> {x x0 H0} x x0.
+  have:
+   Check QphiI (phi_gt1 pm).
+
+Lemma irreducibleP3 x :
+  H' x <> x ->
+  irreducible_poly phi <-> iter (size phi).-1 H' x = x.
+Proof.
+move=> Hxx.
+split; last first.
+* move: Hxx; rewrite -addv_eq0 nondeg1 => Hxx.
+  rewrite -addv_eq0 nondeg1 => Hpxx.
+  apply/irreducibleP1/existsP; case/not_all_ex_not: Hxx => x0 Hxx.
+  rewrite pairing_addv -pairing_adj -pairing_add in Hxx.
+  exists x0; apply/andP; split.
+  + apply/negP => /eqP Fxx.
+    move: Fxx Hxx => ->.
+    rewrite addrr_char2 ?char2_phi // pairing0v //.
+  + move: {Hpxx} (Hpxx x0).
+    rewrite pairing_addv pairing_adj_iter -pairing_add => Hpxx.
+    rewrite -subr_eq0 oppr_char2 ?char2_phi //.
+    apply/eqP.
+    subr0_eq
+    rewrite addr0_eq.
+    rewrite -addv_eq0.
+
+  have/ex_not_not_all {x0 Hxx} : exists x0, pairing (irreducible.F x0 + x0) x <> 0 by exists x0.
+  Hxx :
+  rewrite pairing_addv -pairing_adj -pairing_add in Hxx.
+  rewrite -add_eq0.
+
+
+   Check not_all_not_ex.
+
+  rewrite /= in Hpxx.
+
+
+ => [/(@irreducibleP1 _ pm)/existsP[] s /andP[] | ].
+* Check pairing_adj x s.
+
+
+Definition i (x: V) := [ tuple (sval x i) | i < (size phi).-1 ].
+(* Require Import Coq.Program.Wf. *)
+(* Require Import FunInd. *)
+Require Import Recdef.
+
+Function j (x: ((size phi).-1).-tuple 'F_2) (p : nat) {measure p} : 'F_2 :=
+  if (p < (size phi).-1)%nat
+  then nth 0 x p
+  else (\big[add/zero]_(i < (size phi).-1) subst (phi`_i)%:P D (fun k : nat => j x (k + i)%nat)) (p  - (size phi).-1)%nat.
+Next Obligation.
+
+
+   (fun j : nat => x (j + (size phi).-1)%N)
+  \big[add/zero]_(i < (size phi).-1) subst (phi`_i)%:P D (fun j : nat => x (j + i)%N) =
+  x`_0
+case:
+  {x : ((size phi).-1).-tuple 'F_2 | subst phi D (nth 0 x) = zero }.
+  have d : 'I_(size phi).-1.
+   rewrite -[(size phi).-1]prednK.
+   apply ord0.
+   by case: (size phi) (phi_gt1 pm).
+  case: x => x H.
+  rewrite /=.
+  set T := nth 0 _.
+  have->: T = x.
+   apply/functional_extensionality => j.
+   rewrite /T (nth_map d) ?size_enum_ord //.
+  have->: nth 0 [seq x i | i <- enum 'I_(size phi).-1] = x.
+  rewrite /= nth_map.
+  rewrite /=.
+
+  rewrite /=.
+  rewrite (nth_map _ 0).
+  rewrite (nth_map (x d)).
+  rewrite /=.
+  Set Printing All.
+  rewrite
+
+  rewrite /=.
+  rewrite nth_map
+  rewrite nth_seq.
+  :=
+Check i.
+Check {x : ((size phi).-1).-tuple 'F_2 | subst phi D (nth 0 x) = zero }.
+
+Check subst phi D (sval x).
+
+(* Lemma inji: injective i. *)
+(* Proof. *)
+(*   move=> x y H. *)
+(*   apply/eqP/forallP => j. *)
+(*   rewrite eqE /=. *)
+(*   have d : 'I_(size phi).-1. *)
+(*    rewrite -[(size phi).-1]prednK. *)
+(*    apply ord0. *)
+(*    by case: (size phi) (phi_gt1 pm). *)
+(*   have<-: nth 0%R (i x) j = sval x j. *)
+(*    by rewrite (nth_map d) /= ?nth_enum_ord ?size_enum_ord. *)
+(*   have<-: nth 0%R (i y) j = sval y j. *)
+(*    by rewrite (nth_map d) /= ?nth_enum_ord ?size_enum_ord. *)
+(*   by rewrite H. *)
+(* Qed. *)
+
+Definition jH (x : ((size phi).-1).-tuple 'F_2) :
+  exists y : option V,
+    match y with
+    | Some y => forall (i : 'I_(size phi).-1), sval y i = tnth x i
+    | None => True
+    end.
+  pose f := nth 0 x.
+  case (em (subst phi D f = zero)) => z; last by exists None.
+  apply: (ex_intro _ (Some (exist _ _ z))) => i.
+  by rewrite /f /= -tnth_nth.
+Defined.
+Check
+Check i.
+Check {in _ &, injective i}.
+Check i @: _.
+t
+Check #|_|.
+(* Print V. *)
+
+(* (* Lemma V_enum : *) *)
+
+(* (* Lemma V_enumP : Finite.axiom *) *)
+(* (* Check FinMixin _. *) *)
+
+(* (* Check sig_choiceMixin. *) *)
+(* (* Check finType. *) *)
+(* (* Print V. *) *)
+(* (* Check [choiceMixin of V by <:]. *) *)
+
+(* Check ChoiceMixin _ _. *)
+(* Definition jH (x : ((size phi).-1).-tuple 'F_2) : *)
+(*   exists y : option V, *)
+(*     match y with *)
+(*     | Some y => forall (i : 'I_(size phi).-1), sval y i = tnth x i *)
+(*     | None => True *)
+(*     end. *)
+(*   pose f := nth 0 x. *)
+(*   case (em (subst phi D f = zero)) => z; last by exists None. *)
+(*   apply: (ex_intro _ (Some (exist _ _ z))) => i. *)
+(*   by rewrite /f /= -tnth_nth. *)
+(* Defined. *)
+(* Definition jH': exists j, pcancel i j. *)
+(* case: (fc jH) => j H; exists j => x. *)
+(* Check H (i x). *)
+(* rewrite *)
+(* rewrite /=. *)
+
+Definition V_choiceMixin : choiceMixin V.
+refine (@PcanChoiceMixin _ _ i _ _).
+(* Check i. *)
+(* Print pcancel. *)
+(* Check pcancel i _. *)
+Check fc jH.
+  constructor.
+
+Set Printing All.
+Print tuple_choiceMixin.
+apply: (ex_i
+
+Definition j (x : nat) :=
+  if j
+  then Some
+  else None
+Variable x: V.
+Check sval x _ : nat.
+Check x.
+
+  [forall i, sval x (i : 'I_(size phi).-1) == sval y i].
+  Admitted.
+
+Canonical V_choiceType := ChoiceType V V_choiceMixin.
+
+
+(*   move=> X. *)
+(*   rewrite /choiceMixin. *)
+(*   done. *)
+(* Check ChoiceType _ V_choiceMixin. *)
+(* Definition V_choiceType := *)
+
+Definition V_zmodMixin := ZmodMixin addvA addvC add0v addIv.
+Canonical V_zmodType := ZmodType V V_zmodMixin.
+Check V_zmodType.
+
+Lemma fH (w : V) :
+  exists (v: QphiI (phi_gt1 pm)), (w <> zerov -> pairing v w = 1)
+                             /\ (w = zerov -> v = 0).
+Proof.
+  case: (em (w = zerov)) => w0.
+   apply not_all_not_ex.
+   rewrite w0 => /(_ 0).
+   case/Classical_Prop.not_and_or => //.
+   apply/ex_not_not_all.
+   by suff: zerov <> zerov -> pairing 0 zerov = 1 by move=> w1; exists w1.
+  move: (w0); rewrite {1}nondeg1 => /not_all_ex_not w1.
+  case: w1 => x xH; exists x; split => [|/w0 //].
+  move: xH; case: (pairing x w) => [][|[]//] i /eqP // ? ?.
+  by apply/val_inj.
+Qed.
+
+Definition f := fc fH.
+Check f.
+
+Check Finite.enum V.
+Check enum ('I__ : Type).
+Check enum .
+(* * case: (fc fH) => f H. *)
+
+
+
+
+
+(*    move/(_ _ x0). *)
+
+(*   rewrite /pairing. *)
+(* Qed. *)
+
+Lemma nondeg1' x H' :
+  H' x = x <-> (forall y, pairing y (addv (H' x) x) = 0).
+Proof.
+  split => [-> y|/nondeg1 /(f_equal (addv x))].
+* by rewrite addvv /pairing subst0.
+* by rewrite addvC -addvA addvv addvC add0v addvC add0v.
+Qed.
+
+Lemma lem2 :
+  (forall x, H' x <> x -> iter (size phi).-1 H' x = x) <->
+  (forall s, irreducible.F s != s ->
+         iter (size phi).-1 (irreducible.F (pm:=pm)) s == s).
+Proof.
+  split => [H s Fss|].
+* apply/eqP.
+  rewrite -nondeg1' in H.
+*
+  rewrite
+
+Lemma irreducibleP3 x :
+  H' x <> x ->
+  irreducible_poly phi <-> iter (size phi).-1 H' x = x.
+Proof.
+move=> Hxx.
+split => [/(@irreducibleP1 _ pm)/existsP[] s /andP[] | ].
+* Check pairing_adj x s.
+
+split; last first.
+move=> Hxx0.
+
+apply/(iffP idP) => [iHxx|].
+* apply/irreducibleP1/existsP.
+  by exists x; rewrite Hxx iHxx.
+* by case/irreducibleP/andP => ? /expandF ->.
 Qed.
 
 Check H'.
