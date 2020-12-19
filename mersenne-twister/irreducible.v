@@ -1,5 +1,6 @@
 From mathcomp
 Require Import all_ssreflect all_algebra all_field all_fingroup.
+From mathcomp Require Import boolp classical_sets.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -1092,6 +1093,19 @@ Proof. by rewrite polyseqX /= !add0p !addp0. Qed.
 Definition D (f : S) := fun i => f i.+1.
 
 Definition V := { x : S | subst phi D x = zero }.
+Canonical V_eqType := Eval hnf in EqType V gen_eqMixin.
+Canonical V_choiceType := Eval hnf in ChoiceType V gen_choiceMixin.
+
+(*
+Record V' := mkV' {
+ x :> S;
+ _ : `[<subst phi D x = zero>];
+}.
+Canonical V'_subType := Eval hnf in [subType for x].
+From mathcomp Require Import classical_sets.
+Canonical V'_eqType := Eval hnf in EqType V' gen_eqMixin.
+Canonical V'_choiceType := Eval hnf in ChoiceType V' gen_choiceMixin.
+*)
 
 Lemma eqV f g H I :
   f = g ->
