@@ -592,7 +592,7 @@ Proof.
 Qed.
 
 Lemma map_pi_card :
-#|image (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) 'Z_(2 ^ m - 1)| = (2 ^ m - 1)%N.
+#|image_mem (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) (mem 'Z_(2 ^ m - 1))| = (2 ^ m - 1)%N.
 Proof.
   have Hc : #|'Z_(2 ^ m - 1)| = (2 ^ m - 1)%nat.
    rewrite card_ord.
@@ -616,14 +616,14 @@ Proof.
 Qed.
 
 Lemma map_piE :
-image (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) 'Z_(2 ^ m - 1)
+image_mem (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) (mem 'Z_(2 ^ m - 1))
 =i (finset [finComRingType of QphiI phi_gt1] :\ 0%R).
 Proof.
  have H3: [seq x ^ i * x | i : 'Z_(2 ^ (size phi).-1 - 1)] \subset
           [set x | [finComRingType of QphiI phi_gt1] x] :\ 0.
   suff: codom (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x)
         \subset (finset [finComRingType of QphiI phi_gt1] :\ 0%R).
-   by apply/subset_trans/subsetP/image_codom.
+    by apply/fintype.subset_trans/subsetP/image_codom.
   apply/subsetP => y.
   rewrite codomE !inE /=.
   elim: (enum 'Z_(2 ^ m - 1)) => // a l IH.
@@ -635,7 +635,7 @@ Qed.
 
 Lemma map_piP q :
 reflect (exists (r : 'Z_(2 ^ m - 1)), x ^ r * x = q)
-(q \in (image (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) 'Z_(2 ^ m - 1))).
+(q \in (image_mem (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) (mem 'Z_(2 ^ m - 1)))).
 Proof.
 move: map_pi_inj => inj.
 apply/(iffP idP).
@@ -697,7 +697,7 @@ Proof.
           addnC exprD mulnC exprM -minstabE -mulrA minstab_exp minstabE => /esym C.
   have j: ((r + i.+1) %% (2 ^ (size phi).-1 - 1) < (Zp_trunc (2 ^ (size phi).-1 - 1)).+2)%nat
    by rewrite !prednK // (ltn_pmod (r + i.+1) predpower_gt0).
-  have: (0 \in (image (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) 'Z_(2 ^ m - 1)))
+  have: (0 \in (image_mem (fun (i : 'Z_(2 ^ m - 1)) => x ^ i * x) (mem 'Z_(2 ^ m - 1))))
    by apply/map_piP; exists (Ordinal j).
   rewrite map_piE => /setD1P/andP.
   by rewrite eqxx.
@@ -1560,8 +1560,10 @@ apply/(iffP idP).
   by rewrite /= H.
 Qed.
 
+(*
 Definition V_eqMixin := EqMixin VeqP.
 Canonical V_eqType := Eval hnf in EqType V V_eqMixin.
+*)
 
 Lemma pairing_addv x y z :
   pairing x (addv y z) = pairing x y + pairing x z.
@@ -1580,6 +1582,49 @@ Proof.
   apply subst_subst; first by case: z.
   by rewrite reprK piD !reprK.
 Qed.
+
+Definition V_zmodMixin := ZmodMixin addvA addvC add0v addIv.
+Canonical V_zmodType := ZmodType V V_zmodMixin.
+Definition scalev a v : V :=
+  if a == 1 :> 'F_2 then v else zerov.
+Fact scalev1x A : scalev 1 A = A.
+Proof. by []. Qed.
+Fact scalevA x y A : scalev x (scalev y A) = scalev (x * y) A.
+Proof. by case: x y => [][|[]//] + [][|[]//]. Qed.
+Fact scalevxDl A x y : scalev (x + y) A = scalev x A + scalev y A.
+Proof.
+  case: x y => [][|[]//] ? [][|[]//] ?;
+  by rewrite ?(add0r, addr0) /scalev //= -(addvv A).
+Qed.
+Fact scalevxDr x A B : scalev x (A + B) = scalev x A + scalev x B.
+Proof. case: x => [][|[]//] ?; by rewrite add0r. Qed.
+Definition V_lmodMixin := LmodMixin scalevA scalev1x scalevxDr scalevxDl.
+Canonical V_lmodType := Eval hnf in LmodType 'F_2 V V_lmodMixin.
+
+Definition V_rV (x : V) : 'rV['F_2]_(size phi).-1 :=
+  \row_(i < (size phi).-1) sval x i.
+
+Definition rVVI (x : 'rV['F_2]_(size phi).-1) : V.
+  Print V.
+
+  \big[add/zero]_(i < (size phi).-1) subst (phi`_i)%:P D (fun j0 : nat => x (j0 + i)%N)
+
+  Check
+  \pi \o rVpoly.
+
+Lemma V_vect_axiom : Vector.axiom (size phi).-1 V.
+Proof.
+
+by exists QphiI_rV; [move=> ???; rewrite QphiI_rV_D QphiI_rV_scaler|exists rVQphiI].
+Qed.
+Check size phi.
+Check Vector.axiom _ _.
+Check VectMixin _.
+Local Notation "V ^*" := 'Hom([ vectType 'F_2 of V ], regular_vectType [ringType of 'F_2]).
+Check (QphiI (phi_gt1 pm))^*.
+Check 'Hom([ vectType 'F_2 of QphiI (phi_gt1 pm) ], regular_vectType [ringType of 'F_2]).
+Check regular_vectType [ringType of 'F_2].
+Check [ vectType 'F_2 of QphiI (phi_gt1 pm) ] .
 
 Lemma pairing0v x : pairing 0 x = 0.
 Proof.
