@@ -1604,7 +1604,37 @@ Canonical V_lmodType := Eval hnf in LmodType 'F_2 V V_lmodMixin.
 Definition V_rV (x : V) : 'rV['F_2]_(size phi).-1 :=
   \row_(i < (size phi).-1) sval x i.
 
+Require Import Program.
+
+Program Fixpoint rVSI (x : 'rV['F_2]_(size phi).-1) (i : nat) {measure i} : 'F_2 :=
+  (if (i < (size phi).-1)%N as b
+      return (protect_term ((i < (size phi).-1)%N = b) -> 'F_2)
+   then (fun H : (i < (size phi).-1)%N = true => x ord0 (Ordinal H))
+   else (fun=> \sum_(j < (size phi).-1) phi`_j * rVSI x (i + j - (size phi).-1)%nat))
+    (erefl (i < (size phi).-1)%nat).
+Next Obligation.
+  apply/ltP.
+  rewrite -subnBA; last by apply/ltnW.
+  case: j => j /=.
+  rewrite ltnNge /leq.
+  case H: ((size phi).-1 - j)%nat => // _.
+  rewrite subn_eq0.
+  case: i H0 rVSI => [/negP/negP|i H0 _].
+   rewrite -ltnNge leqNgt prednK // ?phi_gt1 ?phi_gt0 //.
+  by rewrite subSS ltnS leq_subr.
+Qed.
+
 Definition rVVI (x : 'rV['F_2]_(size phi).-1) : V.
+  exists (rVSI x).
+  apply/functional_extensionality => i.
+  rewrite /rVSI /rVSI_func /=.
+  rewrite /Fix_sub.
+  rewrite /Fix_F_sub.
+  rewrite /=.
+  rewrite /subst /subst_rec.
+  case: ifP.
+  rewrite /=.
+  rewrite /=.
   Print V.
 
   \big[add/zero]_(i < (size phi).-1) subst (phi`_i)%:P D (fun j0 : nat => x (j0 + i)%N)
