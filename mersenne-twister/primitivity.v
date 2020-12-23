@@ -171,7 +171,7 @@ Lemma pm : prime.prime (expn 2 19937 - 1)%nat.
 Proof.
   apply/primeP'.
   rewrite of_nat_sub ?of_nat_exp; last by apply/ltn_trans/ltn_expl.
-  set ln := Init.Nat.of_uint _.
+  set ln := Init.Nat.of_num_uint _.
   have ->: Z.of_nat ln = Zpos 19937 by [].
   apply Lucas.lucas_prime; by native_compute.
 Qed.
