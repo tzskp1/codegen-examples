@@ -6,6 +6,23 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Section ssrnat_ext.
+Local Open Scope nat_scope.
+Lemma ltn0ord [n : nat] : 'I_n -> 0 < n.
+Proof. by case=>i; apply/leq_trans/ltn0Sn. Qed.
+(* provide Wf_nat.lt_wf_rect with a similar interface to ssrnat.ltn_ind *)
+Let _ltn_rect P : (forall n, (forall m, m < n -> P m) -> P n) -> forall n, P n.
+Proof.
+move=> IH n.
+apply (@Wf_nat.lt_wf_rect n).
+move=> k H.
+apply IH.
+move=> m H0.
+apply (H m (ltP H0)).
+Defined.
+Definition ltn_rect := Eval hnf in _ltn_rect.
+End ssrnat_ext.
+
 Lemma f2p_monic (p : {poly 'F_2}) :
   (p != 0)%R -> p \is monic.
 Proof.
@@ -1604,6 +1621,7 @@ Canonical V_lmodType := Eval hnf in LmodType 'F_2 V V_lmodMixin.
 Definition V_rV (x : V) : 'rV['F_2]_(size phi).-1 :=
   \row_(i < (size phi).-1) sval x i.
 
+(*
 Require Import Program.
 
 Program Fixpoint rVSI (x : 'rV['F_2]_(size phi).-1) (i : nat) {measure i} : 'F_2 :=
@@ -1622,6 +1640,84 @@ Next Obligation.
   case: i H0 rVSI => [/negP/negP|i H0 _].
    rewrite -ltnNge leqNgt prednK // ?phi_gt1 ?phi_gt0 //.
   by rewrite subSS ltnS leq_subr.
+Qed.
+*)
+
+Section rVSI.
+Local Notation n := (size phi).
+
+Variable x : 'rV['F_2]_n.-1.
+
+Fixpoint rVSI_gen (i : nat) : seq 'F_2.
+Proof.
+refine (match i with O => [::] | i'.+1 => let tail := rVSI_gen i' in _ :: tail end).
+refine (if (i' < n.-1)%N then _ else _).
+- refine (x ord0 (Ordinal (_ : (i' %% n.-1 < n.-1)%N))).
+  by apply/ltn_pmod/(predphi_geq1 pm).
+- refine (\sum_(j < n.-1) _)=> /=.
+  exact (phi`_j * (nth 0 tail (n.-2 - j))).
+Defined.
+
+Definition rVSI i := head 0 (rVSI_gen i.+1).
+
+Lemma rVSI_cp (i : nat) (H : (i < n.-1)%N) :
+  rVSI i = x ord0 (Ordinal H).
+Proof. by rewrite /rVSI /= H; congr (_ _ _); apply ord_inj=> /=; rewrite modn_small. Qed.
+
+Lemma size_rVSI_gen (i : nat) : size (rVSI_gen i) = i.
+Proof. by elim: i=> //= i IHi; congr _.+1. Qed.
+
+Lemma drop_rVSI_gen (i j : nat) : (j <= i)%N -> drop (i - j)%N (rVSI_gen i) = rVSI_gen j.
+Proof.
+move: i j; elim=> [j | i IHi]; first by rewrite leqn0=> /eqP ->.
+case=> [_ | j ji]; first by rewrite /= -{1}(size_rVSI_gen i) drop_size.
+move: (ji); rewrite subSS -{1}(addn1 j) -{1}(addn1 i) leq_add2r => ji'.
+case H : (i - j)%N; first by move/eqP: H; rewrite subn_eq0=> /(conj ji') /andP /anti_leq ->.
+have: exists k, (i - j)%N = k.+1 by rewrite H; eexists.
+case=> k Hk; rewrite -H Hk {H} /=.
+have ij : (0 < i - j)%N by rewrite Hk.
+have ji'' : (j < i)%N
+  by rewrite ltn_neqAle ji' andbT; apply/eqP=> ji''; move: Hk; rewrite ji'' subnn.
+set X := (if _ then _ else _).
+rewrite -(IHi j) //.
+suff-> : X = nth 0 (rVSI_gen i) k by rewrite Hk -drop_nth // size_rVSI_gen -Hk leq_subr.
+suff-> : X = nth 0 (drop k (rVSI_gen i)) 0 by rewrite nth_drop addn0.
+move: (IHi j.+1 ji'').
+have-> : (i - j.+1)%N = k by rewrite subnS; apply succn_inj; rewrite prednK.
+by move->.
+(* A good part of this lemma could be generalized out. (Lemma drop_head?) *)
+Qed.
+
+Lemma nth_rVSI_gen (i j : nat) : (j <= i)%N -> nth 0 (rVSI_gen i.+1) (i - j) = rVSI j.
+Proof.
+move=> ji; rewrite -(subSS j i) -(addn0 (i.+1 - j.+1)%N) -nth_drop drop_rVSI_gen //.
+Qed.
+
+Lemma rVSI_rep (i : nat) :
+  (n.-1 <= i)%N ->  rVSI i = \sum_(j < n.-1) phi`_j * rVSI (i - n.-1 + j).
+Proof.
+move=> ni.
+set n':= n.-2.
+have Hn' : n.-1 = n'.+1 by rewrite prednK // (predphi_geq1 pm).
+rewrite Hn'.
+set i' := i.-1.
+have Hi' : i = i'.+1 by rewrite prednK //; apply/leq_trans/ni; rewrite Hn' ltnS.
+move: (ni); rewrite /rVSI /= leqNgt; move/negbTE ->.
+rewrite [in LHS] Hn'; apply eq_bigr=> j _ /=.
+congr (_ * _).
+set X := if _ then _ else _.
+rewrite -(subSS j n').
+rewrite -{1}Hn'.
+set k := (i - n.-1)%N.
+have Hk : n.-1 = (i - k)%N by rewrite subKn.
+rewrite Hk Hi' -subnDA addnC subnDA subSS -subnDA nth_rVSI_gen;
+first by rewrite /rVSI /= (_ : (j + k)%N = (i - n'.+1 + j)%N) // /k Hn' addnC.
+rewrite /k /i' addnC addnBAC //.
+rewrite -(leq_add2r 1) !addn1 prednK; last by rewrite Hi'.
+rewrite ltn_subLR; last by apply/(leq_trans ni)/leq_addr.
+rewrite addnC ltn_add2r.
+rewrite {X}; rewrite {Hk}; rewrite {k}.
+by case: j=> j; rewrite -Hn'.
 Qed.
 
 Definition rVVI (x : 'rV['F_2]_(size phi).-1) : V.
