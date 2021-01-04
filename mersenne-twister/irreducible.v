@@ -1643,9 +1643,8 @@ Next Obligation.
 Qed.
 *)
 
-Section rVSI.
+Section rVVI.
 Local Notation n := (size phi).
-
 Variable x : 'rV['F_2]_n.-1.
 
 Fixpoint rVSI_gen (i : nat) : seq 'F_2.
@@ -1660,10 +1659,48 @@ Defined.
 
 Definition rVSI i := head 0 (rVSI_gen i.+1).
 
+Lemma rVSI_gen_mkseq' i : rVSI_gen i = mkseq (fun j => rVSI (i - j.+1)) i.
+Proof.
+elim: i=> //= i IHi.
+set X := if _ then _ else _.
+rewrite IHi /mkseq /=.
+congr (_ :: _); first  by rewrite subn1.
+rewrite (map_comp rVSI) [in RHS](map_comp rVSI).
+congr map.
+apply (@eq_from_nth _ 0%N); first by rewrite !size_map !size_iota.
+move=> j; rewrite size_map size_iota=> ji.
+rewrite (nth_map 0%N 0%N) ?size_iota // (nth_map 0%N 0%N) ?size_iota //.
+rewrite nth_iota ?ji // nth_iota ?ji //.
+Qed.
+
+Lemma rVSI_gen_mkseq i : rVSI_gen i = rev (mkseq rVSI i).
+Proof.
+rewrite rVSI_gen_mkseq' /mkseq -map_rev.
+rewrite (map_comp rVSI) [in RHS](map_comp rVSI).
+congr map.
+apply (@eq_from_nth _ 0%N); first by rewrite  !size_map ?size_rev !size_iota.
+move=> j.
+rewrite size_map size_iota=> ji.
+rewrite (nth_map 0%N 0%N) ? size_iota // (nth_map 0%N 0%N) ?size_rev ?size_iota //.
+rewrite nth_rev ?size_iota //.
+rewrite nth_iota ?size_iota // nth_iota ?size_iota //.
+by rewrite ltn_subLR // -{1}(add0n i) ltn_add2r ltn0Sn.
+Qed.
+
+Lemma nth_rVSI_gen (i j : nat) : (j <= i)%N -> nth 0 (rVSI_gen i.+1) (i - j) = rVSI j.
+Proof.
+move=> ji.
+have iji: (i - j < i.+1)%N
+  by rewrite -(addn1 i) ltn_subLR // addnCA -{1}(addn0 i) ltn_add2l addn1 ltn0Sn.
+rewrite rVSI_gen_mkseq' /mkseq (nth_map 0%N 0) ?size_iota // nth_iota //.
+by rewrite add0n subSS subKn.
+Qed.
+
 Lemma rVSI_cp (i : nat) (H : (i < n.-1)%N) :
   rVSI i = x ord0 (Ordinal H).
 Proof. by rewrite /rVSI /= H; congr (_ _ _); apply ord_inj=> /=; rewrite modn_small. Qed.
 
+(*
 Lemma size_rVSI_gen (i : nat) : size (rVSI_gen i) = i.
 Proof. by elim: i=> //= i IHi; congr _.+1. Qed.
 
@@ -1692,9 +1729,10 @@ Lemma nth_rVSI_gen (i j : nat) : (j <= i)%N -> nth 0 (rVSI_gen i.+1) (i - j) = r
 Proof.
 move=> ji; rewrite -(subSS j i) -(addn0 (i.+1 - j.+1)%N) -nth_drop drop_rVSI_gen //.
 Qed.
+*)
 
 Lemma rVSI_rep (i : nat) :
-  (n.-1 <= i)%N ->  rVSI i = \sum_(j < n.-1) phi`_j * rVSI (i - n.-1 + j).
+  (n.-1 <= i)%N -> rVSI i = \sum_(j < n.-1) phi`_j * rVSI (i - n.-1 + j).
 Proof.
 move=> ni.
 set n':= n.-2.
@@ -1720,9 +1758,16 @@ rewrite {X}; rewrite {Hk}; rewrite {k}.
 by case: j=> j; rewrite -Hn'.
 Qed.
 
-Definition rVVI (x : 'rV['F_2]_(size phi).-1) : V.
-  exists (rVSI x).
+Lemma subst_poly_D psi s i :
+  subst psi D s i = \sum_(j < (size psi).-1) psi`_j * s (i + j)%N.
+Admitted.
+
+Definition rVVI : V.
+  exists rVSI.
   apply/functional_extensionality => i.
+  rewrite subst_poly_D.
+  
+  rewrite /rVSI.
   rewrite /rVSI /rVSI_func /=.
   rewrite /Fix_sub.
   rewrite /Fix_F_sub.
@@ -1737,6 +1782,8 @@ Definition rVVI (x : 'rV['F_2]_(size phi).-1) : V.
 
   Check
   \pi \o rVpoly.
+
+End rVVI.
 
 Lemma V_vect_axiom : Vector.axiom (size phi).-1 V.
 Proof.
