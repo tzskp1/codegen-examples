@@ -1,12 +1,13 @@
 From mathcomp
 Require Import all_ssreflect all_algebra all_field all_fingroup.
 From mathcomp Require Import boolp classical_sets.
+From infotheo Require Import f2.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Section ssrnat_ext.
+Section mathcomp_ssrnat_ext.
 Local Open Scope nat_scope.
 Lemma ltn0ord [n : nat] : 'I_n -> 0 < n.
 Proof. by case=>i; apply/leq_trans/ltn0Sn. Qed.
@@ -21,7 +22,16 @@ move=> m H0.
 apply (H m (ltP H0)).
 Defined.
 Definition ltn_rect := Eval hnf in _ltn_rect.
-End ssrnat_ext.
+End mathcomp_ssrnat_ext.
+
+Section infotheo_f2_ext.
+Local Open Scope ring_scope.
+Import GRing.Theory.
+Lemma F2_opp (a : 'F_2) : - a = a.
+Proof. by case/F2P: a=> //=; rewrite oppr0. Qed.
+Lemma F2_mulI (a : 'F_2) : a * a = a.
+Proof. by case/F2P: a; rewrite ?mul1r ?mul0r. Qed.
+End infotheo_f2_ext.
 
 Lemma f2p_monic (p : {poly 'F_2}) :
   (p != 0)%R -> p \is monic.
@@ -1035,11 +1045,13 @@ Definition S := nat -> 'F_2.
 
 Local Definition add (f g : S) := fun i => f i + g i.
 Local Definition zero : S := fun i => 0.
+Local Definition scale' (a : 'F_2) (p : S) : S := fun i => a * p i.
 
 Fixpoint subst_rec (s : seq 'F_2) x : S -> S :=
   if s is a :: s'
   then fun (b : S) => add ((subst_rec s' x \o x) b)
-                       (if a == 1 then b else zero)
+                       (scale' a b)
+                       (*if a == 1 then b else zero*)
   else fun=> zero.
 Definition subst p := subst_rec p.
 
@@ -1051,6 +1063,18 @@ Definition subst p := subst_rec p.
 (*     then fun (b : S) => add (iter (size q) D b) (subst q D b) *)
 (*     else subst q D *)
 (*   end. *)
+
+Lemma scale'Dr a p q : scale' a (add p q) = add (scale' a p) (scale' a q).
+Proof. by apply funext=> i; rewrite /scale' mulrDr. Qed.
+
+Lemma scale'1p p : scale' 1 p = p.
+Proof. by apply funext=> i; rewrite /scale' mul1r. Qed.
+
+Lemma scale'0p p : scale' 0 p = zero.
+Proof. by apply funext=> i; rewrite /scale' mul0r. Qed.
+
+Lemma scale'p0 a : scale' a zero = zero.
+Proof. by apply funext=> i; rewrite /scale' mulr0. Qed.
 
 Lemma addC : commutative add.
 Proof.
@@ -1099,17 +1123,39 @@ Proof.
    apply/functional_extensionality => i.
    by rewrite /add /zero addr0.
   rewrite H IH -!addA; congr add.
-  case: (c == 1).
-   by rewrite addC -addA [X in add _ X]addC.
-  by rewrite !add0p !addp0.
+  by rewrite (addC a b) [in RHS]addC -addA scale'Dr.
 Qed.
 
 Lemma substX D a : subst 'X D a = D a.
-Proof. by rewrite polyseqX /= !add0p !addp0. Qed.
+Proof. by rewrite polyseqX /= scale'1p scale'0p add0p addp0. Qed.
 
 Definition D (f : S) := fun i => f i.+1.
 
-Definition V := { x : S | subst phi D x = zero }.
+Lemma addD p q : D (add p q) = add (D p) (D q).
+Proof. by []. Qed.
+
+Lemma scale'D a p : D (scale' a p) = scale' a (D p).
+Proof. by []. Qed.
+
+Lemma subst_poly_D psi s i :
+  subst psi D s i = \sum_(j < size psi) psi`_j * s (i + j)%N.
+Proof.
+move: s i; elim: psi; first by move=> s i; rewrite big_ord0.
+move=> a psi IHpsi s i.
+rewrite /= /add IHpsi big_ord_recl addrC.
+congr (_ + _); first by rewrite addn0.
+apply eq_bigr=> j _ /=.
+rewrite /bump /D /=.
+congr (_ * s _).
+by rewrite add1n addnS.
+Qed.
+
+Record V := mkV {
+  V_val :> S;
+  _ : subst phi D V_val = zero;
+}.
+Arguments mkV : clear implicits.
+(* Definition V := { x : S | subst phi D x = zero }. *)
 Canonical V_eqType := Eval hnf in EqType V gen_eqMixin.
 Canonical V_choiceType := Eval hnf in ChoiceType V gen_choiceMixin.
 
@@ -1124,28 +1170,33 @@ Canonical V'_eqType := Eval hnf in EqType V' gen_eqMixin.
 Canonical V'_choiceType := Eval hnf in ChoiceType V' gen_choiceMixin.
 *)
 
-Lemma eqV f g H I :
-  f = g ->
-  exist (fun x : S => subst phi D x = zero) f H
-= exist (fun x : S => subst phi D x = zero) g I.
+Lemma eqV f g H I : f = g -> mkV f H = mkV g I.
 Proof.
   move=> K; move: H I; rewrite K => H I.
   rewrite (eq_proofs_unicity _ H I) // => x y.
   by apply em.
 Qed.
 
+Lemma eqV' u v : V_val u = V_val v -> u = v.
+Proof.
+  case: u=> u Hu; case: v=> v Hv /= H.
+  move: Hu Hv; rewrite H.
+  by move=> *; congr mkV; apply Prop_irrelevance.
+Qed.
+
 Local Definition addv (a b : V) : V.
-exists (add (proj1_sig a) (proj1_sig b)).
+exists (add a b).
 apply functional_extensionality => i.
 case: a => a Ha; case: b => b Hb.
 by rewrite substD //= Ha Hb /add add0r.
 Defined.
 
 Local Definition zerov : V.
-exists (fun _ => 0).
+exists zero.
 apply functional_extensionality => i.
-elim: (polyseq phi) => //= a l.
-case: (a == 1); by rewrite /add /zero => ->; rewrite addr0.
+rewrite subst_poly_D /zero /=.
+under eq_bigr do rewrite mulr0.
+by rewrite big1.
 Defined.
 
 Lemma addvA : associative addv.
@@ -1186,7 +1237,7 @@ Qed.
 Definition t (f : S) := f 0%nat.
 
 Definition pairing (g: QphiI (phi_gt1 pm)) (x : V) : 'F_2 :=
-  t (subst (generic_quotient.repr g) D (sval x)).
+  t (subst (generic_quotient.repr g) D x).
 
 Definition H (f : S) : S := fun i => f i.*2.
 
@@ -1205,22 +1256,34 @@ Lemma substC j l :
 Proof.
    elim: l j => //= b l IH j.
    apply functional_extensionality => x.
-   by case: ifP; rewrite IH.
+   by rewrite IH -scale'D addD.
 Qed.
+
+Lemma scale'Cp a b p : scale' a (scale' b p) = scale' b (scale' a p).
+Proof. by apply funext=> i; rewrite /scale' mulrCA. Qed.
+
+Lemma scale'_substD a xs p : scale' a (subst xs D p) = subst xs D (scale' a p).
+Proof.
+move: p; elim: xs; first by rewrite /= scale'p0.
+move=> x xs IHxs p /=.
+rewrite scale'Dr scale'Cp.
+congr add.
+by rewrite IHxs -scale'D.
+Qed.
+
+Lemma scale'I a p : scale' a (scale' a p) = scale' a p.
+Proof. by apply funext=> i; rewrite /scale' mulrA F2_mulI. Qed.
 
 Lemma phiD2 : subst phi (D \o D) = subst phi D \o subst phi D.
 Proof.
   elim: (polyseq phi) => //= a l IH.
-  apply functional_extensionality => j.
-  case: (a == 1).
-   rewrite /= !substD // IH -!addA [add _ (add _ j)]addA addpp add0p.
-   congr add.
-   apply functional_extensionality => x.
-   congr subst.
-   apply functional_extensionality => i.
-   elim: l {IH} j => //= b l IH j.
-   case: ifP; by rewrite addC /add IH addrC.
-  by rewrite /= !addp0 IH /= !substC.
+  apply funext=> p.
+  rewrite IH /=.
+  rewrite !(addD, substC, scale'Dr) /=.
+  rewrite -scale'D scale'_substD scale'I addA.
+  congr add.
+  rewrite substC -addD -substD /=; last by exact:addD.
+  by rewrite -addA addpp addp0 substC.
 Qed.
 
 Lemma subst0 p D :
@@ -1229,7 +1292,7 @@ Lemma subst0 p D :
 Proof.
   move=> D00.
   elim: p => //= a p IH.
-  by case: (a == 1); rewrite D00 {}IH add0p.
+  by rewrite scale'p0 addp0 D00 IH.
 Qed.
 
 Lemma substDMXC (p : {poly 'F_2}) c D a :
@@ -1241,10 +1304,9 @@ Proof.
    case: (polyseq p) H => // _.
    apply/functional_extensionality => i.
    by rewrite /add /= add0r.
-  case: ifP => c1.
-   by rewrite (eqP c1) polyseqC /= add0p.
-  case: c c1 => [][|[]//] /= c c1.
-  by rewrite polyseqC.
+  congr add.
+  rewrite polyseqC.
+  by case/F2P: c => /=; [rewrite scale'0p | rewrite scale'1p add0p].
 Qed.
 
 Lemma substMX p x : subst (p * 'X) x = subst p x \o x.
@@ -1266,100 +1328,43 @@ Qed.
 
 Lemma subst_rcons s a D x :
   subst_rec (rcons s a) D x =
-  add (if a == 1 then iter (size s) D x else zero) (subst_rec s D x).
+  add (scale' a (iter (size s) D x)) (subst_rec s D x).
+  (*add (if a == 1 then iter (size s) D x else zero) (subst_rec s D x).*)
 Proof.
   elim: s a D x => [*| b s IH a D x].
    by rewrite addC.
-  rewrite /= IH.
-  case: ifP; first by case: ifP; rewrite -!iterS iterSr !addA.
-  by rewrite !add0p.
+  by rewrite /= IH addA -iterS iterSr.
 Qed.
 
 Lemma substD' (p r : {poly 'F_2}) a :
   subst (p + r) D a = add (subst p D a) (subst r D a).
 Proof.
-  rewrite /GRing.add /= /add_poly
-          unlock /add_poly_def /poly
-          unlock subst_poly.
-  move mnE : (maxn (size p) (size r)) => mn.
-  elim: (lt_wf mn) p r a mnE => {mn} [][_ _ p r a /eqP|mn _ IH p r a mnE].
-   rewrite maxnE addn_eq0 => /andP [] p0.
-   rewrite (eqP p0) subn0; move: p0.
-   rewrite !size_poly_eq0 => /eqP -> /eqP ->.
-   by rewrite !polyseq0 /= add0p.
-  move: r a p mnE.
-  apply: (@poly_ind _ (fun (r : {poly 'F_2})=> forall a (p : {poly 'F_2}), maxn (size p) (size r) = mn.+1 -> _)).
-   move=> ? p.
-   rewrite size_poly0 maxn0 => <-.
-   have->: (fun i : nat => p`_i + (0: {poly 'F_2})`_i) = fun i => p`_i.
-    apply/functional_extensionality => ?.
-    by rewrite coef0 addr0.
-   case p0: (size p == 0%nat).
-    rewrite size_poly_eq0 in p0.
-    by rewrite (eqP p0) !polyseq0 /= addp0.
-   rewrite polyseq0 /= addp0 -polyseq_poly ?coefK //.
-   case: p p0 => /= p + p0.
-   by rewrite (last_nth 0%R) -[size p]prednK // lt0n p0.
-  move=> p c _ a r H'.
-  set P := p * _ + _.
-  rewrite /mkseq.
-  have->: (mn.+1 = mn + 1)%nat by rewrite -addn1.
-  rewrite addnC iota_add add0n map_cat.
-  have->: [seq r`_i + P`_i | i <- iota 1 mn]
-      = mkseq (fun i : nat => r`_i.+1 + p`_i) mn.
-   apply (@eq_from_nth _ 0).
-    by rewrite size_map size_iota size_mkseq.
-   move=> i H.
-   have ?: (i < mn)%nat.
-    move: H.
-    by rewrite size_map size_iota.
-   by rewrite (nth_map 0%nat 0) ?size_iota // !nth_iota // !add1n
-              /P -cons_poly_def coef_cons nth_mkseq.
-  rewrite cat1s /P -cons_poly_def coef_cons eqxx.
-  subst P; move: r a c p H'.
-  apply: (@poly_ind _ (fun (r : {poly 'F_2})=> forall a c (p : {poly 'F_2}), maxn (size r) _ = mn.+1 -> _)).
-   move=> ? c p.
-   rewrite size_poly0 max0n -cons_poly_def size_cons_poly coef0 add0r polyseq0 /= add0p.
-   have->: (fun i : nat => (0: 'F_2) + p`_i) = fun i => p`_i.
-    apply/functional_extensionality => ?.
-    by rewrite add0r.
-   case: ifP => // n [] <-.
-   case p0: (size p == 0%nat).
-    rewrite size_poly_eq0 in p0; move: n.
-    rewrite (eqP p0) !polyseq0 /= add0p.
-    case: c => [][|[]//] // *.
-    by rewrite /= polyseq_cons polyseq0 /= polyseqC /= add0p.
-   rewrite -polyseq_poly ?coefK // ?polyseq_cons.
-    by case: (polyseq p) p0.
-   case: p p0 n => /= p + p0.
-   by rewrite (last_nth 0%R) -[size p]prednK // lt0n p0.
-  move=> p c _ a b r H'.
-  rewrite -!cons_poly_def coef_cons eqxx.
-  have->: (fun i : nat => (cons_poly c p)`_i.+1 + r`_i)
-        = (fun i : nat => p`_i + r`_i).
-   apply/functional_extensionality => ?.
-   rewrite polyseq_cons /=.
-   case: (polyseq p) => //=.
-   rewrite polyseqC /=.
-   case: c {H'} => [][|[]//] //= c.
-   by rewrite nth_nil !add0r.
-  rewrite /= IH //; last first.
-   move: H'.
-   rewrite -!cons_poly_def !size_cons_poly.
-   case: ifP; case: ifP => //.
-   + rewrite max0n => ? /andP [] p0 ? [] <-.
-     case: (polyseq p) p0 => //=.
-     by rewrite max0n.
-   + rewrite maxn0 => /andP [] r0 ? ? [] <-.
-     by case: (polyseq r) r0.
-   + by move=> ?? /eqP; rewrite maxnSS eqSS => /eqP.
-  rewrite !cons_poly_def !substDMXC -!addA.
-  congr add.
-  rewrite [in RHS]addC -!addA.
-  congr add.
-  rewrite !polyseqC.
-  case: c {H'} => [][|[]//]; case: b => [][|[]//] /= c b;
-  by rewrite ?(addp0, add0p, addpp).
+  apply funext=> i.
+  rewrite /add !subst_poly_D.
+  set spr := size (p + r).
+  set sp := size p.
+  set sr := size r.
+  set N := maxn (size p) (size r).
+  have Hspr : N = (spr + (N - spr))%N
+    by rewrite subnKC // size_add.
+  have Hsp : N = (sp + (N - sp))%N
+    by rewrite subnKC // leq_maxl.
+  have Hsr : N = (sr + (N - sr))%N
+    by rewrite subnKC // leq_maxr.
+  have-> : \sum_(j < spr) (p + r)`_j * a (i + j)%N =
+           \sum_(j < N) (p + r)`_j * a (i + j)%N
+    by rewrite -[X in X = _]addr0 Hspr big_split_ord /=; congr (_ + _);
+    apply/esym/big1=> -[] j Hj _ /=; rewrite (nth_default _ (leq_addr j spr)) mul0r.
+  have-> : \sum_(j < sp) p`_j * a (i + j)%N =
+           \sum_(j < N) p`_j * a (i + j)%N
+    by rewrite -[X in X = _]addr0 Hsp big_split_ord /=; congr (_ + _);
+    apply/esym/big1=> -[] j Hj _ /=; rewrite (nth_default _ (leq_addr j sp)) mul0r.
+  have-> : \sum_(j < sr) r`_j * a (i + j)%N =
+           \sum_(j < N) r`_j * a (i + j)%N
+    by rewrite -[X in X = _]addr0 Hsr big_split_ord /=; congr (_ + _);
+    apply/esym/big1=> -[] j Hj _ /=; rewrite (nth_default _ (leq_addr j sr)) mul0r.
+  rewrite -big_split /=.
+  by under eq_bigr do rewrite coef_add_poly mulrDl.
 Qed.
 
 Lemma substM (p q : {poly 'F_2}) a :
@@ -1372,19 +1377,19 @@ Proof.
    have->: Ordinal c = 0 by apply/val_inj.
    by rewrite polyC0 mul0r addr0 substMX polyseq0 /= addp0 substC.
   have->: Ordinal c = 1 by apply/val_inj.
-  by rewrite substDMXC polyC1 mul1r polyseq1 /= add0p substC.
+  by rewrite substDMXC polyC1 mul1r polyseq1 /= scale'1p add0p substC.
 Qed.
 
 Lemma substMXn n x : subst 'X^n x = \big[comp/id]_(i < n) subst 'X x.
 Proof.
   elim: n x => [x|n IH x].
-   rewrite big_ord0 expr0 polyseqC.
+   rewrite big_ord0 expr0 polyseqC /=.
    apply/functional_extensionality => ?.
-   by rewrite /= add0p.
+   by rewrite scale'1p add0p.
   rewrite exprSr substMX IH big_ord_recl.
   elim: n {IH} => [|n IH].
    rewrite big_ord0; apply/functional_extensionality => ?.
-   by rewrite /= polyseqX /= addp0 add0p.
+   by rewrite polyseqX /= scale'1p scale'0p add0p addp0.
   by rewrite big_ord_recl -[in RHS]IH.
 Qed.
 
@@ -1454,7 +1459,7 @@ Proof.
   rewrite doubleS !exprSr !substM /= substM /= IH.
    congr t; congr subst.
    move: (substM 'X 'X) => /= <-.
-   by rewrite -expr2 polyseqXn polyseqX /= !addp0 !add0p.
+   by rewrite -expr2 polyseqXn polyseqX /= !scale'0p !addp0 !add0p.
   repeat move: substM => /= <-.
   by rewrite mulrC mulrA mulrC mulrA substM /= fH subst0.
 Qed.
@@ -1470,14 +1475,14 @@ Proof.
   rewrite (subst_subst _ E) //= polyseqXn /subst subst_rcons size_nseq.
   have->: (subst_rec (nseq i 0) D x) = zero.
    elim: i x {E p H0} => // i IH x.
-   by rewrite /= IH addp0.
-  rewrite /= addp0.
+   by rewrite /= scale'0p addp0 IH.
+  rewrite /= addp0 scale'1p.
   elim: i x {E p H0} => // i IH x.
   by rewrite iterSr => /IH.
 Qed.
 
 Definition Veq (x y : V) :=
-  [forall i, sval x (i : 'I_(size phi).-1) == sval y i].
+  [forall i, V_val x (i : 'I_(size phi).-1) == V_val y i].
 
 Lemma add_eq0 x y :
   add x y = zero <-> x = y.
@@ -1510,117 +1515,9 @@ Proof.
   by rewrite !big_ord_recr /= /add /= IH.
 Qed.
 
-Lemma VeqP : Equality.axiom Veq.
-Proof.
-case=> x xH []y yH.
-apply/(iffP idP).
-* move=> H0.
-  apply/eqV/functional_extensionality => j.
-  rewrite /Veq /= in H0.
-  elim: (lt_wf j) => {j} j _ IH.
-  case js: (j < (size phi).-1)%nat.
-   by move/forallP/(_ (Ordinal js))/eqP: H0.
-  move/negP/negP: js; rewrite -leqNgt => js.
-  move: xH yH H0.
-  rewrite /Veq /= -[phi]coefK poly_def !subst_sum.
-  move pn: (size phi) js => p'.
-  case: p' pn (phi_gt0 pm) => [->//|] p' pn _ js.
-  have cD: forall x i, (\big[comp/id]_(i0 < i) subst 'X D) x = fun j => x (j + i)%nat.
-   move=> z.
-    elim.
-     apply/functional_extensionality => k.
-     by rewrite big_ord0 addn0.
-    move=> i IH'.
-    rewrite big_ord_recl /= IH' polyseqX /= !addp0 !add0p.
-    apply/functional_extensionality => k.
-    by rewrite /D addSn addnS.
-  under eq_bigr => i _.
-   rewrite -mul_polyC substM substMXn /= cD.
-  over.
-  move=> xH.
-  under eq_bigr => i _.
-   rewrite -mul_polyC substM substMXn /= cD.
-  over.
-  move=> yH H0; move: xH yH.
-  rewrite !big_ord_recr /= !add_eq0.
-  have->: p' = (size phi).-1 by rewrite pn.
-  have->: phi`_(size phi).-1 = 1.
-   rewrite nth_last.
-   case: phi pn => [][]//= a l.
-   case: (last a l) => [][|[]//]// *.
-   by apply val_inj.
-  rewrite !polyseqC /= !add0p => xH yH.
-  move: (f_equal (fun x => x (j - (size phi).-1)%nat) xH).
-  rewrite /= subnK ?pn // => <-.
-  move: (f_equal (fun x => x (j - (size phi).-1)%nat) yH).
-  rewrite /= subnK ?pn // => <-.
-  rewrite (big_subst (fun i => subst (phi`_i)%:P D (fun j0 : nat => x (j0 + i)%N)))
-          (big_subst (fun i => subst (phi`_i)%:P D (fun j0 : nat => y (j0 + i)%N))).
-  apply/eq_bigr => i _.
-  case p1: (phi`_i == 1).
-   rewrite (eqP p1) !polyseqC /= !add0p IH //.
-   apply/ltP.
-   rewrite addnBAC // -subnBA; last by apply ltnW.
-   suff: ((p' - i) > 0)%nat.
-    case: j js {IH}.
-     rewrite leqn0 /= => /eqP p0 C.
-     by rewrite {1}p0 sub0n in C.
-    case: (p' - i)%nat => // ? j js.
-    by rewrite subSS !ltnS leq_subr.
-   by rewrite ltnNge leqn0 subn_eq0 -ltnNge.
-  have->: phi`_i = 0.
-   case: (phi`_i) p1 => [][|[]//] *.
-   by apply val_inj.
-  by rewrite !polyseqC /=.
-* case => H.
-  apply/forallP => i.
-  by rewrite /= H.
-Qed.
-
-(*
-Definition V_eqMixin := EqMixin VeqP.
-Canonical V_eqType := Eval hnf in EqType V V_eqMixin.
-*)
-
-Lemma pairing_addv x y z :
-  pairing x (addv y z) = pairing x y + pairing x z.
-Proof.
-  case: y z => [y Hy] [z Hz].
-  by rewrite /pairing /addv /= substD.
-Qed.
-
-Lemma tD x y : t (add x y) = t x + t y.
-Proof. by []. Qed.
-
-Lemma pairing_add x y z :
-  pairing (x + y) z = pairing x z + pairing y z.
-Proof.
-  rewrite /pairing -tD -substD'; congr t.
-  apply subst_subst; first by case: z.
-  by rewrite reprK piD !reprK.
-Qed.
-
-Definition V_zmodMixin := ZmodMixin addvA addvC add0v addIv.
-Canonical V_zmodType := ZmodType V V_zmodMixin.
-Definition scalev a v : V :=
-  if a == 1 :> 'F_2 then v else zerov.
-Fact scalev1x A : scalev 1 A = A.
-Proof. by []. Qed.
-Fact scalevA x y A : scalev x (scalev y A) = scalev (x * y) A.
-Proof. by case: x y => [][|[]//] + [][|[]//]. Qed.
-Fact scalevxDl A x y : scalev (x + y) A = scalev x A + scalev y A.
-Proof.
-  case: x y => [][|[]//] ? [][|[]//] ?;
-  by rewrite ?(add0r, addr0) /scalev //= -(addvv A).
-Qed.
-Fact scalevxDr x A B : scalev x (A + B) = scalev x A + scalev x B.
-Proof. case: x => [][|[]//] ?; by rewrite add0r. Qed.
-Definition V_lmodMixin := LmodMixin scalevA scalev1x scalevxDr scalevxDl.
-Canonical V_lmodType := Eval hnf in LmodType 'F_2 V V_lmodMixin.
-
-Definition V_rV (x : V) : 'rV['F_2]_(size phi).-1 :=
-  \row_(i < (size phi).-1) sval x i.
-
+Section rVVI_def.
+Local Notation n := (size phi).
+Variable x : 'rV['F_2]_n.-1.
 (*
 Require Import Program.
 
@@ -1642,10 +1539,6 @@ Next Obligation.
   by rewrite subSS ltnS leq_subr.
 Qed.
 *)
-
-Section rVVI.
-Local Notation n := (size phi).
-Variable x : 'rV['F_2]_n.-1.
 
 Fixpoint rVSI_gen (i : nat) : seq 'F_2.
 Proof.
@@ -1696,42 +1589,11 @@ rewrite rVSI_gen_mkseq' /mkseq (nth_map 0%N 0) ?size_iota // nth_iota //.
 by rewrite add0n subSS subKn.
 Qed.
 
-Lemma rVSI_cp (i : nat) (H : (i < n.-1)%N) :
+Lemma rVSI_init (i : nat) (H : (i < n.-1)%N) :
   rVSI i = x ord0 (Ordinal H).
 Proof. by rewrite /rVSI /= H; congr (_ _ _); apply ord_inj=> /=; rewrite modn_small. Qed.
 
-(*
-Lemma size_rVSI_gen (i : nat) : size (rVSI_gen i) = i.
-Proof. by elim: i=> //= i IHi; congr _.+1. Qed.
-
-Lemma drop_rVSI_gen (i j : nat) : (j <= i)%N -> drop (i - j)%N (rVSI_gen i) = rVSI_gen j.
-Proof.
-move: i j; elim=> [j | i IHi]; first by rewrite leqn0=> /eqP ->.
-case=> [_ | j ji]; first by rewrite /= -{1}(size_rVSI_gen i) drop_size.
-move: (ji); rewrite subSS -{1}(addn1 j) -{1}(addn1 i) leq_add2r => ji'.
-case H : (i - j)%N; first by move/eqP: H; rewrite subn_eq0=> /(conj ji') /andP /anti_leq ->.
-have: exists k, (i - j)%N = k.+1 by rewrite H; eexists.
-case=> k Hk; rewrite -H Hk {H} /=.
-have ij : (0 < i - j)%N by rewrite Hk.
-have ji'' : (j < i)%N
-  by rewrite ltn_neqAle ji' andbT; apply/eqP=> ji''; move: Hk; rewrite ji'' subnn.
-set X := (if _ then _ else _).
-rewrite -(IHi j) //.
-suff-> : X = nth 0 (rVSI_gen i) k by rewrite Hk -drop_nth // size_rVSI_gen -Hk leq_subr.
-suff-> : X = nth 0 (drop k (rVSI_gen i)) 0 by rewrite nth_drop addn0.
-move: (IHi j.+1 ji'').
-have-> : (i - j.+1)%N = k by rewrite subnS; apply succn_inj; rewrite prednK.
-by move->.
-(* A good part of this lemma could be generalized out. (Lemma drop_head?) *)
-Qed.
-
-Lemma nth_rVSI_gen (i j : nat) : (j <= i)%N -> nth 0 (rVSI_gen i.+1) (i - j) = rVSI j.
-Proof.
-move=> ji; rewrite -(subSS j i) -(addn0 (i.+1 - j.+1)%N) -nth_drop drop_rVSI_gen //.
-Qed.
-*)
-
-Lemma rVSI_rep (i : nat) :
+Lemma rVSI_rec (i : nat) :
   (n.-1 <= i)%N -> rVSI i = \sum_(j < n.-1) phi`_j * rVSI (i - n.-1 + j).
 Proof.
 move=> ni.
@@ -1758,32 +1620,115 @@ rewrite {X}; rewrite {Hk}; rewrite {k}.
 by case: j=> j; rewrite -Hn'.
 Qed.
 
-Lemma subst_poly_D psi s i :
-  subst psi D s i = \sum_(j < (size psi).-1) psi`_j * s (i + j)%N.
-Admitted.
+Lemma rVVI_proof : subst phi D rVSI = zero.
+Proof.
+apply/funext=> i; apply/eqP.
+rewrite subst_poly_D /zero /=.
+have -> : n = n.-1.+1
+  by rewrite prednK //; move: (leq_pred n); apply/leq_trans/(predphi_geq1 pm).
+rewrite big_ord_recr addr_eq0 F2_opp /= -lead_coefE.
+have-> : lead_coef phi = 1 
+  by apply/eqP; rewrite F2_eq1 lead_coef_eq0 -size_poly_leq0 leqNgt negbK (phi_gt0 pm).
+rewrite mul1r rVSI_rec ?leq_addl //.
+apply/eqP/eq_bigr=> j _; congr (_ * rVSI (_ + _)%N).
+by rewrite -addnBA ?leqnn // subnn addn0.
+Qed.
 
-Definition rVVI : V.
-  exists rVSI.
-  apply/functional_extensionality => i.
-  rewrite subst_poly_D.
-  
-  rewrite /rVSI.
-  rewrite /rVSI /rVSI_func /=.
-  rewrite /Fix_sub.
-  rewrite /Fix_F_sub.
-  rewrite /=.
-  rewrite /subst /subst_rec.
-  case: ifP.
-  rewrite /=.
-  rewrite /=.
-  Print V.
+Definition rVVI : V := mkV rVSI rVVI_proof.
+End rVVI_def.
 
-  \big[add/zero]_(i < (size phi).-1) subst (phi`_i)%:P D (fun j0 : nat => x (j0 + i)%N)
+Section rVVI_prop.
+Local Notation n := (size phi).
 
-  Check
-  \pi \o rVpoly.
+Definition V_rV (x : V) : 'rV['F_2]_(size phi).-1 :=
+  \row_(i < (size phi).-1) V_val x i.
 
-End rVVI.
+Lemma V_rVVI (v : V) : v = rVVI (V_rV v).
+Proof.
+rewrite /V_rV.
+case: v=> v Hv.
+apply/eqV'/funext => /=.
+apply: ltn_ind=> i IHi.
+case Hin : (i < n.-1)%N; first by rewrite rVSI_init mxE.
+move/negbT: Hin; rewrite ltnNge negbK=> Hin.
+rewrite rVSI_rec //.
+under eq_bigr => j _.
+- move: (ltn_ord j)=> Hj.
+  rewrite -IHi; last first.
+  rewrite addnBAC // ltn_subLR; first by rewrite addnC ltn_add2r.
+  by move: (leq_addr j i); apply leq_trans.
+  over.
+apply/eqP; rewrite -(F2_opp (v i)) eq_sym -addr_eq0.
+set X := _ + _.
+have->: X = \sum_(j < n) phi`_j * v (i - n.-1 + j)%N.
+- have-> : n = n.-1.+1
+    by rewrite prednK //; move: (leq_pred n); apply/leq_trans/(predphi_geq1 pm).
+  rewrite big_ord_recr /= /X (_ : (i - n.-1 + n.-1)%N = i) ?subnK //.
+  rewrite -lead_coefE.
+  have-> : lead_coef phi = 1 
+    by apply/eqP; rewrite F2_eq1 lead_coef_eq0 -size_poly_leq0 leqNgt negbK (phi_gt0 pm).
+  rewrite mul1r.
+  by congr (_ + _).
+by move/(congr1 (fun p => p (i - n.-1)%N)): Hv; rewrite subst_poly_D /zero => ->.
+Qed.
+
+Lemma V_rVVI' (v : V) : exists x, v = rVVI x.
+Proof. by exists (V_rV v); exact: V_rVVI. Qed.
+End rVVI_prop.
+
+Lemma VeqP : Equality.axiom Veq.
+Proof.
+move=> x y.
+apply/(iffP idP).
+- rewrite /Veq => /forallP /= H.
+  rewrite (V_rVVI x) (V_rVVI y).
+  congr (rVVI (\row_j _)).
+  by apply funext=> _; apply funext=> j /=; apply/eqP; rewrite H.
+-  by move->; rewrite /Veq; apply/forallP.
+Qed.
+
+(*
+Definition V_eqMixin := EqMixin VeqP.
+Canonical V_eqType := Eval hnf in EqType V V_eqMixin.
+*)
+
+Lemma pairing_addv x y z :
+  pairing x (addv y z) = pairing x y + pairing x z.
+Proof.
+  case: y z => [y Hy] [z Hz].
+  by rewrite /pairing /addv /= substD.
+Qed.
+
+Lemma tD x y : t (add x y) = t x + t y.
+Proof. by []. Qed.
+
+Lemma pairing_add x y z :
+  pairing (x + y) z = pairing x z + pairing y z.
+Proof.
+  rewrite /pairing -tD -substD'; congr t.
+  apply subst_subst; first by case: z.
+  by rewrite reprK piD !reprK.
+Qed.
+
+Definition V_zmodMixin := ZmodMixin addvA addvC add0v addIv.
+Canonical V_zmodType := ZmodType V V_zmodMixin.
+Definition scalev a v : V :=
+  if a == 1 :> 'F_2 then v else zerov.
+Fact scalev1x A : scalev 1 A = A.
+Proof. by []. Qed.
+Fact scalevA x y A : scalev x (scalev y A) = scalev (x * y) A.
+Proof. by case: x y => [][|[]//] + [][|[]//]. Qed.
+Fact scalevxDl A x y : scalev (x + y) A = scalev x A + scalev y A.
+Proof.
+  case: x y => [][|[]//] ? [][|[]//] ?;
+  by rewrite ?(add0r, addr0) /scalev //= -(addvv A).
+Qed.
+Fact scalevxDr x A B : scalev x (A + B) = scalev x A + scalev x B.
+Proof. case: x => [][|[]//] ?; by rewrite add0r. Qed.
+Definition V_lmodMixin := LmodMixin scalevA scalev1x scalevxDr scalevxDl.
+Canonical V_lmodType := Eval hnf in LmodType 'F_2 V V_lmodMixin.
+
+(* *)
 
 Lemma V_vect_axiom : Vector.axiom (size phi).-1 V.
 Proof.
