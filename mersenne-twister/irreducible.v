@@ -1044,6 +1044,9 @@ Definition subst p := subst_rec p.
 Lemma scale'Dr a p q : scale' a (add p q) = add (scale' a p) (scale' a q).
 Proof. by apply funext=> i; rewrite /scale' mulrDr. Qed.
 
+Lemma scale'Dl a b p : scale' (a + b) p = add (scale' a p) (scale' b p).
+Proof. by apply funext=> i; rewrite /scale' mulrDl. Qed.
+
 Lemma scale'1p p : scale' 1 p = p.
 Proof. by apply funext=> i; rewrite /scale' mul1r. Qed.
 
@@ -1052,6 +1055,12 @@ Proof. by apply funext=> i; rewrite /scale' mul0r. Qed.
 
 Lemma scale'p0 a : scale' a zero = zero.
 Proof. by apply funext=> i; rewrite /scale' mulr0. Qed.
+
+Lemma scale'Cp a b p : scale' a (scale' b p) = scale' b (scale' a p).
+Proof. by apply funext=> i; rewrite /scale' mulrCA. Qed.
+
+Lemma scale'A  a b p : scale' a (scale' b p) = scale' (a * b) p.
+Proof. by apply funext=> i; rewrite /scale' mulrA. Qed.
 
 Lemma addC : commutative add.
 Proof.
@@ -1236,9 +1245,6 @@ Proof.
    by rewrite IH -scale'D addD.
 Qed.
 
-Lemma scale'Cp a b p : scale' a (scale' b p) = scale' b (scale' a p).
-Proof. by apply funext=> i; rewrite /scale' mulrCA. Qed.
-
 Lemma scale'_substD a xs p : scale' a (subst xs D p) = subst xs D (scale' a p).
 Proof.
 move: p; elim: xs; first by rewrite /= scale'p0.
@@ -1248,7 +1254,7 @@ congr add.
 by rewrite IHxs -scale'D.
 Qed.
 
-Lemma scale'I a p : scale' a (scale' a p) = scale' a p.
+Lemma F2_scale'I a p : scale' a (scale' a p) = scale' a p.
 Proof. by apply funext=> i; rewrite /scale' mulrA F2_mulI. Qed.
 
 Lemma phiD2 : subst phi (D \o D) = subst phi D \o subst phi D.
@@ -1257,7 +1263,7 @@ Proof.
   apply funext=> p.
   rewrite IH /=.
   rewrite !(addD, substC, scale'Dr) /=.
-  rewrite -scale'D scale'_substD scale'I addA.
+  rewrite -scale'D scale'_substD F2_scale'I addA.
   congr add.
   rewrite substC -addD -substD /=; last by exact:addD.
   by rewrite -addA addpp addp0 substC.
@@ -1688,19 +1694,20 @@ Qed.
 
 Definition V_zmodMixin := ZmodMixin addvA addvC add0v addIv.
 Canonical V_zmodType := ZmodType V V_zmodMixin.
-Definition scalev a v : V :=
-  if a == 1 :> 'F_2 then v else zerov.
-Fact scalev1x A : scalev 1 A = A.
-Proof. by []. Qed.
-Fact scalevA x y A : scalev x (scalev y A) = scalev (x * y) A.
-Proof. by case: x y => [][|[]//] + [][|[]//]. Qed.
-Fact scalevxDl A x y : scalev (x + y) A = scalev x A + scalev y A.
+Definition scalev (a : 'F_2) (v : V) : V.
 Proof.
-  case: x y => [][|[]//] ? [][|[]//] ?;
-  by rewrite ?(add0r, addr0) /scalev //= -(addvv A).
-Qed.
+refine (mkV (scale' a v) _).
+case: v=>v /= Hv.
+by rewrite -scale'_substD Hv scale'p0.
+Defined.
+Fact scalev1x v : scalev 1 v = v.
+Proof. by apply/VeqP/forallP=> i /=; rewrite scale'1p. Qed.
+Fact scalevA x y A : scalev x (scalev y A) = scalev (x * y) A.
+Proof. by apply/VeqP/forallP=> i /=; rewrite scale'A. Qed.
+Fact scalevxDl A x y : scalev (x + y) A = scalev x A + scalev y A.
+Proof. by apply/VeqP/forallP=> i /=; rewrite scale'Dl. Qed.
 Fact scalevxDr x A B : scalev x (A + B) = scalev x A + scalev x B.
-Proof. case: x => [][|[]//] ?; by rewrite add0r. Qed.
+Proof. by apply/VeqP/forallP=> i /=; rewrite scale'Dr. Qed.
 Definition V_lmodMixin := LmodMixin scalevA scalev1x scalevxDr scalevxDl.
 Canonical V_lmodType := Eval hnf in LmodType 'F_2 V V_lmodMixin.
 
@@ -1708,9 +1715,22 @@ Canonical V_lmodType := Eval hnf in LmodType 'F_2 V V_lmodMixin.
 
 Lemma V_vect_axiom : Vector.axiom (size phi).-1 V.
 Proof.
-
-by exists QphiI_rV; [move=> ???; rewrite QphiI_rV_D QphiI_rV_scaler|exists rVQphiI].
+rewrite /Vector.axiom_def.
+exists V_rV.
+- move=> a u v.
+  rewrite /V_rV.
+  apply/rowP=> i.
+  by rewrite !mxE /= /add /scale'.
+- exists rVVI; first by move=> ?; rewrite -V_rVVI.
+  move=> v;  apply/rowP=> i.
+  rewrite /V_rV /rVVI /= mxE.
+  case: i=> i Hi /=.
+  rewrite /rVSI /= Hi /=.
+  congr (v _ _).
+  apply val_inj=> /=.
+  by rewrite modn_small.
 Qed.
+
 Check size phi.
 Check Vector.axiom _ _.
 Check VectMixin _.
