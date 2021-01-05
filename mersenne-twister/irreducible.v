@@ -33,42 +33,19 @@ Lemma F2_mulI (a : 'F_2) : a * a = a.
 Proof. by case/F2P: a; rewrite ?mul1r ?mul0r. Qed.
 End infotheo_f2_ext.
 
-Lemma f2p_monic (p : {poly 'F_2}) :
-  (p != 0)%R -> p \is monic.
-Proof.
-  move=> /negPf p0; apply/eqP.
-  case lp0: (lead_coef p == 0)%R.
-   by rewrite lead_coef_eq0 p0 in lp0.
-  case: (lead_coef p) lp0 => [][]//[]// *.
-  by apply/val_inj.
-Qed.
-
 Lemma f2eqp_eq (p q : {poly 'F_2}) : (p %= q)%R = (p == q).
 Proof.
   case q0: (q == 0%R).
    by move/eqP: q0 => ->; rewrite eqp0.
   case p0: (p == 0%R).
    by move/eqP: p0 => ->; rewrite eq_sym -eqp0 eqp_sym.
-  rewrite eqp_monic // f2p_monic //.
+  rewrite eqp_monic // monic_F2 //.
   + by move/negP/negP: p0.
   + by move/negP/negP: q0.
 Qed.
 
-Lemma lem1 q n : prime q -> (n < q -> n.+1 != n %[mod q])%N.
-Proof.
-  move=> Hq nq.
-  case n0: (n == 0)%N.
-   move/eqP: n0 => ->.
-   rewrite mod0n modn_small //.
-   by case: q Hq nq => []//[].
-  case nsq: (n.+1 == q).
-   move/eqP: nsq => <-.
-   by rewrite modnn modn_small // eq_sym n0.
-  have nsq': (n.+1 < q)%N
-   by rewrite ltn_neqAle nq nsq.
-  rewrite !modn_small //.
-  by elim n.
-Qed.
+Lemma eqnSn_mod n d : (n == n.+1 %[mod d])%N = (d == 1)%N.
+Proof. by rewrite -{1}(addn0 n) -addn1 eqn_modDl modnS dvdn1 mod0n; case: (d == 1). Qed.
 
 Lemma exp2_dvd a b :
   2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
@@ -128,7 +105,7 @@ Proof.
 Qed.
 
 Lemma phi_is_monic : phi \is monic.
-Proof. by apply f2p_monic; rewrite -size_poly_gt0 ltnW. Qed.
+Proof. by apply monic_F2; rewrite -size_poly_gt0 ltnW. Qed.
 
 Hint Resolve phi_is_monic phi_neq0 ltn_phi_pred : core.
 
@@ -158,7 +135,7 @@ Lemma phiI_proper_ideal : proper_ideal phiI.
 Proof.
   split => [|??].
   * by rewrite unfold_in rmodp_small ?size_polyC ?size_p oner_neq0.
-  * rewrite !unfold_in -rmodp_mulmr ?f2p_monic // => /eqP ->.
+  * rewrite !unfold_in -rmodp_mulmr ?monic_F2 // => /eqP ->.
     by rewrite mulr0 rmod0p.
 Qed.
 
@@ -638,8 +615,8 @@ Proof.
   move: minstab_attain => H0; apply/negP => /eqP Hc.
   move: (H0 a a.+1).
   rewrite GRing.exprS -GRing.mulrA Hc GRing.mulr0 => /(_ erefl)/eqP.
-  rewrite (divn_eq a (2 ^ m - 1)) -addnS !modnMDl.
-  by apply/negP/lem1 => //; rewrite ltn_mod.
+  rewrite (divn_eq a (2 ^ m - 1)) -addnS !modnMDl eq_sym eqnSn_mod=> /eqP H.
+  by move: (prime_gt1 pm); rewrite H ltnn.
 Qed.
 
 Lemma map_piE :
@@ -1404,8 +1381,8 @@ Lemma subst_subst x y f :
 Proof.
 move => Hf /eqP.
 rewrite -Quotient.idealrBE unfold_in Pdiv.RingMonic.rmodp_add
-        ?f2p_monic ?phi_neq0 ?phi_gt1 // addr_eq0
-        -!Pdiv.IdomainMonic.modpE ?f2p_monic ?phi_neq0 ?phi_gt1 //
+        ?monic_F2 ?phi_neq0 ?phi_gt1 // addr_eq0
+        -!Pdiv.IdomainMonic.modpE ?monic_F2 ?phi_neq0 ?phi_gt1 //
         modp_opp opprK => /eqP H.
 by rewrite (divp_eq x phi) (divp_eq y phi) H !substD' !substM /comp ?Hf
            // !subst0.
@@ -1626,6 +1603,8 @@ apply/funext=> i; apply/eqP.
 rewrite subst_poly_D /zero /=.
 have -> : n = n.-1.+1
   by rewrite prednK //; move: (leq_pred n); apply/leq_trans/(predphi_geq1 pm).
+rewrite big_ord_recr addr_eq0 F2_opp /=.
+
 rewrite big_ord_recr addr_eq0 F2_opp /= -lead_coefE.
 have-> : lead_coef phi = 1 
   by apply/eqP; rewrite F2_eq1 lead_coef_eq0 -size_poly_leq0 leqNgt negbK (phi_gt0 pm).
