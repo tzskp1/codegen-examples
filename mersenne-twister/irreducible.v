@@ -56,7 +56,7 @@ have H: forall a, 2 ^ a = 2 ^ a - 1 + 1 by move=> *; rewrite subnK // expn_gt0.
 by rewrite [in LHS]H mulnDl mul1n [X in _ + X]H addn1 !addnS !subn1.
 Qed.
 
-Lemma m_is_prime m : prime (2 ^ m - 1) -> prime m.
+Lemma Mersenne_exponent_is_prime m : prime (2 ^ m - 1) -> prime m.
 Proof.
 apply: contraLR => /primePn []; first by case: m => []//[].
 case => a aH /dvdnP[] b mba; move: mba aH => -> mba.
@@ -386,7 +386,7 @@ Section Irreducible.
 Variable phi : {poly 'F_2}.
 Local Notation m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
-Local Notation m_is_prime := (m_is_prime pm).
+Local Notation m_is_prime := (Mersenne_exponent_is_prime pm).
 
 Lemma phi_gt1 : 1 < size phi.
 Proof. by case: (size phi) m_is_prime => []//[]. Qed.
@@ -1603,8 +1603,6 @@ apply/funext=> i; apply/eqP.
 rewrite subst_poly_D /zero /=.
 have -> : n = n.-1.+1
   by rewrite prednK //; move: (leq_pred n); apply/leq_trans/(predphi_geq1 pm).
-rewrite big_ord_recr addr_eq0 F2_opp /=.
-
 rewrite big_ord_recr addr_eq0 F2_opp /= -lead_coefE.
 have-> : lead_coef phi = 1 
   by apply/eqP; rewrite F2_eq1 lead_coef_eq0 -size_poly_leq0 leqNgt negbK (phi_gt0 pm).
@@ -1616,12 +1614,11 @@ Qed.
 Definition rVVI : V := mkV rVSI rVVI_proof.
 End rVVI_def.
 
-Section rVVI_prop.
-Local Notation n := (size phi).
-
 Definition V_rV (x : V) : 'rV['F_2]_(size phi).-1 :=
   \row_(i < (size phi).-1) V_val x i.
 
+Section rVVI_prop.
+Local Notation n := (size phi).
 Lemma V_rVVI (v : V) : v = rVVI (V_rV v).
 Proof.
 rewrite /V_rV.
