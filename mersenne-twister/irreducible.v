@@ -22,6 +22,8 @@ move=> m H0.
 apply (H m (ltP H0)).
 Defined.
 Definition ltn_rect := Eval hnf in _ltn_rect.
+Lemma eqnSn_mod n d : (n == n.+1 %[mod d]) = (d == 1)%N.
+Proof. by rewrite -{1}(addn0 n) -addn1 eqn_modDl modnS dvdn1 mod0n; case: (d == 1). Qed.
 End mathcomp_ssrnat_ext.
 
 Section infotheo_f2_ext.
@@ -33,7 +35,8 @@ Lemma F2_mulI (a : 'F_2) : a * a = a.
 Proof. by case/F2P: a; rewrite ?mul1r ?mul0r. Qed.
 End infotheo_f2_ext.
 
-Lemma f2eqp_eq (p q : {poly 'F_2}) : (p %= q)%R = (p == q).
+Section infotheo_f2_poly.
+Lemma F2_eqp_eq (p q : {poly 'F_2}) : (p %= q)%R = (p == q).
 Proof.
   case q0: (q == 0%R).
    by move/eqP: q0 => ->; rewrite eqp0.
@@ -43,11 +46,10 @@ Proof.
   + by move/negP/negP: p0.
   + by move/negP/negP: q0.
 Qed.
+End infotheo_f2_poly.
 
-Lemma eqnSn_mod n d : (n == n.+1 %[mod d])%N = (d == 1)%N.
-Proof. by rewrite -{1}(addn0 n) -addn1 eqn_modDl modnS dvdn1 mod0n; case: (d == 1). Qed.
-
-Lemma exp2_dvd a b :
+Section Mersenne_number.
+Lemma Mersenne_composite_exponentE a b :
   2^(a * b) - 1 = (2^a - 1) * \sum_(i < b) 2 ^ (a * (b - i.+1)).
 Proof.
 elim: b => [|b IHb]; first by rewrite muln0 expn0 subn1 big_ord0 muln0.
@@ -56,11 +58,11 @@ have H: forall a, 2 ^ a = 2 ^ a - 1 + 1 by move=> *; rewrite subnK // expn_gt0.
 by rewrite [in LHS]H mulnDl mul1n [X in _ + X]H addn1 !addnS !subn1.
 Qed.
 
-Lemma Mersenne_exponent_is_prime m : prime (2 ^ m - 1) -> prime m.
+Lemma Mersenne_prime_has_prime_exponent m : prime (2 ^ m - 1) -> prime m.
 Proof.
 apply: contraLR => /primePn []; first by case: m => []//[].
 case => a aH /dvdnP[] b mba; move: mba aH => -> mba.
-rewrite exp2_dvd; apply/primePn; right.
+rewrite Mersenne_composite_exponentE; apply/primePn; right.
 exists (2 ^ b - 1); rewrite ?dvdn_mulr //.
 have? : 1 < 2 ^ b - 1.
  case: b mba => [|[|b _]].
@@ -74,6 +76,7 @@ case: a mba => []//[]// a mba.
 rewrite !big_ord_recr /= subnn muln0 expn0 -[X in X < _]add0n ltn_add2r.
 by rewrite subSnn muln1 ltn_addl // expn_gt0.
 Qed.
+End Mersenne_number.
 
 Section iter_lin.
 Variable K : fieldType.
@@ -112,7 +115,7 @@ Hint Resolve phi_is_monic phi_neq0 ltn_phi_pred : core.
 Definition phiI := rdvdp phi.
 Fact phiI_key : pred_key phiI. Proof. by []. Qed.
 
-Canonical keyd_phiI : keyed_pred phiI_key.
+Canonical keyed_phiI : keyed_pred phiI_key.
 by apply (@PackKeyedPred _ _ phiI_key (rdvdp phi)).
 Defined.
 
@@ -145,7 +148,7 @@ Canonical phiI_idealr := MkIdeal phiI_zmodPred phiI_proper_ideal.
 
 Local Open Scope quotient_scope.
 
-Definition QphiI := {ideal_quot keyd_phiI}.
+Definition QphiI := {ideal_quot keyed_phiI}.
 
 Definition QphiI_rV (x : QphiI) : 'rV['F_2]_(size phi).-1 :=
   poly_rV (rmodp (generic_quotient.repr x) phi).
@@ -247,12 +250,12 @@ Proof. by rewrite -rmorphM. Qed.
 
 Lemma piD p q : \pi_QphiI (p + q) = (\pi p : QphiI) + \pi q.
 Proof.
-by rewrite (rmorphD (pi_rmorphism (Quotient.rquot_ringQuotType keyd_phiI))).
+by rewrite (rmorphD (pi_rmorphism (Quotient.rquot_ringQuotType keyed_phiI))).
 Qed.
 
 Lemma piB p q : \pi_QphiI (p - q) = (\pi p : QphiI) - (\pi q : QphiI).
 Proof.
-by rewrite (rmorphB (pi_rmorphism (Quotient.rquot_ringQuotType keyd_phiI))).
+by rewrite (rmorphB (pi_rmorphism (Quotient.rquot_ringQuotType keyed_phiI))).
 Qed.
 
 Lemma card_QphiI : (#|[finType of QphiI]| = 2 ^ (size phi).-1)%N.
@@ -337,15 +340,15 @@ Proof.
   set P := (generic_quotient.repr p).
   rewrite -Quotient.idealrBE unfold_in rmodp_add //
           [rmodp (-1) _]rmodp_small ?size_opp ?size_polyC //
-          subr_eq0 -f2eqp_eq // -Pdiv.IdomainMonic.modpE //
+          subr_eq0 -F2_eqp_eq // -Pdiv.IdomainMonic.modpE //
           mulrC modp_mul mulrC.
   have<-: (((egcdp phi P).1 * phi + (egcdp phi P).2 * P)) %% phi =
           ((egcdp phi P).2 * P) %% phi
    by rewrite modp_add -modp_mul modpp mulr0 mod0p add0r.
   have->: ((egcdp phi P).1 * phi + (egcdp phi P).2 * P) = gcdp phi P
-   by apply/esym/eqP; rewrite -f2eqp_eq // egcdpE.
+   by apply/esym/eqP; rewrite -F2_eqp_eq // egcdpE.
   suff: gcdp phi P %= 1.
-   rewrite !f2eqp_eq => /eqP ->.
+   rewrite !F2_eqp_eq => /eqP ->.
    by rewrite modp_small // size_polyC.
   rewrite eqp_sym; apply/eqp_trans/gcdp_modr; rewrite eqp_sym.
   rewrite -size_poly_eq1; apply/eqP; rewrite coprimep_size_gcd //.
@@ -363,7 +366,7 @@ Proof.
    by rewrite eqpxx.
   case: (ip) => _ H1 H2.
   move/H1: H2; rewrite d1 => /implyP /=.
-  rewrite f2eqp_eq => /eqP -> /dvdp_leq.
+  rewrite F2_eqp_eq => /eqP -> /dvdp_leq.
   rewrite leqNgt ltn_modp phi_neq0 => C.
   suff: false by []; apply/C.
   rewrite -[p]reprK -pi_zeror -Quotient.idealrBE subr0 unfold_in
@@ -386,7 +389,7 @@ Section Irreducible.
 Variable phi : {poly 'F_2}.
 Local Notation m := (size phi).-1.
 Hypothesis pm : prime (2 ^ m - 1).
-Local Notation m_is_prime := (Mersenne_exponent_is_prime pm).
+Local Notation m_is_prime := (Mersenne_prime_has_prime_exponent pm).
 
 Lemma phi_gt1 : 1 < size phi.
 Proof. by case: (size phi) m_is_prime => []//[]. Qed.
@@ -748,7 +751,7 @@ Proof.
     by rewrite -exprnP exprS expr1 -[X in _ - X]mulr1 -mulrBr dvdp_mulr //.
    rewrite size_polyX /= => C.
    have/(f_equal (size : {poly 'F_2} -> _)): 'X = 'X ^ 2 - 'X :> {poly 'F_2}
-    by apply/eqP; rewrite -f2eqp_eq C.
+    by apply/eqP; rewrite -F2_eqp_eq C.
    by rewrite size_addl ?size_opp ?size_polyXn ?size_polyX.
   move/negP/negP: x0 => x0 /(f_equal (size : {poly 'F_2} -> _)).
   rewrite size_mul // size_addl ?size_polyXn ?size_opp ?size_polyX //.
@@ -829,7 +832,7 @@ Qed.
 Lemma char2_phi : 2 \in [char QphiI phi_gt1]%R.
 Proof.
 by apply/(GRing.rmorph_char
-         (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi))))
+         (pi_rmorphism (Quotient.rquot_ringQuotType (keyed_phiI phi))))
         /(GRing.rmorph_char (polyC_rmorphism [ringType of 'F_2])).
 Qed.
 
@@ -875,7 +878,7 @@ Lemma expandF q :
   reflect (iter q F =1 id) ('X^(2 ^ q) %% phi == 'X %% phi)%R.
 Proof.
 pose rmorphX :=
-    (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+    (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyed_phiI phi)))).
 rewrite exprnP XnE rmorphX.
 apply/(iffP idP) => [/eqP H0 x|/(_ (\pi 'X))].
 * rewrite (coord_basis (QphiIX_full _) (memvf x)).
@@ -889,7 +892,7 @@ Lemma cycleF_dvdP p :
   reflect (iter p F =1 id) (2 ^ m - 1 %| 2 ^ p - 1)%nat.
 Proof.
 pose rmorphX :=
-  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyed_phiI phi)))).
 case/andP: irreducibleP_inverse => _ H0.
 apply/(iffP idP).
 * case/dvdnP => q H1.
@@ -959,7 +962,7 @@ reflect (irreducible_poly phi)
 (('X ^ 2 %% phi != 'X %% phi) && ('X ^ (2 ^ m)%N %% phi == 'X %% phi))%R.
 Proof.
 pose rmorphX :=
-  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyed_phiI phi)))).
 apply/(iffP idP); last by apply irreducibleP_inverse.
 case/andP; rewrite !XnE -!exprnP !rmorphX.
 by apply irreducibleP_direct.
@@ -970,7 +973,7 @@ Lemma irreducibleP1 :
   [exists x, (F x != x) && (iter (size phi).-1 F x == x)%R].
 Proof.
 pose rmorphX :=
-  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+  (rmorphX (pi_rmorphism (Quotient.rquot_ringQuotType (keyed_phiI phi)))).
 apply/(iffP idP).
 * case/existsP => x /andP [] H1 H2.
   apply (irreducibleP_direct H1).
@@ -1747,7 +1750,7 @@ Proof.
    congr t.
    apply subst_subst.
     by case: x.
-   by rewrite reprK (rmorph0 (pi_rmorphism (Quotient.rquot_ringQuotType (keyd_phiI phi)))).
+   by rewrite reprK (rmorph0 (pi_rmorphism (Quotient.rquot_ringQuotType (keyed_phiI phi)))).
   by rewrite /t polyseqC.
 Qed.
 
