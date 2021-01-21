@@ -1009,6 +1009,60 @@ Axiom pi : proof_irrelevance.
 Axiom em : excluded_middle.
 Axiom fc : forall a b, FunctionalChoice_on a b.
 
+Module R_stream.
+Section def.
+Local Open Scope ring_scope.
+Import GRing.Theory.
+Variable R : ringType.
+Definition S := nat -> R.
+Definition adds (s t : S) := fun i => s i + t i.
+Definition zeros : S := fun i => 0.
+Definition invs (s : S) : S := fun i => - (s i).
+Definition scales (a : R) (s : S) : S := fun i => a * s i.
+Lemma scalesDr a : {morph  scales a : u v / adds u v}.
+Proof. by move=> *; apply funext=> ?; rewrite /scales mulrDr. Qed.
+Lemma scalesDl v : {morph  (fun a => scales a v) : a b / a + b >-> adds a b}.
+Proof. by move=> *; apply funext=> ?; rewrite /scales mulrDl. Qed.
+Lemma scale1s : left_id 1 scales.
+Proof. by move=> *; apply funext=> ?; rewrite /scales mul1r. Qed.
+Lemma scale0s s : scales 0 s = zeros.
+Proof. by apply funext=> i; rewrite /scales mul0r. Qed.
+Lemma scales0 a : scales a zeros = zeros.
+Proof. by apply funext=> i; rewrite /scales mulr0. Qed.
+(*
+Lemma scalesCA a b s : scales a (scales b s) = scales b (scales a s).
+Proof. by apply funext=> i; rewrite /scales mulrCA. Qed.
+*)
+Lemma scalesA  a b s : scales a (scales b s) = scales (a * b) s.
+Proof. by apply funext=> i; rewrite /scales mulrA. Qed.
+Lemma addsC : commutative adds.
+Proof. by move=> *; apply funext=> ?; rewrite /adds addrC. Qed.
+Lemma addsA : associative adds.
+Proof. by move=> *; apply funext=> ?; rewrite /adds addrA. Qed.
+Lemma add0s : left_id zeros adds.
+Proof. by move=> *; apply funext=> ?; rewrite /adds add0r. Qed.
+Lemma adds0 : right_id zeros adds.
+Proof. by move=> *; apply funext=> ?; rewrite /adds addr0. Qed.
+Lemma addNs : left_inverse zeros invs adds.
+Proof. by move=> *; apply funext=> ?; rewrite /adds addNr. Qed.
+
+Definition zmodMixin := ZmodMixin addsA addsC add0s addNs.
+Definition zmodType := ZmodType S zmodMixin.
+Definition lmodMixin := LmodMixin (R:=R) (V:=zmodType)
+                                  scalesA scale1s scalesDr scalesDl.
+Definition lmodType := LmodType R zmodType lmodMixin.
+End def.
+Module Exports.
+Canonical R_stream_zmodType R := zmodType R.
+Canonical R_stream_lmodType R := lmodType R.
+Notation R_stream R := (S R).
+End Exports.
+End R_stream.
+Export R_stream.Exports.
+
+Lemma addss_char2 s : adds s s = zeros.
+Proof. by apply funext=> ?; rewrite /adds addrr_char2. Qed.
+
 Section Infinite.
 Variable phi : {poly 'F_2}.
 Variable pm : prime (2 ^ (size phi).-1 - 1).
@@ -1020,12 +1074,6 @@ Lemma polyF2_char2 : 2 \in [char {poly 'F_2}].
 Proof. by apply (GRing.rmorph_char (polyC_rmorphism _)). Qed.
 
 Hint Resolve polyF2_char2 : core.
-
-Definition S := nat -> 'F_2.
-
-Local Definition add (f g : S) := fun i => f i + g i.
-Local Definition zero : S := fun i => 0.
-Local Definition scale' (a : 'F_2) (p : S) : S := fun i => a * p i.
 
 Fixpoint subst_rec (s : seq 'F_2) x : S -> S :=
   if s is a :: s'
@@ -1043,56 +1091,6 @@ Definition subst p := subst_rec p.
 (*     then fun (b : S) => add (iter (size q) D b) (subst q D b) *)
 (*     else subst q D *)
 (*   end. *)
-
-Lemma scale'Dr a p q : scale' a (add p q) = add (scale' a p) (scale' a q).
-Proof. by apply funext=> i; rewrite /scale' mulrDr. Qed.
-
-Lemma scale'Dl a b p : scale' (a + b) p = add (scale' a p) (scale' b p).
-Proof. by apply funext=> i; rewrite /scale' mulrDl. Qed.
-
-Lemma scale'1p p : scale' 1 p = p.
-Proof. by apply funext=> i; rewrite /scale' mul1r. Qed.
-
-Lemma scale'0p p : scale' 0 p = zero.
-Proof. by apply funext=> i; rewrite /scale' mul0r. Qed.
-
-Lemma scale'p0 a : scale' a zero = zero.
-Proof. by apply funext=> i; rewrite /scale' mulr0. Qed.
-
-Lemma scale'Cp a b p : scale' a (scale' b p) = scale' b (scale' a p).
-Proof. by apply funext=> i; rewrite /scale' mulrCA. Qed.
-
-Lemma scale'A  a b p : scale' a (scale' b p) = scale' (a * b) p.
-Proof. by apply funext=> i; rewrite /scale' mulrA. Qed.
-
-Lemma addC : commutative add.
-Proof.
-  move=> f g.
-  apply/functional_extensionality => i.
-  by rewrite /add addrC.
-Qed.
-
-Lemma addA : associative add.
-Proof.
-  move=> f g h.
-  apply/functional_extensionality => i.
-  by rewrite /add addrA.
-Qed.
-
-Lemma add0p h : add zero h = h.
-Proof.
-  apply/functional_extensionality => i.
-  by rewrite /add add0r.
-Qed.
-
-Lemma addp0 h : add h zero = h.
-Proof. by rewrite addC add0p. Qed.
-
-Lemma addpp p : add p p = zero.
-Proof.
-  apply functional_extensionality => j.
-  by rewrite /add addrr_char2.
-Qed.
 
 Lemma iterD D :
   (forall a b, D (add a b) = add (D a) (D b)) ->
