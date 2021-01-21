@@ -1611,7 +1611,7 @@ rewrite subst_poly_D /zero /=.
 have -> : n = n.-1.+1
   by rewrite prednK //; move: (leq_pred n); apply/leq_trans/(predphi_geq1 pm).
 rewrite big_ord_recr addr_eq0 F2_opp /= -lead_coefE.
-have-> : lead_coef phi = 1 
+have-> : lead_coef phi = 1
   by apply/eqP; rewrite F2_eq1 lead_coef_eq0 -size_poly_leq0 leqNgt negbK (phi_gt0 pm).
 rewrite mul1r rVSI_rec ?leq_addl //.
 apply/eqP/eq_bigr=> j _; congr (_ * rVSI (_ + _)%N).
@@ -1648,7 +1648,7 @@ have->: X = \sum_(j < n) phi`_j * v (i - n.-1 + j)%N.
     by rewrite prednK //; move: (leq_pred n); apply/leq_trans/(predphi_geq1 pm).
   rewrite big_ord_recr /= /X (_ : (i - n.-1 + n.-1)%N = i) ?subnK //.
   rewrite -lead_coefE.
-  have-> : lead_coef phi = 1 
+  have-> : lead_coef phi = 1
     by apply/eqP; rewrite F2_eq1 lead_coef_eq0 -size_poly_leq0 leqNgt negbK (phi_gt0 pm).
   rewrite mul1r.
   by congr (_ + _).
@@ -1732,25 +1732,66 @@ exists V_rV.
   by rewrite modn_small.
 Qed.
 
-Check size phi.
-Check Vector.axiom _ _.
-Check VectMixin _.
+Definition V_vectMixin := VectMixin V_vect_axiom.
+Canonical V_vectType := Eval hnf in VectType 'F_2 V V_vectMixin.
+
 Local Notation "V ^*" := 'Hom([ vectType 'F_2 of V ], regular_vectType [ringType of 'F_2]).
-Check (QphiI (phi_gt1 pm))^*.
-Check 'Hom([ vectType 'F_2 of QphiI (phi_gt1 pm) ], regular_vectType [ringType of 'F_2]).
-Check regular_vectType [ringType of 'F_2].
-Check [ vectType 'F_2 of QphiI (phi_gt1 pm) ] .
 
 Lemma pairing0v x : pairing 0 x = 0.
 Proof.
   rewrite /pairing.
-  rewrite -[RHS](_ : t (subst (polyseq 0) D (sval x)) = _).
+  rewrite -[RHS](_ : t (subst (polyseq 0) D x) = _).
    congr t.
    apply subst_subst.
     by case: x.
    by rewrite reprK (rmorph0 (pi_rmorphism (Quotient.rquot_ringQuotType (keyed_phiI phi)))).
   by rewrite /t polyseqC.
 Qed.
+
+Lemma pairing_sum j F y :
+pairing (\sum_(i < j) F i) y = \sum_(i < j) pairing (F i) y.
+Proof.
+  elim: j F y => [??|j IH F y]; first by rewrite !big_ord0 pairing0v.
+  by rewrite 2!big_ord_recl pairing_add IH.
+Qed.
+
+Lemma pairingZ_L s x y :
+pairing (s *: x) y = s * pairing x y.
+Proof.
+  case: s => [][|[]] //= i.
+  + have->: Ordinal i = 0 by apply/val_inj.
+    by rewrite scale0r mul0r pairing0v.
+  + have->: Ordinal i = 1 by apply/val_inj.
+    by rewrite scale1r mul1r.
+Qed.
+
+Lemma nondeg2 x :
+  x = 0 <-> (forall y, pairing x y = 0).
+Proof.
+  split => [-> ?|]; first by rewrite pairing0v.
+  rewrite (coord_vbasis (memvf x)) => H.
+  have {H} H: forall y, \sum_(i < \dim fullv)
+              coord (vbasis fullv) i x * pairing (vbasis fullv)`_i y = 0.
+   move=> y; move: (H y); rewrite pairing_sum.
+   under eq_bigr => i _.
+    rewrite pairingZ_L.
+   over.
+   by [].
+
+
+
+   move=> /H.
+  rewrite pairing_sum.
+
+  Check nondeg1.
+
+
+
+Check (QphiI (phi_gt1 pm))^*.
+Check V^*.
+Check 'Hom([ vectType 'F_2 of QphiI (phi_gt1 pm) ], regular_vectType [ringType of 'F_2]).
+Check regular_vectType [ringType of 'F_2].
+Check [ vectType 'F_2 of QphiI (phi_gt1 pm) ] .
 
 Lemma pairing_adj_iter s x y:
   pairing x (iter s H' y) = pairing (iter s (@irreducible.F _ pm) x) y.
