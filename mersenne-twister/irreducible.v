@@ -1053,15 +1053,15 @@ Definition lmodMixin := LmodMixin (R:=R) (V:=zmodType)
 Definition lmodType := LmodType R zmodType lmodMixin.
 End def.
 Module Exports.
-Canonical R_stream_zmodType R := zmodType R.
-Canonical R_stream_lmodType R := lmodType R.
+Canonical R_stream_zmodType R := Eval hnf in zmodType R.
+Canonical R_stream_lmodType R := Eval hnf in lmodType R.
 Notation R_stream R := (S R).
 End Exports.
 End R_stream.
 Export R_stream.Exports.
 
-Lemma addss_char2 s : adds s s = zeros.
-Proof. by apply funext=> ?; rewrite /adds addrr_char2. Qed.
+(* Lemma addss_char2 s : adds s s = zeros. *)
+(* Proof. by apply funext=> ?; rewrite /adds addrr_char2. Qed. *)
 
 Section Infinite.
 Variable phi : {poly 'F_2}.
@@ -1075,26 +1075,15 @@ Proof. by apply (GRing.rmorph_char (polyC_rmorphism _)). Qed.
 
 Hint Resolve polyF2_char2 : core.
 
-Fixpoint subst_rec (s : seq 'F_2) x : S -> S :=
+Fixpoint subst_rec (s : seq 'F_2) x : R_stream [ringType of 'F_2] -> R_stream [ringType of 'F_2] :=
   if s is a :: s'
-  then fun (b : S) => add ((subst_rec s' x \o x) b)
-                       (scale' a b)
-                       (*if a == 1 then b else zero*)
-  else fun=> zero.
+  then fun b => ((subst_rec s' x \o x) b) + a *: (b : R_stream_lmodType _)
+  else fun=> 0.
 Definition subst p := subst_rec p.
 
-(* Local Fixpoint subst p D : S -> S := *)
-(*   match p with *)
-(*   | [::] => fun _ => zero *)
-(*   | a :: q => *)
-(*     if a == (1 : 'F_2) *)
-(*     then fun (b : S) => add (iter (size q) D b) (subst q D b) *)
-(*     else subst q D *)
-(*   end. *)
-
-Lemma iterD D :
-  (forall a b, D (add a b) = add (D a) (D b)) ->
-  forall n a b, (iter n D) (add a b) = add (iter n D a) (iter n D b).
+Lemma iterD V (D : R_stream V -> R_stream V) :
+  (forall a b, D (a + b) = (D a) + (D b)) ->
+  forall n a b, (iter n D) (a + b) = (iter n D a) + (iter n D b).
 Proof.
   move=> H.
   elim => // n IH a b.
@@ -1102,60 +1091,49 @@ Proof.
 Qed.
 
 Lemma substD phi' D a b :
-  (forall a b, D (add a b) = add (D a) (D b)) ->
-  subst phi' D (add a b) = add (subst phi' D a) (subst phi' D b).
+  (forall a b, D (a + b) = (D a) + (D b)) ->
+  subst phi' D (a + b) = (subst phi' D a) + (subst phi' D b).
 Proof.
   move=> H.
   elim: phi' a b => /=[*|c phi' IH a b].
    apply/functional_extensionality => i.
-   by rewrite /add /zero addr0.
-  rewrite H IH -!addA; congr add.
-  by rewrite (addC a b) [in RHS]addC -addA scale'Dr.
+   by rewrite addr0.
+  rewrite H IH -!addrA; congr (_ + _).
+  by rewrite (addrC a b) [in RHS]addrC -addrA scalerDr.
 Qed.
 
 Lemma substX D a : subst 'X D a = D a.
-Proof. by rewrite polyseqX /= scale'1p scale'0p add0p addp0. Qed.
+Proof. by rewrite polyseqX /= add0r scale0r addr0 scale1r. Qed.
 
-Definition D (f : S) := fun i => f i.+1.
+Definition D {R} (f : R_stream R) : R_stream R.
+  rewrite /R_stream.S.
+  apply (fun i => f i.+1).
+Defined.
 
-Lemma addD p q : D (add p q) = add (D p) (D q).
-Proof. by []. Qed.
+(* Lemma addD R p q : @D R (p + q) = (D p) + (D q). *)
+(* Proof. by []. Qed. *)
 
-Lemma scale'D a p : D (scale' a p) = scale' a (D p).
-Proof. by []. Qed.
+(* Lemma scale'D a p : D (a *: p) = a *: (D p). *)
+(* Proof. by []. Qed. *)
 
 Lemma subst_poly_D psi s i :
   subst psi D s i = \sum_(j < size psi) psi`_j * s (i + j)%N.
 Proof.
 move: s i; elim: psi; first by move=> s i; rewrite big_ord0.
 move=> a psi IHpsi s i.
-rewrite /= /add IHpsi big_ord_recl addrC.
+rewrite /= big_ord_recl addrC /= /GRing.add /= /R_stream.adds /= IHpsi.
 congr (_ + _); first by rewrite addn0.
-apply eq_bigr=> j _ /=.
-rewrite /bump /D /=.
-congr (_ * s _).
-by rewrite add1n addnS.
+apply eq_bigr=> j _.
+by rewrite /bump /D /= addnS.
 Qed.
 
 Record V := mkV {
-  V_val :> S;
-  _ : subst phi D V_val = zero;
+  V_val :> R_stream [ringType of 'F_2];
+  _ : subst phi D V_val = 0;
 }.
 Arguments mkV : clear implicits.
-(* Definition V := { x : S | subst phi D x = zero }. *)
 Canonical V_eqType := Eval hnf in EqType V gen_eqMixin.
 Canonical V_choiceType := Eval hnf in ChoiceType V gen_choiceMixin.
-
-(*
-Record V' := mkV' {
- x :> S;
- _ : `[<subst phi D x = zero>];
-}.
-Canonical V'_subType := Eval hnf in [subType for x].
-From mathcomp Require Import classical_sets.
-Canonical V'_eqType := Eval hnf in EqType V' gen_eqMixin.
-Canonical V'_choiceType := Eval hnf in ChoiceType V' gen_choiceMixin.
-*)
 
 Lemma eqV f g H I : f = g -> mkV f H = mkV g I.
 Proof.
@@ -1172,16 +1150,17 @@ Proof.
 Qed.
 
 Local Definition addv (a b : V) : V.
-exists (add a b).
+case: a => a aH.
+case: b => b bH.
+apply (mkV (a + b)).
 apply functional_extensionality => i.
-case: a => a Ha; case: b => b Hb.
-by rewrite substD //= Ha Hb /add add0r.
+by rewrite substD //= aH bH add0r.
 Defined.
 
 Local Definition zerov : V.
-exists zero.
+exists 0.
 apply functional_extensionality => i.
-rewrite subst_poly_D /zero /=.
+rewrite subst_poly_D /=.
 under eq_bigr do rewrite mulr0.
 by rewrite big1.
 Defined.
@@ -1189,44 +1168,44 @@ Defined.
 Lemma addvA : associative addv.
 Proof.
   case => []f fH []g gH []h hH.
-  rewrite /addv /= (eqV _ _ (addA _ _ _)).
-   by rewrite !substD // hH fH gH ?add0p.
+  rewrite /addv /= (eqV _ _ (addrA _ _ _)).
+   by rewrite !substD // hH fH gH ?add0p !addr0.
   move=> ?; by apply eqV.
 Qed.
 
 Lemma addvC : commutative addv.
 Proof.
   case => []f fH []g gH.
-  by apply eqV, addC.
+  by apply eqV, addrC.
 Qed.
 
 Lemma add0v : left_id zerov addv.
 Proof.
   case=> x xH.
   apply eqV, functional_extensionality => i.
-  by rewrite /add add0r.
+  by rewrite add0r.
 Qed.
 
 Lemma addIv : left_inverse zerov id addv.
 Proof.
   case=> x xH.
   apply eqV, functional_extensionality => i.
-  by rewrite /add /= addrr_char2.
+  by rewrite /GRing.add /= /R_stream.adds /= addrr_char2.
 Qed.
 
 Lemma addvv v : addv v v = zerov.
 Proof.
   case: v => v p.
-  apply eqV.
-  by rewrite addpp.
+  apply eqV, functional_extensionality => i.
+  by rewrite /GRing.add /= /R_stream.adds /= addrr_char2.
 Qed.
 
-Definition t (f : S) := f 0%nat.
+Definition t (f : R_stream [ringType of 'F_2]) := f 0%nat.
 
 Definition pairing (g: QphiI (phi_gt1 pm)) (x : V) : 'F_2 :=
   t (subst (generic_quotient.repr g) D x).
 
-Definition H (f : S) : S := fun i => f i.*2.
+Definition H (f : R_stream [ringType of 'F_2]) : R_stream [ringType of 'F_2] := fun i => f i.*2.
 
 Lemma DHC x : subst phi D (H x) = H (subst phi (D \o D) x).
 Proof.
@@ -1243,54 +1222,59 @@ Lemma substC j l :
 Proof.
    elim: l j => //= b l IH j.
    apply functional_extensionality => x.
-   by rewrite IH -scale'D addD.
+   by rewrite IH.
 Qed.
 
-Lemma scale'_substD a xs p : scale' a (subst xs D p) = subst xs D (scale' a p).
+Lemma scale'_substD a xs p : a *: (subst xs D p : R_stream_lmodType _)
+                             = subst xs D (a *: (p : R_stream_lmodType _)).
 Proof.
-move: p; elim: xs; first by rewrite /= scale'p0.
+move: p; elim: xs; first by rewrite /= scaler0.
 move=> x xs IHxs p /=.
-rewrite scale'Dr scale'Cp.
-congr add.
-by rewrite IHxs -scale'D.
+rewrite scalerDr.
+congr (_ + _).
+ by rewrite IHxs.
+by rewrite !scalerA mulrC.
 Qed.
 
-Lemma F2_scale'I a p : scale' a (scale' a p) = scale' a p.
-Proof. by apply funext=> i; rewrite /scale' mulrA F2_mulI. Qed.
+Lemma F2_scale'I a (p : R_stream_lmodType [ringType of 'F_2]) : a *: (a *: p) = a *: p.
+Proof.
+apply funext=> i.
+  by rewrite /GRing.scale /= /R_stream.scales mulrA F2_mulI.
+Qed.
 
 Lemma phiD2 : subst phi (D \o D) = subst phi D \o subst phi D.
 Proof.
   elim: (polyseq phi) => //= a l IH.
   apply funext=> p.
-  rewrite IH /=.
-  rewrite !(addD, substC, scale'Dr) /=.
-  rewrite -scale'D scale'_substD F2_scale'I addA.
-  congr add.
-  rewrite substC -addD -substD /=; last by exact:addD.
-  by rewrite -addA addpp addp0 substC.
+  rewrite IH /= !(substC, scalerDr) /= !addrA.
+  rewrite substD // -scale'_substD .
+  congr (_ + _); last by rewrite F2_scale'I.
+  rewrite substC -[LHS]addr0 -addrA.
+  congr (_ + _).
+  apply/funext => i.
+  by rewrite /GRing.add /= /R_stream.adds addrr_char2.
 Qed.
 
 Lemma subst0 p D :
-  D zero = zero ->
-  subst p D zero = zero.
+  D 0 = 0 -> subst p D 0 = 0.
 Proof.
   move=> D00.
   elim: p => //= a p IH.
-  by rewrite scale'p0 addp0 D00 IH.
+  by rewrite scaler0 addr0 D00 IH.
 Qed.
 
 Lemma substDMXC (p : {poly 'F_2}) c D a :
   subst (p * 'X + c%:P) D a =
-  add ((subst p D \o D) a) (subst c%:P D a).
+  ((subst p D \o D) a) + (subst c%:P D a).
 Proof.
   rewrite -cons_poly_def polyseq_cons.
   case: ifP => /= H; last first.
    case: (polyseq p) H => // _.
    apply/functional_extensionality => i.
-   by rewrite /add /= add0r.
-  congr add.
+   by rewrite /= add0r.
+  congr (_ + _).
   rewrite polyseqC.
-  by case/F2P: c => /=; [rewrite scale'0p | rewrite scale'1p add0p].
+  by case/F2P: c => /=; [rewrite scale0r | rewrite scale1r add0r].
 Qed.
 
 Lemma substMX p x : subst (p * 'X) x = subst p x \o x.
@@ -1298,7 +1282,7 @@ Proof.
   rewrite -[p * 'X]addr0.
   have->: 0 = (0 : 'F_2)%:P by rewrite polyC0.
   apply functional_extensionality => ?.
-  by rewrite substDMXC !polyC0 polyseq0 /= addp0.
+  by rewrite substDMXC !polyC0 polyseq0 /= addr0.
 Qed.
 
 Lemma subst_poly s x : subst (Poly s) x = subst_rec s x.
@@ -1307,24 +1291,23 @@ Proof.
    by rewrite polyseqC.
   rewrite /= cons_poly_def.
   apply functional_extensionality => ?.
-  by case: a => [][|[]//] /= i; rewrite substDMXC !polyseqC /= IH ?add0p.
+  by case: a => [][|[]//] /= i; rewrite substDMXC !polyseqC /= IH ?add0r.
 Qed.
 
 Lemma subst_rcons s a D x :
   subst_rec (rcons s a) D x =
-  add (scale' a (iter (size s) D x)) (subst_rec s D x).
-  (*add (if a == 1 then iter (size s) D x else zero) (subst_rec s D x).*)
+  (a *: (iter (size s) D x : R_stream_lmodType [ringType of 'F_2])) + (subst_rec s D x).
 Proof.
   elim: s a D x => [*| b s IH a D x].
-   by rewrite addC.
-  by rewrite /= IH addA -iterS iterSr.
+   by rewrite addrC.
+  by rewrite /= IH addrA -iterS iterSr.
 Qed.
 
 Lemma substD' (p r : {poly 'F_2}) a :
-  subst (p + r) D a = add (subst p D a) (subst r D a).
+  subst (p + r) D a = (subst p D a) + (subst r D a).
 Proof.
   apply funext=> i.
-  rewrite /add !subst_poly_D.
+  rewrite !subst_poly_D.
   set spr := size (p + r).
   set sp := size p.
   set sr := size r.
@@ -1339,16 +1322,17 @@ Proof.
            \sum_(j < N) (p + r)`_j * a (i + j)%N
     by rewrite -[X in X = _]addr0 Hspr big_split_ord /=; congr (_ + _);
     apply/esym/big1=> -[] j Hj _ /=; rewrite (nth_default _ (leq_addr j spr)) mul0r.
-  have-> : \sum_(j < sp) p`_j * a (i + j)%N =
+  under eq_bigr do rewrite coef_add_poly mulrDl.
+  rewrite big_split /=.
+  have<-: \sum_(j < sp) p`_j * a (i + j)%N =
            \sum_(j < N) p`_j * a (i + j)%N
     by rewrite -[X in X = _]addr0 Hsp big_split_ord /=; congr (_ + _);
     apply/esym/big1=> -[] j Hj _ /=; rewrite (nth_default _ (leq_addr j sp)) mul0r.
-  have-> : \sum_(j < sr) r`_j * a (i + j)%N =
+  have<- : \sum_(j < sr) r`_j * a (i + j)%N =
            \sum_(j < N) r`_j * a (i + j)%N
     by rewrite -[X in X = _]addr0 Hsr big_split_ord /=; congr (_ + _);
     apply/esym/big1=> -[] j Hj _ /=; rewrite (nth_default _ (leq_addr j sr)) mul0r.
-  rewrite -big_split /=.
-  by under eq_bigr do rewrite coef_add_poly mulrDl.
+  by rewrite /GRing.add /= /R_stream.adds /= !subst_poly_D.
 Qed.
 
 Lemma substM (p q : {poly 'F_2}) a :
@@ -1359,9 +1343,9 @@ Proof.
   rewrite mulrDl substD' mulrC mulrA substMX /comp mulrC IH.
   case: c => [][|[]//] c.
    have->: Ordinal c = 0 by apply/val_inj.
-   by rewrite polyC0 mul0r addr0 substMX polyseq0 /= addp0 substC.
+   by rewrite polyC0 mul0r addr0 substMX polyseq0 /= addr0 substC.
   have->: Ordinal c = 1 by apply/val_inj.
-  by rewrite substDMXC polyC1 mul1r polyseq1 /= scale'1p add0p substC.
+  by rewrite substDMXC polyC1 mul1r polyseq1 /= scale1r add0r substC.
 Qed.
 
 Lemma substMXn n x : subst 'X^n x = \big[comp/id]_(i < n) subst 'X x.
@@ -1369,11 +1353,11 @@ Proof.
   elim: n x => [x|n IH x].
    rewrite big_ord0 expr0 polyseqC /=.
    apply/functional_extensionality => ?.
-   by rewrite scale'1p add0p.
+   by rewrite scale1r add0r.
   rewrite exprSr substMX IH big_ord_recl.
   elim: n {IH} => [|n IH].
    rewrite big_ord0; apply/functional_extensionality => ?.
-   by rewrite polyseqX /= scale'1p scale'0p add0p addp0.
+   by rewrite polyseqX /= scale1r scale0r add0r addr0.
   by rewrite big_ord_recl -[in RHS]IH.
 Qed.
 
@@ -1383,7 +1367,7 @@ rewrite DHC phiD2 /comp Hx subst0 //.
 Defined.
 
 Lemma subst_subst x y f :
-  subst phi D f = zero ->
+  subst phi D f = 0 ->
   x = y %[mod QphiI (phi_gt1 pm)] -> subst y D f = subst x D f.
 Proof.
 move => Hf /eqP.
@@ -1408,14 +1392,14 @@ Proof.
 Qed.
 
 Lemma subst_sum s (f : 'I_s -> {poly 'F_2}) x :
-  subst (\sum_(i < s) f i) D x = \big[add/zero]_(i < s) subst (f i) D x.
+  subst (\sum_(i < s) f i) D x = \sum_(i < s) subst (f i) D x.
 Proof.
   elim: s f => [|s IH] f; first by rewrite !big_ord0 polyseq0.
   by rewrite !big_ord_recl substD' IH.
 Qed.
 
-Lemma t_sum s (f : 'I_s -> S) :
-  t (\big[add/zero]_(i < s) f i) = \sum_(i < s) t (f i).
+Lemma t_sum s (f : 'I_s -> R_stream [ringType of 'F_2]) :
+  t (\sum_(i < s) f i) = \sum_(i < s) t (f i).
 Proof.
   elim: s f => [|s IH] f; first by rewrite !big_ord0.
   by rewrite !big_ord_recl -IH.
@@ -1439,11 +1423,11 @@ Proof.
   have ->: Ordinal i0 = 1 by apply/val_inj.
   rewrite !scale1r -exprM muln2.
   case: i => i /= _; elim: i f fH => [??|i IH f fH].
-   by rewrite expr0 polyseqC /= !add0p.
+   by rewrite expr0 polyseqC /= !add0r.
   rewrite doubleS !exprSr !substM /= substM /= IH.
    congr t; congr subst.
    move: (substM 'X 'X) => /= <-.
-   by rewrite -expr2 polyseqXn polyseqX /= !scale'0p !addp0 !add0p.
+   by rewrite -expr2 polyseqXn polyseqX /= !scale0r !addr0 !add0r.
   repeat move: substM => /= <-.
   by rewrite mulrC mulrA mulrC mulrA substM /= fH subst0.
 Qed.
@@ -1457,10 +1441,10 @@ Proof.
   apply eqV, functional_extensionality => i.
   move: (H0 (\pi 'X^i)); case: piP => y E.
   rewrite (subst_subst _ E) //= polyseqXn /subst subst_rcons size_nseq.
-  have->: (subst_rec (nseq i 0) D x) = zero.
+  have->: (subst_rec (nseq i 0) D x) = 0.
    elim: i x {E p H0} => // i IH x.
-   by rewrite /= scale'0p addp0 IH.
-  rewrite /= addp0 scale'1p.
+   by rewrite /= scale0r addr0 IH.
+  rewrite /= addr0 scale1r.
   elim: i x {E p H0} => // i IH x.
   by rewrite iterSr => /IH.
 Qed.
@@ -1468,16 +1452,19 @@ Qed.
 Definition Veq (x y : V) :=
   [forall i, V_val x (i : 'I_(size phi).-1) == V_val y i].
 
-Lemma add_eq0 x y :
-  add x y = zero <-> x = y.
+Lemma add_eq0 (x y : R_stream [ringType of 'F_2]) :
+  x + y = 0 <-> x = y.
 Proof.
   split => [H |->].
-  * move: (f_equal (add x) H).
-    by rewrite addp0 addA addpp add0p => ->.
-  * by rewrite addpp.
+  * move: (f_equal (fun y => x + y) H).
+    rewrite addr0 addrA => <-.
+    apply/funext => j.
+    by rewrite /GRing.add /= /R_stream.adds /= addrr_char2 // add0r.
+  * apply/funext => j.
+    by rewrite /GRing.add /= /R_stream.adds /= addrr_char2 // add0r.
 Qed.
 
-Lemma addv_eq0 x y :
+Lemma addv_eq0 (x y : V) :
   addv x y = zerov <-> x = y.
 Proof.
   split => [H |->].
@@ -1486,17 +1473,17 @@ Proof.
   * by rewrite addvv.
 Qed.
 
-Canonical op : Monoid.law zero.
-  apply: (@Monoid.Law _ zero add addA) => p;
-  by rewrite !(add0p, addp0).
-Defined.
+(* Canonical op : Monoid.law 0. *)
+(*   apply: (@Monoid.Law _ zero add addA) => p; *)
+(*   by rewrite !(add0p, addp0). *)
+(* Defined. *)
 
-Lemma big_subst (F : nat -> S) p j :
-  (\big[add/zero]_(i < p) F i) j = \sum_(i < p) F i j.
+Lemma big_subst (F : nat -> R_stream [ringType of 'F_2]) p j :
+  (\sum_(i < p) F i) j = \sum_(i < p) F i j.
 Proof.
   elim: p F => [?|p IH F].
    by rewrite !big_ord0.
-  by rewrite !big_ord_recr /= /add /= IH.
+  by rewrite !big_ord_recr /= /GRing.add /= /R_stream.adds /= IH.
 Qed.
 
 Section rVVI_def.
@@ -1604,10 +1591,10 @@ rewrite {X}; rewrite {Hk}; rewrite {k}.
 by case: j=> j; rewrite -Hn'.
 Qed.
 
-Lemma rVVI_proof : subst phi D rVSI = zero.
+Lemma rVVI_proof : subst phi D rVSI = 0.
 Proof.
 apply/funext=> i; apply/eqP.
-rewrite subst_poly_D /zero /=.
+rewrite subst_poly_D /=.
 have -> : n = n.-1.+1
   by rewrite prednK //; move: (leq_pred n); apply/leq_trans/(predphi_geq1 pm).
 rewrite big_ord_recr addr_eq0 F2_opp /= -lead_coefE.
@@ -1652,7 +1639,7 @@ have->: X = \sum_(j < n) phi`_j * v (i - n.-1 + j)%N.
     by apply/eqP; rewrite F2_eq1 lead_coef_eq0 -size_poly_leq0 leqNgt negbK (phi_gt0 pm).
   rewrite mul1r.
   by congr (_ + _).
-by move/(congr1 (fun p => p (i - n.-1)%N)): Hv; rewrite subst_poly_D /zero => ->.
+by move/(congr1 (fun p => p (i - n.-1)%N)): Hv; rewrite subst_poly_D => ->.
 Qed.
 
 Lemma V_rVVI' (v : V) : exists x, v = rVVI x.
@@ -1682,7 +1669,7 @@ Proof.
   by rewrite /pairing /addv /= substD.
 Qed.
 
-Lemma tD x y : t (add x y) = t x + t y.
+Lemma tD x y : t (x + y) = t x + t y.
 Proof. by []. Qed.
 
 Lemma pairing_add x y z :
@@ -1697,22 +1684,37 @@ Definition V_zmodMixin := ZmodMixin addvA addvC add0v addIv.
 Canonical V_zmodType := ZmodType V V_zmodMixin.
 Definition scalev (a : 'F_2) (v : V) : V.
 Proof.
-refine (mkV (scale' a v) _).
-case: v=>v /= Hv.
-by rewrite -scale'_substD Hv scale'p0.
+case: v => v Hv.
+exists (a *: (v : R_stream_lmodType _)).
+by rewrite -scale'_substD Hv scaler0.
 Defined.
 Fact scalev1x v : scalev 1 v = v.
-Proof. by apply/VeqP/forallP=> i /=; rewrite scale'1p. Qed.
+Proof.
+apply/VeqP/forallP=> i /=.
+case: v => v.
+by rewrite /scalev /= scale1r.
+Qed.
 Fact scalevA x y A : scalev x (scalev y A) = scalev (x * y) A.
-Proof. by apply/VeqP/forallP=> i /=; rewrite scale'A. Qed.
+Proof.
+apply/VeqP/forallP=> i /=.
+case: A => A.
+by rewrite /= scalerA.
+Qed.
 Fact scalevxDl A x y : scalev (x + y) A = scalev x A + scalev y A.
-Proof. by apply/VeqP/forallP=> i /=; rewrite scale'Dl. Qed.
+Proof.
+apply/VeqP/forallP=> i /=.
+case: A => A.
+by rewrite /= scalerDl.
+Qed.
 Fact scalevxDr x A B : scalev x (A + B) = scalev x A + scalev x B.
-Proof. by apply/VeqP/forallP=> i /=; rewrite scale'Dr. Qed.
+Proof.
+apply/VeqP/forallP=> i /=.
+case: A => A.
+case: B => B.
+by rewrite /= scalerDr.
+Qed.
 Definition V_lmodMixin := LmodMixin scalevA scalev1x scalevxDr scalevxDl.
 Canonical V_lmodType := Eval hnf in LmodType 'F_2 V V_lmodMixin.
-
-(* *)
 
 Lemma V_vect_axiom : Vector.axiom (size phi).-1 V.
 Proof.
@@ -1721,7 +1723,10 @@ exists V_rV.
 - move=> a u v.
   rewrite /V_rV.
   apply/rowP=> i.
-  by rewrite !mxE /= /add /scale'.
+  rewrite !mxE /=.
+  case: u => u.
+  case: v => v.
+  by rewrite /= /GRing.add /GRing.scale /= /R_stream.adds /R_stream.scales.
 - exists rVVI; first by move=> ?; rewrite -V_rVVI.
   move=> v;  apply/rowP=> i.
   rewrite /V_rV /rVVI /= mxE.
