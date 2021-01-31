@@ -1770,18 +1770,214 @@ Proof.
     by rewrite scale1r mul1r.
 Qed.
 
+Section DualSpace.
+Variable F : fieldType.
+Variable V : vectType F.
+Definition dual := 'Hom(V, regular_vectType F).
+
+Lemma dual_vect_axiom : Vector.axiom (Vector.dim V) dual.
+Proof.
+  move: (lfun_vect_iso V (regular_vectType F)).
+  by rewrite muln1.
+Qed.
+Definition dual_vectMixin := VectMixin dual_vect_axiom.
+Canonical dual_vectType := Eval hnf in VectType F dual dual_vectMixin.
+End DualSpace.
+
+Section DualSpace.
+Definition V_ddV (K : fieldType) (V : vectType K) :
+    'Hom(V, dual_vectType (dual_vectType V)).
+  apply linfun => e; apply linfun => f; apply (f e).
+Defined.
+
+Lemma V_ddVfV (K : fieldType) (V : vectType K) :
+  (V_ddV V \o (V_ddV V)^-1 = \1)%VF.
+Proof.
+  apply/lfunP => x.
+  rewrite comp_lfunE.
+  suff: (injective ((V_ddV V)^-1)%VF).
+   apply.
+   rewrite lker0_lfunK; first by rewrite -comp_lfunE comp_lfun1r.
+   apply/lker0P => z w.
+   rewrite /V_ddV /= /linfun /fun_of_lfun.
+   repeat rewrite unlock /=.
+   rewrite /fun_of_lfun_def /linfun_def /mulmxr.
+   move/Vector.InternalTheory.r2v_inj => /=.
+   set T := lin1_mx _.
+   move/(f_equal (fun x => x *m invmx T)).
+   rewrite -!mulmxA mulmxV ?mulmx1.
+    by apply Vector.InternalTheory.v2r_inj.
+   subst T.
+   rewrite unitmxE /lin1_mx /determinant.
+   under eq_bigr => i _.
+    under eq_bigr => j _.
+     rewrite !mxE /= !Vector.InternalTheory.r2vK.
+    over.
+   over.
+    rewrite /=.
+    rewrite /=.
+    rewrite mxE.
+    rewrite Vector.InternalTheory.r2vK.
+    rewrite Vector.InternalTheory.v2rK.
+    Set Printing All.
+    rewrite /=.
+    under eq_bigr => k _.
+    rewrite /Vector.InternalTheory.v2r.
+    rewrite !mxE /=.
+   rewrite /=.
+   rewrite
+
+   Search (_ *m invmx _).
+   rewrite /=.
+   rewrite /lin1_mx.
+   Search r2v_inj.
+   rewrite /=.
+   rewrite unlock /=.
+   rewrite /=.
+   rewrite unlock /=.
+    => H.
+   rewrite fun_of_lfunK in H.
+   Check (can_inj (@fun_of_lfunK _ _ _)).
+   Set Printing All.
+   Check injective.
+   rewrite lfunE.
+   rewrite lfun_simp.
+   set f := (fun _ => _).
+   have ->: f = id.
+   move/val_inj.
+   move/lfunP => /(_ x.
+   move/eqP.
+   rewrite lfunE.
+   rewrite eqE /= eqE /= eqE /=.
+   rewrite /=.
+   Search (linfun _ _ = linfun _ _).
+
+   Set Printing All.
+   move/(f_equal (@fun_of_lfun _ _ _)).
+   rewrite /=.
+   rewrite
+   Check fun_of_lfunK _.
+   Check (H z).
+   rewrite lfunE.
+   rewrite /l
+   !fun_of_lfunK .
+   rewrite
+  rewrite -lkerE.
+  Check (injective ((V_ddV V)^-1)%VF).
+  Check injective.
+  apply/eqlfunP.
+  Check (f_equal ((V_ddV V)^-1)%VF).
+  apply/funext.
+  move=> x.
+  rewrite limg_lfunVK.
+  rewrite limg_lfunVK.
+
+Lemma dual_basis (K : fieldType) (V : vectType K)
+(basis : (Vector.dim V).-tuple (dual V))
+(b : basis_of (fullv: {vspace dual V}) basis) :
+  {
+    dbasis : (Vector.dim V).-tuple V |
+    basis_of (fullv: {vspace V}) dbasis /\
+    forall (i j : 'I_(Vector.dim V)), basis`_i dbasis`_j = (i == j)%:R
+  }.
+Proof.
+  refine (exist _ [ tuple (linfun (V_ddV V)^-1%VF (linfun (fun x => (coord basis i x : regular_vectType K)))) | i < (Vector.dim V) ] _).
+  split.
+   rewrite basisEfree size_tuple dimvf leqnn subvf !andbT.
+   apply/freeP => k /(f_equal (linfun (V_ddV V))) + j.
+   rewrite linear_sum.
+   under eq_bigr => i.
+    rewrite -tnth_nth tnth_mktuple linearZ !fun_of_lfunK /=.
+    rewrite -comp_lfunE.
+    Search (_ \o _^-1 = _)%VF.
+    rewrite lker0_lfunK .
+    rewrite lker0_lfunK.
+    rewrite limg_lfunVK.
+    Check lker0_compfV.
+    rewrite lker0_lfunVK.
+    rewrite lker0_lfunK.
+    Set Printing All.
+
+    rewrite -comp_lfunE.
+
+    Search (linfun _ \o linfun _)%VF.
+    Search (linfun _ (linfun _)).
+   under eq_bigr => i.
+   rewrite comp_lfunE.
+    do rewrite -tnth_nth tnth_mktuple.
+   Search (_ (_ *: _)).
+   set T := \sum__ _.
+   move=> + j.
+
+   rewrite (nth_map (0: )).
+   rewrite /=.
+   Set Printing All.
+   rewrite (nth_map (ordinal (@Vector.dim (GRing.Field.ringType K) (Phant (GRing.Field.sort K)) V))).
+   set T := [seq _ | _ <- _]`__.
+   rewrite nth_mkseq.
+   nth_mktuple.
+
+   rewrite /free.
+   move=> x.
+  QphiIX_free subvf size_map size_enum_ord dim_QphiI /=.
+
+   rewrite /=.
+  have: (Vector.dim V).-tuple V.
+   refine [ tuple (linfun (V_ddV V)^-1%VF (linfun (fun x => (coord basis i x : regular_vectType K)))) | i < (Vector.dim V) ].
+   apply: (coord basis i x : regular_vectType K).
+   move: (coord_basis b (memvf x)).
+   Check fun (j : 'I_(Vector.dim V)) => linfun (fun (y : dual_vectType V) => coord basis j y : regular_vectType K).
+   Check coord basis i x.
+   rewrite
+
+                   [ tuple (linfun (V_ddV V)^-1%VF (linfun (fun x => _))) | i < (Vector.dim V) ] _).
+  Check coord_basis.
+
+  Check linfun ((V_ddV V)^-1%VF) _.
+  move=>
+  move n: (Vector.dim V) basis b => t.
+  elim: t V n => [? e [][]// *|n IHn V e basis b].
+   set V' := fullv.
+   have->: V' = 0%VS.
+    apply/eqP.
+    by rewrite -dimv_eq0 -e dimvf.
+   exists (nil_tuple _).
+   split; first by apply nil_basis.
+   by case => [][].
+
+
+
+   move=> i j.
+   rewrite /= !nth_nil.
+   rewrite /=.
+  elim n: (Vector.dim V) basis b => T.
+   => [*|].
+   have: fullv = 0%VS.
+   move: nil_basis.
+   rewrite
+   rewrite /=.
+   split.
+   rewrite /=.
+   rewrite /=.
+   Search (0.-tuple _).
+   exists tuple0.
+   Check tuple0.
+   exists [::].
+   move=> []//.
+End DualSpace.
+
 Lemma nondeg2 x :
   x = 0 <-> (forall y, pairing x y = 0).
 Proof.
   split => [-> ?|]; first by rewrite pairing0v.
+
   rewrite (coord_vbasis (memvf x)) => H.
   have {H} H: forall y, \sum_(i < \dim fullv)
               coord (vbasis fullv) i x * pairing (vbasis fullv)`_i y = 0.
    move=> y; move: (H y); rewrite pairing_sum.
-   under eq_bigr => i _.
-    rewrite pairingZ_L.
-   over.
-   by [].
+   by under eq_bigr do rewrite pairingZ_L.
+
+
 
 
 
